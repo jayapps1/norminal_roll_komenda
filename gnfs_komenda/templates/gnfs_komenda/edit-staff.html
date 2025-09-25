@@ -1,0 +1,215 @@
+
+{% extends 'main.html' %}
+{% block title %}
+    Edit Staff
+{% endblock title %}
+
+{% block content %}
+<div class="text-center my-4">
+    <h2 class="fw-bold mb-1">Ghana National Fire Service</h2>
+    <hr class="w-25 mx-auto" style="border-top: 2px solid #000;">
+    <h4 class="text-secondary mb-1">Komenda Fire Station</h4>
+    <hr class="w-25 mx-auto" style="border-top: 1px solid #555;">
+    <h5 class="text-muted mt-2">Edit Staff Record</h5>
+    <hr class="w-25 mx-auto" style="border-top: 1px solid #aaa;">
+</div>
+
+<div class="container mt-5">
+    <div class="card shadow-lg border-0">
+        <!-- Card Header -->
+        <div class="card-header text-center" style="background-color: #8B0000; color: #FFFFFF;">
+            <h4 class="mb-0">Add New Staff</h4>
+        </div>
+
+        <!-- Card Body -->
+        <div class="card-body" style="background-color: #F8F9FA;">
+            <form method="post">
+                {% csrf_token %}
+
+                <style>
+                    /* Force all text inputs to uppercase */
+                    .uppercase {
+                        text-transform: uppercase;
+                    }
+                </style>
+
+                <div class="row mb-3">
+                    <!-- Staff ID -->
+                    <div class="col-md-4">
+                        <label for="staffID" class="form-label" style="color: #8B0000;">Staff ID</label>
+                        <input type="text" class="form-control uppercase {% if form.staffID.errors %}is-invalid{% endif %}" 
+                               id="staffID" name="staffID" value="{{ form.staffID.value|default_if_none:'' }}" required>
+                        {% for error in form.staffID.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Full Name -->
+                    <div class="col-md-4">
+                        <label for="fullname" class="form-label" style="color: #8B0000;">Full Name</label>
+                        <input type="text" class="form-control uppercase {% if form.fullname.errors %}is-invalid{% endif %}" 
+                               id="fullname" name="fullname" value="{{ form.fullname.value|default_if_none:'' }}" required>
+                        {% for error in form.fullname.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Job Grade -->
+                    <div class="col-md-4">
+                        <label for="job_grade" class="form-label" style="color: #8B0000;">Job Grade</label>
+                        <input type="text" class="form-control uppercase {% if form.job_grade.errors %}is-invalid{% endif %}" 
+                               id="job_grade" name="job_grade" value="{{ form.job_grade.value|default_if_none:'' }}" required>
+                        {% for error in form.job_grade.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <!-- Birth Date -->
+                    <div class="col-md-4">
+                        <label for="birth_date" class="form-label" style="color: #8B0000;">Birth Date</label>
+                        <input type="date" class="form-control {% if form.birth_date.errors %}is-invalid{% endif %}" 
+                            id="birth_date" name="birth_date" 
+                            value="{{ form.instance.birth_date|date:'Y-m-d' }}" required>
+                        {% for error in form.birth_date.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Ghana Card -->
+                    <div class="col-md-4">
+                        <label for="ghana_card" class="form-label" style="color: #8B0000;">Ghana Card</label>
+                        <input type="text" class="form-control uppercase {% if form.ghana_card.errors %}is-invalid{% endif %}" 
+                               id="ghana_card" name="ghana_card" value="{{ form.ghana_card.value|default_if_none:'' }}">
+                        {% for error in form.ghana_card.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Mgmt Units -->
+                    <div class="col-md-4">
+                        <label for="mgmt_units" class="form-label" style="color: #8B0000;">Mgmt Units</label>
+                        <input type="text" class="form-control uppercase {% if form.mgmt_units.errors %}is-invalid{% endif %}" 
+                               id="mgmt_units" name="mgmt_units" value="{{ form.mgmt_units.value|default_if_none:'' }}">
+                        {% for error in form.mgmt_units.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <!-- Bank -->
+                    <div class="col-md-4">
+                        <label for="bank" class="form-label" style="color: #8B0000;">Bank</label>
+                        <input type="text" class="form-control uppercase {% if form.bank.errors %}is-invalid{% endif %}" 
+                               id="bank" name="bank" value="{{ form.bank.value|default_if_none:'' }}">
+                        {% for error in form.bank.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Account Number -->
+                    <div class="col-md-4">
+                        <label for="account_number" class="form-label" style="color: #8B0000;">Account Number</label>
+                        <input type="text" class="form-control uppercase {% if form.account_number.errors %}is-invalid{% endif %}" 
+                               id="account_number" name="account_number" value="{{ form.account_number.value|default_if_none:'' }}">
+                        {% for error in form.account_number.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Payroll Status -->
+                    <div class="col-md-4">
+                        <label for="payroll_status" class="form-label" style="color: #8B0000;">Payroll Status</label>
+                        <select class="form-select {% if form.payroll_status.errors %}is-invalid{% endif %}" 
+                                id="payroll_status" name="payroll_status" style="border-color: #8B0000;">
+                            <option value="ACTIVE" {% if form.payroll_status.value == "AT POST" %}selected{% endif %}>ACTIVE</option>
+                            <option value="NON ACTIVE" {% if form.payroll_status.value == "ON LEAVE" %}selected{% endif %}>NON ACTIVEE</option>
+                        </select>
+                        {% for error in form.payroll_status.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <!-- Leave Type -->
+                    <div class="col-md-4">
+                        <label for="leave_type" class="form-label" style="color: #8B0000;">Leave Type</label>
+                        <select class="form-select {% if form.leave_type.errors %}is-invalid{% endif %}" 
+                                id="leave_type" name="leave_type" style="border-color: #8B0000;">
+                            <option value="AT POST" {% if form.leave_type.value == "AT POST" %}selected{% endif %}>AT POST</option>
+                            <option value="ANNUAL LEAVE" {% if form.leave_type.value == "ANNUAL LEAVE" %}selected{% endif %}>ANNUAL LEAVE</option>
+                            <option value="THERMINAL LEAVE" {% if form.leave_type.value == "THERMINAL LEAVE" %}selected{% endif %}>THERMINAL LEAVE</option>
+                            <option value="MATERNITY LEAVE" {% if form.leave_type.value == "MATERNITY LEAVE" %}selected{% endif %}>MATERNITY LEAVE</option>
+                            <option value="STUDY LEAVE" {% if form.leave_type.value == "STUDY LEAVE" %}selected{% endif %}>STUDY LEAVE</option>
+                            <option value="STUDY LEAVE" {% if form.leave_type.value == "STUDY LEAVE" %}selected{% endif %}>SICK LEAVE</option>
+                        </select>
+                        {% for error in form.leave_type.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Leave Status -->
+                    <div class="col-md-4">
+                        <label for="leave_status" class="form-label" style="color: #8B0000;">Leave Status</label>
+                        <select class="form-select {% if form.leave_status.errors %}is-invalid{% endif %}" 
+                                id="leave_status" name="leave_status" style="border-color: #8B0000;">
+                            <option value="AT POST" {% if form.leave_status.value == "AT POST" %}selected{% endif %}>AT POST</option>
+                            <option value="ON LEAVE" {% if form.leave_status.value == "ON LEAVE" %}selected{% endif %}>ON LEAVE</option>
+                        </select>
+                        {% for error in form.leave_status.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                  <!-- Start Leave -->
+<div class="col-md-4">
+    <label for="start_leave" class="form-label" style="color: #8B0000;">Start Leave</label>
+    <input type="date" class="form-control {% if form.start_leave.errors %}is-invalid{% endif %}" 
+           id="start_leave" name="start_leave" 
+           value="{{ form.start_leave.value|date:'Y-m-d' }}">
+    {% for error in form.start_leave.errors %}
+    <div class="invalid-feedback">{{ error }}</div>
+    {% endfor %}
+</div>
+
+<!-- End Leave -->
+<div class="col-md-4">
+    <label for="end_leave" class="form-label" style="color: #8B0000;">End Leave</label>
+    <input type="date" class="form-control {% if form.end_leave.errors %}is-invalid{% endif %}" 
+           id="end_leave" name="end_leave" 
+           value="{{ form.end_leave.value|date:'Y-m-d' }}">
+    {% for error in form.end_leave.errors %}
+    <div class="invalid-feedback">{{ error }}</div>
+    {% endfor %}
+</div>
+
+                    <!-- Called Off -->
+                    <div class="col-md-4 d-flex align-items-center">
+                        <div class="form-check mt-3">
+                            <input class="form-check-input {% if form.called_off.errors %}is-invalid{% endif %}" 
+                                   type="checkbox" id="called_off" name="called_off" {% if form.called_off.value %}checked{% endif %}>
+                            <label class="form-check-label" for="called_off" style="color: #8B0000;">
+                                Called Off
+                            </label>
+                            {% for error in form.called_off.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                 <div class="text-center mt-3">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+            <a href="{% url 'personnel' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Cancel
+            </a>
+        </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,82 @@
+{% load static %}
+<nav id="mainNavbar" class="navbar navbar-expand-lg sticky-top" style="background-color:#8B0000; transition: all 0.3s ease;">
+  <div class="container">
+    <!-- Brand -->
+    <a class="navbar-brand d-flex align-items-center text-white fw-bold" >
+      <img src="{% static 'gnfs_komenda/gnfslogo.png' %}" 
+           alt="GNFS Logo" 
+           width="40" 
+           height="40" 
+           class="d-inline-block align-text-top me-2 brand-logo">
+      GNFS-Komenda
+    </a>
+
+    <!-- Navbar toggler -->
+    <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" 
+            data-bs-target="#navbarSupportedContent" 
+            aria-controls="navbarSupportedContent" 
+            aria-expanded="false" 
+            aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Links + Search + Staff Login -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      {% if user.is_authenticated%}
+      <!-- Left links -->
+      <ul class="navbar-nav ms-3">
+        <li class="nav-item">
+          <a class="nav-link text-white fw-semibold" aria-current="page" href="{% url 'personnel'%}">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-white fw-semibold" aria-current="page" href="{% url 'export-personnel' %}">
+           <i class="fas fa-file-excel"></i> Export
+         </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-white fw-semibold" aria-current="page" href="{% url 'import-personnel' %}">
+           <i class="fas fa-file-excel"></i> Import
+         </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link text-white fw-semibold" href="{% url 'addstaff'%}">Add Personnel</a>
+        </li>
+      </ul>
+
+      {%endif%}
+
+     <form class="d-flex mx-auto" role="search" action="{% url 'personnel' %}" method="get" style="max-width:400px;">
+  <input class="form-control me-2"
+         type="search"
+         name="q"
+         value="{{ request.GET.q }}"
+         placeholder="Search for staff"
+         aria-label="Search"/>
+  <button class="btn btn-warning fw-bold" type="submit">Search</button>
+</form>
+
+      
+
+      <!-- Right Staff Login -->
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle text-white fw-semibold" href="#" 
+             role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Staff Account
+          </a>
+         <ul class="dropdown-menu dropdown-menu-end">
+    {% if user.is_authenticated %}
+        <li><a class="dropdown-item" href="{% url 'logout-staff' %}">Logout</a></li>
+        <li><a class="dropdown-item" href="#">Update</a></li>
+    {% else %}
+        <li><a class="dropdown-item" href="{% url 'login-staff' %}">Login</a></li>
+        <li><a class="dropdown-item" href="{% url 'register-staff' %}">Register</a></li>
+    {% endif %}
+</ul>
+
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>

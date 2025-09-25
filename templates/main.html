@@ -1,0 +1,31 @@
+{% load static %}
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>
+            {%block title%}
+                HomePage
+            {%endblock title%}
+        </title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="{% static 'gnfs_komenda/bootstrap.min.css'%}">
+        <link rel="stylesheet" href="{% static 'gnfs_komenda/styles.css'%}">
+        <link rel="stylesheet" href="{% static 'gnfs_komenda/query.css'%}">
+        <link rel="stylesheet" href="{% static 'gnfs_komenda/css/all.css'%}">
+    </head>
+    <body>
+       {% include 'navbar.html'%}
+       {%include 'messages.html'%}
+
+       {% block content%}
+        
+       {% endblock content%}
+        
+        <script src="{% static 'gnfs_komenda/bootstrap.bundle.min.js'%}" async defer></script>
+        <script src="{% static 'gnfs_komenda/scripts.js'%}"></script>
+    </body>
+</html>

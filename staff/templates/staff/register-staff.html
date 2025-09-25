@@ -1,0 +1,89 @@
+
+{% extends 'main.html' %}
+{%load static%}
+{% block title %}
+Register Staff
+{% endblock title %}
+
+{% block content %}
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-lg">
+                <div class="row g-0">
+                    <!-- Left column: Image -->
+                    <div class="col-md-5">
+    <img src="{% static 'gnfs_komenda/register.JPG' %}" 
+         class="img-fluid h-100 w-100" 
+         style="object-fit: cover;" 
+         alt="register image">
+</div>
+
+                    <!-- Right column: Registration form -->
+                    <div class="col-md-7">
+                        <div class="card-body p-4">
+                            <h3 class="card-title mb-4 text-center">Register Staff</h3>
+                            <form method="post" action="{% url 'register-staff' %}">
+                                {% csrf_token %}
+
+                                <div class="mb-3">
+                                    <label for="id_first_name" class="form-label">First Name</label>
+                                    <input type="text" name="first_name" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" id="id_first_name" value="{{ form.first_name.value|default:'' }}">
+                                    {% if form.first_name.errors %}
+                                        <div class="invalid-feedback">{{ form.first_name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="id_last_name" class="form-label">Last Name</label>
+                                    <input type="text" name="last_name" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" id="id_last_name" value="{{ form.last_name.value|default:'' }}">
+                                    {% if form.last_name.errors %}
+                                        <div class="invalid-feedback">{{ form.last_name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="id_username" class="form-label">Username</label>
+                                    <input type="text" name="username" class="form-control {% if form.username.errors %}is-invalid{% endif %}" id="id_username" value="{{ form.username.value|default:'' }}">
+                                    {% if form.username.errors %}
+                                        <div class="invalid-feedback">{{ form.username.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="id_email" class="form-label">Email</label>
+                                    <input type="email" name="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" id="id_email" value="{{ form.email.value|default:'' }}">
+                                    {% if form.email.errors %}
+                                        <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="id_password1" class="form-label">Password</label>
+                                    <input type="password" name="password1" class="form-control {% if form.password1.errors %}is-invalid{% endif %}" id="id_password1">
+                                    {% if form.password1.errors %}
+                                        <div class="invalid-feedback">{{ form.password1.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="id_password2" class="form-label">Confirm Password</label>
+                                    <input type="password" name="password2" class="form-control {% if form.password2.errors %}is-invalid{% endif %}" id="id_password2">
+                                    {% if form.password2.errors %}
+                                        <div class="invalid-feedback">{{ form.password2.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-grid mt-4">
+                                    <button type="submit" class="btn btn-danger btn-block">Register</button>
+                                </div>
+                            </form>
+                        </div> <!-- card-body -->
+                    </div> <!-- col-md-7 -->
+                </div> <!-- row g-0 -->
+            </div> <!-- card -->
+        </div> <!-- col-md-10 -->
+    </div> <!-- row justify-content-center -->
+</div> <!-- container -->
+{% endblock content %}

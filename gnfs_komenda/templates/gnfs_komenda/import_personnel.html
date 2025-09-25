@@ -1,0 +1,14 @@
+{% extends 'main.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2 style="color:#8B0000;">Import Personnel</h2>
+    <form method="post" enctype="multipart/form-data" class="mt-3">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="file" class="form-label">Upload Excel/CSV File</label>
+            <input type="file" name="file" id="file" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-danger">Import</button>
+    </form>
+</div>
+{% endblock %}

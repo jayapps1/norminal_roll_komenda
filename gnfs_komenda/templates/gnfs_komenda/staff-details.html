@@ -1,0 +1,82 @@
+{% extends "main.html" %}
+{%block title%}
+Staff Details
+{%endblock title%}
+{% block content %}
+<div class="container mt-4">
+    <!-- Card Layout -->
+    <div class="card shadow-lg border-0 rounded-3">
+        <div class="card-header bg-dark text-white text-center py-3">
+            <h3 class="mb-0">Staff Profile</h3>
+        </div>
+        <div class="card-body p-4">
+
+            <!-- Staff Info Grid -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h5 class="text-muted">Staff ID</h5>
+                    <p class="fw-bold">{{ staff.staffID }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="text-muted">Full Name</h5>
+                    <p class="fw-bold">{{ staff.fullname }}</p>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h5 class="text-muted">Job Grade</h5>
+                    <p class="fw-bold">{{ staff.job_grade }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="text-muted">Management Unit</h5>
+                    <p class="fw-bold">{{ staff.mgmt_units }}</p>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h5 class="text-muted">Ghana Card</h5>
+                    <p class="fw-bold">{{ staff.ghana_card }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="text-muted">Bank</h5>
+                    <p class="fw-bold">{{ staff.bank }}</p>
+                </div>
+            </div>
+
+            <!-- Dates Section -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h5 class="text-muted">Start Leave</h5>
+                    <p class="fw-bold">{{ staff.start_leave|date:"M d, Y" }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="text-muted">End Leave</h5>
+                    <p class="fw-bold">{{ staff.end_leave|date:"M d, Y" }}</p>
+                </div>
+            </div>
+
+            <!-- Status Section -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <h5 class="text-muted">Leave Status</h5>
+                    <span class="badge 
+                        {% if staff.leave_status == 'ACTIVE' %} bg-success 
+                        {% elif staff.leave_status == 'PENDING' %} bg-warning text-dark
+                        {% else %} bg-secondary 
+                        {% endif %}">
+                        {{ staff.leave_status }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer text-center">
+            <a href="{% url 'personnel' %}" class="btn btn-outline-dark">Back to Staff List</a>
+            <a href="{% url 'deletestaff' staff.staffID %}" class="btn btn-danger">Delete Staff</a>
+            <a href="{% url 'editstaff' staff.staffID %}" class="btn btn-primary">Edit Staff</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

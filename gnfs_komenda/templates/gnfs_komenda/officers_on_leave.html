@@ -1,0 +1,116 @@
+{% extends 'main.html' %}
+{% block title %}Officer On Leave{% endblock title %}
+
+{% block content %}
+<h2 class="mt-5 mb-3">Officers On Leave</h2>
+
+<style>
+/* Table header style */
+.table thead th {
+    background-color: #ff5733; /* Fire-orange */
+    color: white;
+    font-weight: 600;
+}
+
+/* Rounded corners */
+.table {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* Hover effect for rows */
+.table tbody tr:hover {
+    background-color: #e6f7ff;
+    cursor: pointer;
+}
+
+/* Center countdown text */
+.countdown-cell {
+    text-align: center;
+    font-weight: 600;
+}
+</style>
+
+<table class="table table-bordered table-striped table-hover">
+    <thead>
+        <tr>
+            <th>Staff ID</th>
+            <th>Full Name</th>
+            <th>Leave Type</th>
+            <th>Leave Start</th>
+            <th>Leave End</th>
+            <th>Days</th>
+            <th>Time (H:M:S)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for officer in officers %}
+        <tr>
+            <td>{{ officer.staffID }}</td>
+            <td>{{ officer.fullname }}</td>
+            <td>{{ officer.leave_type }}</td>
+            <td>{{ officer.start_leave|date:"Y-m-d" }}</td>
+            <td data-endleave="{{ officer.end_leave|date:"Y-m-d" }}">{{ officer.end_leave|date:"Y-m-d" }}</td>
+            <td class="countdown-cell days"></td>
+            <td class="countdown-cell time"></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="text-center">No officers currently on leave.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const rows = document.querySelectorAll('table tbody tr');
+
+    rows.forEach(row => {
+        const endLeave = row.querySelector('td[data-endleave]')?.dataset.endleave;
+        if (!endLeave) return;
+
+        const daysCell = row.querySelector('td.days');
+        const timeCell = row.querySelector('td.time');
+
+        function updateCountdown() {
+            const now = new Date();
+            const end = new Date(endLeave + "T23:59:59");
+            const diffTime = end - now;
+
+            if (diffTime <= 0) {
+                daysCell.innerText = 0;
+                timeCell.innerText = "00:00:00";
+                daysCell.style.color = timeCell.style.color = "gray";
+                row.style.backgroundColor = "#f8f9fa"; // past leave
+                return;
+            }
+
+            const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diffTime % (1000 * 60)) / 1000);
+
+            daysCell.innerText = days;
+            timeCell.innerText = `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+
+            // Color code for urgency
+            let color;
+            if (days > 3) color = "green";
+            else if (days > 0 && days <= 3) color = "orange";
+            else color = "red";
+
+            daysCell.style.color = timeCell.style.color = color;
+
+            // Row background
+            if (days > 3) row.style.backgroundColor = "white";
+            else if (days > 0 && days <= 3) row.style.backgroundColor = "#fff3cd";
+            else row.style.backgroundColor = "#f8d7da";
+        }
+
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    });
+});
+</script>
+{% endblock content %}

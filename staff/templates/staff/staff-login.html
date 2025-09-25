@@ -1,0 +1,58 @@
+{% extends 'main.html' %}
+{% load static %}
+{% block title %}
+Login Staff
+{% endblock title %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-lg">
+                <div class="row g-0">
+                    
+                    <!-- Left column: Image -->
+                    <div class="col-md-5 d-none d-md-block">
+                        <img src="{% static 'gnfs_komenda/img.JPG' %}" 
+                             class="img-fluid h-100 w-100" 
+                             style="object-fit: cover;" 
+                             alt="login image">
+                    </div>
+
+                    <!-- Right column: Login form -->
+                    <div class="col-md-7 pt-5">
+                        <div class="card-body p-4">
+                            <h3 class="card-title mb-4 text-center">Staff Login</h3>
+
+                            <form method="post" action="{% url 'login-staff' %}">
+                                {% csrf_token %}
+                                
+                                <div class="mb-3">
+                                    <label for="id_username" class="form-label">Username</label>
+                                    <input type="text" name="username" 
+                                           class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
+                                           id="id_username" 
+                                           value="{{ form.username.value|default:'' }}">
+                                    {% if form.username.errors %}
+                                        <div class="invalid-feedback">{{ form.username.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <input type="password" name="password"
+                                    class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+                                    id="id_password"
+                                    autocomplete="new-password">
+
+                                <div class="d-grid mt-4">
+                                    <button type="submit" class="btn btn-danger btn-block">Login</button>
+                                </div>
+                            </form>
+                        </div> <!-- card-body -->
+                    </div> <!-- col-md-7 -->
+
+                </div> <!-- row g-0 -->
+            </div> <!-- card -->
+        </div> <!-- col-md-10 -->
+    </div> <!-- row justify-content-center -->
+</div> <!-- container -->
+{% endblock content %}

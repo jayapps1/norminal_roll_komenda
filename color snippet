@@ -1,0 +1,10 @@
+| Role                   | Color      | Hex Code  | Use Case                        |
+| ---------------------- | ---------- | --------- | ------------------------------- |
+| **Primary Background** | Dark Red   | #8B0000 | Navbar, headers                 |
+| **Text (default)**     | White      | #FFFFFF | Navbar links, brand text        |
+| **Highlight/Hover**    | Gold       | #FFD700 | Link hover, active states       |
+| **Secondary Accent**   | Orange     | #FFA500 | Button hover, dropdown hover    |
+| **Buttons (success)**  | Green      | #198754 | Success alerts or forms         |
+| **Buttons (warning)**  | Yellow     | #FFC107 | Warnings, search button, alerts |
+| **Links (info)**       | Blue       | #0d6efd | Informational links (optional)  |
+| **Dropdown BG**        | Light Gray | #F8F9FA | Background of dropdown menu     |

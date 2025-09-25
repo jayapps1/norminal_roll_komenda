@@ -1,0 +1,175 @@
+:root {
+  /* === Brand Colors === */
+  --gnfs-dark-red: #8B0000;   /* Main navbar background */
+  --gnfs-gold: #FFD700;       /* Hover, highlight */
+  --gnfs-white: #FFFFFF;      /* Text color */
+  --gnfs-light-gray: #F8F9FA; /* Dropdown background */
+  --gnfs-black: #000000;      /* Extra text or borders */
+
+  /* === Accent Colors === */
+  --gnfs-orange: #FFA500;     /* Button hover, alerts */
+  --gnfs-green: #198754;      /* Success buttons */
+  --gnfs-yellow: #FFC107;     /* Warning buttons */
+  --gnfs-blue: #0d6efd;       /* Info/links */
+}
+
+/* === Body Reset === */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  background-color: #ffffff;   /* default white background */
+  color: #000000;              /* default black text */
+}
+
+/* navbar */
+/* Navbar shrink effect */
+#mainNavbar.shrink {
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+}
+#mainNavbar.shrink .navbar-brand {
+  font-size: 1rem;
+}
+#mainNavbar.shrink .brand-logo {
+  width: 30px;
+  height: 30px;
+}
+
+/* Navbar links */
+.nav-link {
+  transition: color 0.3s ease;
+}
+.nav-link:hover {
+  color: #FFD700 !important; /* Gold hover */
+}
+
+/* Dropdown Menu Background */
+.dropdown-menu {
+  background-color: var(--gnfs-dark-red) !important;  /* Dark Red background */
+  border: none;  /* Removes default gray border */
+}
+
+/* Dropdown Items */
+.dropdown-item {
+  color: var(--gnfs-white) !important;   /* White text */
+  font-weight: 500;
+}
+
+/* Hover Effect */
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: var(--gnfs-gold) !important;  /* Gold hover */
+  color: var(--gnfs-black) !important;           /* Black text for contrast */
+}
+
+
+/* endnavbar */
+
+/* table icons */
+/* Hover effects for action icons */
+/* Ensure icons are visible and scale on hover */
+.table td .btn i {
+    transition: transform 0.2s;
+    color: inherit; /* Keep the icon color same as button text color */
+}
+
+.table td .btn:hover i {
+    transform: scale(1.2); /* Slightly enlarge icon */
+}
+
+/* Optional: change background slightly on hover without affecting icon */
+.btn-info:hover {
+    background-color: #0dcaf0 !important;
+    color: white !important;
+}
+
+.btn-warning:hover {
+    background-color: #ffc107 !important;
+    color: black !important;
+}
+
+.btn-danger:hover {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+/* endtable icons */
+
+/* delete model */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.6);
+  animation: fadeIn 0.3s;
+}
+.modal-content {
+  background-color: #fff;
+  margin: 12% auto;
+  padding: 25px;
+  border-radius: 12px;
+  width: 360px;
+  max-width: 90%;
+  text-align: center;
+  animation: slideDown 0.3s;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+.close {
+  float: right;
+  font-size: 22px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #555;
+}
+.close:hover { color: #000; }
+.btn-modal {
+  margin: 10px 5px;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: 0.2s;
+}
+.btn-danger.btn-modal { background-color: #d33; color: white; }
+.btn-danger.btn-modal:hover { background-color: #a00; }
+.btn-secondary.btn-modal { background-color: #888; color: white; }
+.btn-secondary.btn-modal:hover { background-color: #555; }
+@keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+@keyframes slideDown { from {transform: translateY(-20px);} to {transform: translateY(0);} }
+/* enddelete model */
+
+/* Scoped hover effect for only this section */
+.custom-hover {
+    position: relative;
+    display: inline-block;
+    text-decoration: none;
+    color: #333;
+    padding-right: 1rem;
+    margin-right: 1rem;
+    transition: color 0.3s;
+}
+
+.custom-hover::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 0%;
+    height: 2px;
+    background-color: #ff5733; /* fire-orange line */
+    transition: width 0.4s ease, right 0.4s ease;
+}
+
+.custom-hover:hover::after {
+    width: 100%;
+    right: 0;
+}
+
+.custom-hover:hover {
+    color: #ff5733;
+}

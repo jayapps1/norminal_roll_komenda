@@ -1,0 +1,252 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+Staff Profile &amp; Settings - GNFS Komenda
+{% endblock title %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-9">
+
+            <!-- Profile Header Card -->
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden mb-4">
+                <div class="card-header gnfs-header py-4 px-4 border-0">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div class="d-flex align-items-center">
+                            <!-- User Avatar Circle -->
+                            <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold fs-2 shadow-sm me-3" style="width: 64px; height: 64px;">
+                                {{ user.username|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <h3 class="mb-1 fw-bold text-white">
+                                    {{ user.get_full_name|default:user.username }}
+                                </h3>
+                                <div class="d-flex align-items-center flex-wrap gap-2 text-white-50 small">
+                                    <span><i class="fas fa-user me-1"></i> @{{ user.username }}</span>
+                                    {% if user.email %}
+                                        <span>&bull;</span>
+                                        <span><i class="fas fa-envelope me-1"></i> {{ user.email }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Role & 2FA Badges -->
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            <div>
+                                {% if user.is_superuser %}
+                                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold">
+                                        <i class="fas fa-star me-1"></i> Administrator
+                                    </span>
+                                {% elif user.is_staff %}
+                                    <span class="badge bg-light text-dark px-3 py-2 rounded-pill fw-semibold">
+                                        <i class="fas fa-user-shield me-1"></i> Station Staff
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark px-3 py-2 rounded-pill fw-semibold">
+                                        <i class="fas fa-id-badge me-1"></i> Personnel
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="mt-1">
+                                {% if totp_enabled %}
+                                    <span class="badge bg-success px-3 py-1 rounded-pill">
+                                        <i class="fas fa-shield-alt me-1"></i> 2FA Active
+                                    </span>
+                                {% else %}
+                                    <a href="{% url 'totp-setup' %}" class="badge bg-danger text-white text-decoration-none px-3 py-1 rounded-pill">
+                                        <i class="fas fa-shield-alt me-1"></i> Enable 2FA
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <div class="bg-light px-4 border-bottom">
+                    <ul class="nav nav-tabs border-0" id="profileTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if active_tab == 'profile' %}active fw-bold text-danger border-bottom-0{% else %}text-muted{% endif %} py-3" 
+                                    id="personal-tab" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#personal" 
+                                    type="button" 
+                                    role="tab">
+                                <i class="fas fa-user-edit me-1"></i> Personal Details
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if active_tab == 'password' %}active fw-bold text-danger border-bottom-0{% else %}text-muted{% endif %} py-3" 
+                                    id="security-tab" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#security" 
+                                    type="button" 
+                                    role="tab">
+                                <i class="fas fa-key me-1"></i> Change Password
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <div class="tab-content" id="profileTabsContent">
+
+                        <!-- Tab 1: Personal Details -->
+                        <div class="tab-pane fade {% if active_tab == 'profile' %}show active{% endif %}" id="personal" role="tabpanel">
+                            <div class="row">
+                                <div class="col-lg-8">
+                                    <h5 class="fw-bold mb-1 text-dark">Personal Information</h5>
+                                    <p class="text-muted small mb-4">Update your profile identity and contact information.</p>
+
+                                    <form method="post" action="{% url 'profile' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="update_profile">
+
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label for="{{ profile_form.first_name.id_for_label }}" class="form-label fw-bold small text-dark">
+                                                    First Name
+                                                </label>
+                                                {{ profile_form.first_name }}
+                                                {% if profile_form.first_name.errors %}
+                                                    <div class="text-danger small mt-1">{{ profile_form.first_name.errors.0 }}</div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label for="{{ profile_form.last_name.id_for_label }}" class="form-label fw-bold small text-dark">
+                                                    Last Name
+                                                </label>
+                                                {{ profile_form.last_name }}
+                                                {% if profile_form.last_name.errors %}
+                                                    <div class="text-danger small mt-1">{{ profile_form.last_name.errors.0 }}</div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label for="{{ profile_form.username.id_for_label }}" class="form-label fw-bold small text-dark">
+                                                    Username <span class="text-danger">*</span>
+                                                </label>
+                                                {{ profile_form.username }}
+                                                {% if profile_form.username.errors %}
+                                                    <div class="text-danger small mt-1 fw-semibold">{{ profile_form.username.errors.0 }}</div>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label for="{{ profile_form.email.id_for_label }}" class="form-label fw-bold small text-dark">
+                                                    Email Address
+                                                </label>
+                                                {{ profile_form.email }}
+                                                {% if profile_form.email.errors %}
+                                                    <div class="text-danger small mt-1 fw-semibold">{{ profile_form.email.errors.0 }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-4 pt-2">
+                                            <button type="submit" class="btn btn-gnfs px-4 py-2 rounded-3 shadow-sm">
+                                                <i class="fas fa-save me-1"></i> Save Changes
+                                            </button>
+                                            <a href="{% url 'personnel' %}" class="btn btn-outline-secondary px-4 py-2 rounded-3 ms-2">
+                                                Cancel
+                                            </a>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- Right Summary Sidebar -->
+                                <div class="col-lg-4 mt-4 mt-lg-0 border-start ps-lg-4">
+                                    <div class="card bg-light border-0 rounded-3 p-3 mb-3">
+                                        <h6 class="fw-bold mb-3 text-dark"><i class="fas fa-info-circle me-1 text-danger"></i> Account Overview</h6>
+                                        <ul class="list-unstyled small text-muted mb-0">
+                                            <li class="mb-2">
+                                                <strong>Joined:</strong> {{ user.date_joined|date:"M d, Y" }}
+                                            </li>
+                                            <li class="mb-2">
+                                                <strong>Last Login:</strong> {{ user.last_login|date:"M d, Y H:i"|default:"Never" }}
+                                            </li>
+                                            <li>
+                                                <strong>Status:</strong> 
+                                                {% if user.is_active %}
+                                                    <span class="text-success fw-bold">Active</span>
+                                                {% else %}
+                                                    <span class="text-danger fw-bold">Inactive</span>
+                                                {% endif %}
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="card bg-light border-0 rounded-3 p-3">
+                                        <h6 class="fw-bold mb-2 text-dark"><i class="fas fa-shield-alt me-1 text-danger"></i> Two-Factor Auth</h6>
+                                        <p class="small text-muted mb-3">
+                                            {% if totp_enabled %}
+                                                Google Authenticator is <strong>enabled</strong> for your account.
+                                            {% else %}
+                                                Google Authenticator is not enabled. Protect your account and unlock self-service password reset.
+                                            {% endif %}
+                                        </p>
+                                        <a href="{% url 'totp-setup' %}" class="btn btn-sm {% if totp_enabled %}btn-outline-danger{% else %}btn-danger{% endif %} w-100">
+                                            <i class="fas fa-cog me-1"></i> Manage 2FA
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Security & Password -->
+                        <div class="tab-pane fade {% if active_tab == 'password' %}show active{% endif %}" id="security" role="tabpanel">
+                            <div class="row justify-content-center">
+                                <div class="col-lg-8">
+                                    <h5 class="fw-bold mb-1 text-dark">Change Password</h5>
+                                    <p class="text-muted small mb-4">Ensure your account is using a long, random password to stay secure.</p>
+
+                                    <form method="post" action="{% url 'profile' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="change_password">
+
+                                        {% for field in password_form %}
+                                            <div class="mb-3">
+                                                <label for="{{ field.id_for_label }}" class="form-label fw-bold small text-dark">
+                                                    {{ field.label }}
+                                                </label>
+                                                <input type="password" 
+                                                       name="{{ field.name }}" 
+                                                       id="{{ field.id_for_label }}" 
+                                                       class="form-control {% if field.errors %}is-invalid{% endif %}"
+                                                       autocomplete="new-password">
+                                                {% if field.errors %}
+                                                    <div class="invalid-feedback d-block fw-semibold small mt-1">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i> {{ field.errors.0 }}
+                                                    </div>
+                                                {% endif %}
+                                                {% if field.help_text %}
+                                                    <div class="form-text small text-muted mt-1">{{ field.help_text|safe }}</div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+
+                                        <div class="mt-4 pt-2">
+                                            <button type="submit" class="btn btn-gnfs px-4 py-2 rounded-3 shadow-sm">
+                                                <i class="fas fa-key me-1"></i> Update Password
+                                            </button>
+                                            <a href="{% url 'personnel' %}" class="btn btn-outline-secondary px-4 py-2 rounded-3 ms-2">
+                                                Cancel
+                                            </a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}

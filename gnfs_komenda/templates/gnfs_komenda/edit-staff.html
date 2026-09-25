@@ -1,215 +1,366 @@
-
 {% extends 'main.html' %}
-{% block title %}
-    Edit Staff
-{% endblock title %}
+{% block title %}Edit {{ object.fullname }} — Ghana National Fire Service{% endblock title %}
 
 {% block content %}
-<div class="text-center my-4">
-    <h2 class="fw-bold mb-1">Ghana National Fire Service</h2>
-    <hr class="w-25 mx-auto" style="border-top: 2px solid #000;">
-    <h4 class="text-secondary mb-1">Komenda Fire Station</h4>
-    <hr class="w-25 mx-auto" style="border-top: 1px solid #555;">
-    <h5 class="text-muted mt-2">Edit Staff Record</h5>
-    <hr class="w-25 mx-auto" style="border-top: 1px solid #aaa;">
-</div>
-
-<div class="container mt-5">
-    <div class="card shadow-lg border-0">
+<div class="container my-4" style="max-width: 1000px;">
+    <div class="card shadow border-0 rounded-3 overflow-hidden">
         <!-- Card Header -->
-        <div class="card-header text-center" style="background-color: #8B0000; color: #FFFFFF;">
-            <h4 class="mb-0">Add New Staff</h4>
+        <div class="card-header text-white py-3 d-flex justify-content-between align-items-center" style="background-color: #8B0000;">
+            <div>
+                <h4 class="mb-0 fw-bold"><i class="fas fa-user-edit me-2"></i>Edit Personnel Record</h4>
+                <div class="small text-white-50">{{ object.fullname }} (Staff ID: {{ object.staffID }})</div>
+            </div>
+            <a href="{% url 'personnel' %}" class="btn btn-sm btn-outline-light">Back to Roster</a>
         </div>
 
         <!-- Card Body -->
-        <div class="card-body" style="background-color: #F8F9FA;">
-            <form method="post">
+        <div class="card-body p-4 bg-light">
+            <form method="post" id="editPersonnelForm">
                 {% csrf_token %}
 
                 <style>
-                    /* Force all text inputs to uppercase */
-                    .uppercase {
+                    .uppercase { text-transform: uppercase; }
+                    .section-title {
+                        color: #8B0000;
+                        font-weight: 700;
+                        font-size: 0.9rem;
                         text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        border-bottom: 2px solid #e9ecef;
+                        padding-bottom: 5px;
+                        margin-bottom: 15px;
                     }
                 </style>
 
-                <div class="row mb-3">
-                    <!-- Staff ID -->
+                <!-- SECTION 1: IDENTITY & GENERAL DETAILS -->
+                <div class="section-title">1. Identification & Grade Information</div>
+                <div class="row g-3 mb-4">
                     <div class="col-md-4">
-                        <label for="staffID" class="form-label" style="color: #8B0000;">Staff ID</label>
+                        <label for="staffID" class="form-label small fw-bold text-dark">Staff ID <span class="text-danger">*</span></label>
                         <input type="text" class="form-control uppercase {% if form.staffID.errors %}is-invalid{% endif %}" 
                                id="staffID" name="staffID" value="{{ form.staffID.value|default_if_none:'' }}" required>
-                        {% for error in form.staffID.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
+                        {% for error in form.staffID.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
 
-                    <!-- Full Name -->
                     <div class="col-md-4">
-                        <label for="fullname" class="form-label" style="color: #8B0000;">Full Name</label>
+                        <label for="fullname" class="form-label small fw-bold text-dark">Full Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control uppercase {% if form.fullname.errors %}is-invalid{% endif %}" 
                                id="fullname" name="fullname" value="{{ form.fullname.value|default_if_none:'' }}" required>
-                        {% for error in form.fullname.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
+                        {% for error in form.fullname.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
 
-                    <!-- Job Grade -->
                     <div class="col-md-4">
-                        <label for="job_grade" class="form-label" style="color: #8B0000;">Job Grade</label>
-                        <input type="text" class="form-control uppercase {% if form.job_grade.errors %}is-invalid{% endif %}" 
-                               id="job_grade" name="job_grade" value="{{ form.job_grade.value|default_if_none:'' }}" required>
-                        {% for error in form.job_grade.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
+                        <label for="id_gender" class="form-label small fw-bold text-dark">Gender <span class="text-danger">*</span></label>
+                        <select name="gender" id="id_gender" class="form-select {% if form.gender.errors %}is-invalid{% endif %}" required>
+                            <option value="MALE" {% if form.gender.value == 'MALE' or staff.gender == 'MALE' %}selected{% endif %}>Male</option>
+                            <option value="FEMALE" {% if form.gender.value == 'FEMALE' or staff.gender == 'FEMALE' %}selected{% endif %}>Female</option>
+                        </select>
+                        {% for error in form.gender.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
-                </div>
 
-                <div class="row mb-3">
-                    <!-- Birth Date -->
                     <div class="col-md-4">
-                        <label for="birth_date" class="form-label" style="color: #8B0000;">Birth Date</label>
+                        <label for="id_officer_category" class="form-label small fw-bold text-dark">Officer Category <span class="text-danger">*</span></label>
+                        <select name="officer_category" id="id_officer_category" class="form-select {% if form.officer_category.errors %}is-invalid{% endif %}" required>
+                            <option value="">Select Officer Category</option>
+                            <option value="SENIOR" {% if form.officer_category.value == 'SENIOR' %}selected{% endif %}>Senior Officer</option>
+                            <option value="JUNIOR" {% if form.officer_category.value == 'JUNIOR' %}selected{% endif %}>Junior Officer</option>
+                        </select>
+                        {% for error in form.officer_category.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="id_rank" class="form-label small fw-bold text-dark">Rank / Job Grade <span class="text-danger">*</span></label>
+                        <select name="rank" id="id_rank" class="form-select {% if form.rank.errors %}is-invalid{% endif %}" required>
+                            <option value="">Select Rank / Job Grade</option>
+                            {% for rank_opt in form.fields.rank.queryset %}
+                            <option value="{{ rank_opt.id }}" data-category="{{ rank_opt.officer_category }}" data-abbr="{{ rank_opt.abbreviation }}" {% if form.rank.value|stringformat:"s" == rank_opt.id|stringformat:"s" %}selected{% endif %}>
+                                {{ rank_opt.name }} ({{ rank_opt.abbreviation }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="job_grade" id="job_grade" value="{{ form.job_grade.value|default_if_none:'' }}">
+                        {% for error in form.rank.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        {% for error in form.job_grade.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="birth_date" class="form-label small fw-bold text-dark">Birth Date <span class="text-danger">*</span></label>
                         <input type="date" class="form-control {% if form.birth_date.errors %}is-invalid{% endif %}" 
-                            id="birth_date" name="birth_date" 
-                            value="{{ form.instance.birth_date|date:'Y-m-d' }}" required>
-                        {% for error in form.birth_date.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
+                               id="birth_date" name="birth_date" value="{{ form.birth_date.value|date:'Y-m-d'|default_if_none:form.birth_date.value }}" required>
+                        {% for error in form.birth_date.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
 
-                    <!-- Ghana Card -->
                     <div class="col-md-4">
-                        <label for="ghana_card" class="form-label" style="color: #8B0000;">Ghana Card</label>
+                        <label for="ghana_card" class="form-label small fw-bold text-dark">Ghana Card Number <span class="text-danger">*</span></label>
                         <input type="text" class="form-control uppercase {% if form.ghana_card.errors %}is-invalid{% endif %}" 
-                               id="ghana_card" name="ghana_card" value="{{ form.ghana_card.value|default_if_none:'' }}">
-                        {% for error in form.ghana_card.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
+                               id="ghana_card" name="ghana_card" value="{{ form.ghana_card.value|default_if_none:'' }}" required>
+                        {% for error in form.ghana_card.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
 
-                    <!-- Mgmt Units -->
-                    <div class="col-md-4">
-                        <label for="mgmt_units" class="form-label" style="color: #8B0000;">Mgmt Units</label>
+                    <div class="col-12">
+                        <label for="mgmt_units" class="form-label small fw-bold text-dark">Management Unit / Cost Centre</label>
                         <input type="text" class="form-control uppercase {% if form.mgmt_units.errors %}is-invalid{% endif %}" 
                                id="mgmt_units" name="mgmt_units" value="{{ form.mgmt_units.value|default_if_none:'' }}">
-                        {% for error in form.mgmt_units.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
+                        {% for error in form.mgmt_units.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <!-- Bank -->
+                <!-- SECTION 2: ORGANISATIONAL ASSIGNMENT -->
+                <div class="section-title">2. GNFS Organisational Assignment</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label for="filter_region" class="form-label small fw-bold text-dark">1. Region (Filter)</label>
+                        <select id="filter_region" class="form-select">
+                            <option value="">-- All Regions --</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="filter_district" class="form-label small fw-bold text-dark">2. District (Filter)</label>
+                        <select id="filter_district" class="form-select">
+                            <option value="">-- All Districts --</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="id_station" class="form-label small fw-bold text-dark">3. Fire Station <span class="text-danger">*</span></label>
+                        <select name="station" id="id_station" class="form-select {% if form.station.errors %}is-invalid{% endif %}" required>
+                            <option value="">Select Fire Station</option>
+                            {% for choice in form.station.field.queryset %}
+                            <option value="{{ choice.id }}" {% if form.station.value|stringformat:"s" == choice.id|stringformat:"s" %}selected{% endif %}>
+                                {{ choice.name }} ({{ choice.district.name }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% for error in form.station.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="id_post" class="form-label small fw-bold text-dark">4. Sub-Post / Market Post</label>
+                        <select name="post" id="id_post" class="form-select {% if form.post.errors %}is-invalid{% endif %}">
+                            <option value="">None (Station Direct)</option>
+                            {% for choice in form.post.field.queryset %}
+                            <option value="{{ choice.id }}" {% if form.post.value|stringformat:"s" == choice.id|stringformat:"s" %}selected{% endif %}>
+                                {{ choice.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% for error in form.post.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <!-- SECTION 3: BANKING & PAYROLL -->
+                <div class="section-title">3. Banking & Payroll Information</div>
+                <div class="row g-3 mb-4">
                     <div class="col-md-4">
-                        <label for="bank" class="form-label" style="color: #8B0000;">Bank</label>
+                        <label for="bank" class="form-label small fw-bold text-dark">Bank Name</label>
                         <input type="text" class="form-control uppercase {% if form.bank.errors %}is-invalid{% endif %}" 
                                id="bank" name="bank" value="{{ form.bank.value|default_if_none:'' }}">
-                        {% for error in form.bank.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
+                        {% for error in form.bank.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
 
-                    <!-- Account Number -->
                     <div class="col-md-4">
-                        <label for="account_number" class="form-label" style="color: #8B0000;">Account Number</label>
+                        <label for="account" class="form-label small fw-bold text-dark">Bank Account Number</label>
                         <input type="text" class="form-control uppercase {% if form.account_number.errors %}is-invalid{% endif %}" 
-                               id="account_number" name="account_number" value="{{ form.account_number.value|default_if_none:'' }}">
-                        {% for error in form.account_number.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
+                               id="account" name="account_number" value="{{ form.account_number.value|default_if_none:'' }}">
+                        {% for error in form.account_number.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
 
-                    <!-- Payroll Status -->
                     <div class="col-md-4">
-                        <label for="payroll_status" class="form-label" style="color: #8B0000;">Payroll Status</label>
-                        <select class="form-select {% if form.payroll_status.errors %}is-invalid{% endif %}" 
-                                id="payroll_status" name="payroll_status" style="border-color: #8B0000;">
-                            <option value="ACTIVE" {% if form.payroll_status.value == "AT POST" %}selected{% endif %}>ACTIVE</option>
-                            <option value="NON ACTIVE" {% if form.payroll_status.value == "ON LEAVE" %}selected{% endif %}>NON ACTIVEE</option>
+                        <label for="payroll_status" class="form-label small fw-bold text-dark">Payroll Status</label>
+                        <select class="form-select" id="payroll_status" name="payroll_status">
+                            <option value="ACTIVE" {% if form.payroll_status.value == "ACTIVE" %}selected{% endif %}>ACTIVE</option>
+                            <option value="NON ACTIVE" {% if form.payroll_status.value == "NON ACTIVE" %}selected{% endif %}>NON ACTIVE</option>
                         </select>
-                        {% for error in form.payroll_status.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <!-- Leave Type -->
-                    <div class="col-md-4">
-                        <label for="leave_type" class="form-label" style="color: #8B0000;">Leave Type</label>
-                        <select class="form-select {% if form.leave_type.errors %}is-invalid{% endif %}" 
-                                id="leave_type" name="leave_type" style="border-color: #8B0000;">
-                            <option value="AT POST" {% if form.leave_type.value == "AT POST" %}selected{% endif %}>AT POST</option>
+                <!-- SECTION 4: LEAVE RECORD & LIFECYCLE -->
+                <div class="section-title">4. Leave Status & Dates</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label for="leave_type" class="form-label small fw-bold text-dark">Leave Type</label>
+                        <select class="form-select" id="leave_type" name="leave_type">
                             <option value="ANNUAL LEAVE" {% if form.leave_type.value == "ANNUAL LEAVE" %}selected{% endif %}>ANNUAL LEAVE</option>
-                            <option value="THERMINAL LEAVE" {% if form.leave_type.value == "THERMINAL LEAVE" %}selected{% endif %}>THERMINAL LEAVE</option>
+                            <option value="AT POST" {% if form.leave_type.value == "AT POST" %}selected{% endif %}>AT POST</option>
                             <option value="MATERNITY LEAVE" {% if form.leave_type.value == "MATERNITY LEAVE" %}selected{% endif %}>MATERNITY LEAVE</option>
                             <option value="STUDY LEAVE" {% if form.leave_type.value == "STUDY LEAVE" %}selected{% endif %}>STUDY LEAVE</option>
-                            <option value="STUDY LEAVE" {% if form.leave_type.value == "STUDY LEAVE" %}selected{% endif %}>SICK LEAVE</option>
+                            <option value="SICK LEAVE" {% if form.leave_type.value == "SICK LEAVE" %}selected{% endif %}>SICK LEAVE</option>
+                            <option value="THERMINAL LEAVE" {% if form.leave_type.value == "THERMINAL LEAVE" %}selected{% endif %}>THERMINAL LEAVE</option>
                         </select>
-                        {% for error in form.leave_type.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
                     </div>
 
-                    <!-- Leave Status -->
-                    <div class="col-md-4">
-                        <label for="leave_status" class="form-label" style="color: #8B0000;">Leave Status</label>
-                        <select class="form-select {% if form.leave_status.errors %}is-invalid{% endif %}" 
-                                id="leave_status" name="leave_status" style="border-color: #8B0000;">
+                    <div class="col-md-3">
+                        <label for="leave_status" class="form-label small fw-bold text-dark">Leave Status</label>
+                        <select class="form-select" id="leave_status" name="leave_status">
                             <option value="AT POST" {% if form.leave_status.value == "AT POST" %}selected{% endif %}>AT POST</option>
                             <option value="ON LEAVE" {% if form.leave_status.value == "ON LEAVE" %}selected{% endif %}>ON LEAVE</option>
                         </select>
-                        {% for error in form.leave_status.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
                     </div>
 
-                  <!-- Start Leave -->
-<div class="col-md-4">
-    <label for="start_leave" class="form-label" style="color: #8B0000;">Start Leave</label>
-    <input type="date" class="form-control {% if form.start_leave.errors %}is-invalid{% endif %}" 
-           id="start_leave" name="start_leave" 
-           value="{{ form.start_leave.value|date:'Y-m-d' }}">
-    {% for error in form.start_leave.errors %}
-    <div class="invalid-feedback">{{ error }}</div>
-    {% endfor %}
-</div>
+                    <div class="col-md-3">
+                        <label for="start_leave" class="form-label small fw-bold text-dark">Start Leave</label>
+                        <input type="date" class="form-control" id="start_leave" name="start_leave" value="{{ form.start_leave.value|date:'Y-m-d'|default_if_none:form.start_leave.value }}">
+                    </div>
 
-<!-- End Leave -->
-<div class="col-md-4">
-    <label for="end_leave" class="form-label" style="color: #8B0000;">End Leave</label>
-    <input type="date" class="form-control {% if form.end_leave.errors %}is-invalid{% endif %}" 
-           id="end_leave" name="end_leave" 
-           value="{{ form.end_leave.value|date:'Y-m-d' }}">
-    {% for error in form.end_leave.errors %}
-    <div class="invalid-feedback">{{ error }}</div>
-    {% endfor %}
-</div>
+                    <div class="col-md-3">
+                        <label for="end_leave" class="form-label small fw-bold text-dark">End Leave</label>
+                        <input type="date" class="form-control" id="end_leave" name="end_leave" value="{{ form.end_leave.value|date:'Y-m-d'|default_if_none:form.end_leave.value }}">
+                    </div>
 
-                    <!-- Called Off -->
-                    <div class="col-md-4 d-flex align-items-center">
-                        <div class="form-check mt-3">
-                            <input class="form-check-input {% if form.called_off.errors %}is-invalid{% endif %}" 
-                                   type="checkbox" id="called_off" name="called_off" {% if form.called_off.value %}checked{% endif %}>
-                            <label class="form-check-label" for="called_off" style="color: #8B0000;">
-                                Called Off
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="called_off" name="called_off" {% if form.called_off.value %}checked{% endif %}>
+                            <label class="form-check-label text-dark small" for="called_off">
+                                <strong>Leave Called Off:</strong> Force immediately back to AT POST and clear leave dates.
                             </label>
-                            {% for error in form.called_off.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
-                            {% endfor %}
                         </div>
                     </div>
                 </div>
-                 <div class="text-center mt-3">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save"></i> Save Changes
-            </button>
-            <a href="{% url 'personnel' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Cancel
-            </a>
-        </div>
+
+                <!-- Submit Button -->
+                <div class="text-center mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-warning btn-lg px-5 shadow fw-bold text-dark">
+                        <i class="fas fa-save me-2"></i> Update Personnel Record
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 </div>
+
+<!-- Cascading Dropdowns Script -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const regionSelect = document.getElementById("filter_region");
+    const districtSelect = document.getElementById("filter_district");
+    const stationSelect = document.getElementById("id_station");
+    const postSelect = document.getElementById("id_post");
+
+    // Load Regions
+    fetch("/api/regions/")
+        .then(res => res.json())
+        .then(data => {
+            if (data.regions) {
+                data.regions.forEach(r => {
+                    const opt = document.createElement("option");
+                    opt.value = r.id;
+                    opt.textContent = `${r.name} (${r.code})`;
+                    regionSelect.appendChild(opt);
+                });
+            }
+        });
+
+    regionSelect.addEventListener("change", function () {
+        districtSelect.innerHTML = '<option value="">-- All Districts --</option>';
+        if (!this.value) return;
+
+        fetch(`/api/districts/?region_id=${this.value}`)
+            .then(res => res.json())
+            .then(data => {
+                data.districts.forEach(d => {
+                    const opt = document.createElement("option");
+                    opt.value = d.id;
+                    opt.textContent = d.name;
+                    districtSelect.appendChild(opt);
+                });
+            });
+    });
+
+    districtSelect.addEventListener("change", function () {
+        stationSelect.innerHTML = '<option value="">Select Fire Station</option>';
+        if (!this.value) return;
+
+        fetch(`/api/stations/?district_id=${this.value}`)
+            .then(res => res.json())
+            .then(data => {
+                data.stations.forEach(s => {
+                    const opt = document.createElement("option");
+                    opt.value = s.id;
+                    opt.textContent = `${s.name} (${s.station_type})`;
+                    stationSelect.appendChild(opt);
+                });
+            });
+    });
+
+    stationSelect.addEventListener("change", function () {
+        postSelect.innerHTML = '<option value="">None (Station Direct)</option>';
+        if (!this.value) return;
+
+        fetch(`/api/posts/?station_id=${this.value}`)
+            .then(res => res.json())
+            .then(data => {
+                data.posts.forEach(p => {
+                    const opt = document.createElement("option");
+                    opt.value = p.id;
+                    opt.textContent = `${p.name} (${p.post_type})`;
+                    postSelect.appendChild(opt);
+                });
+            });
+    });
+
+    // Dynamic Officer Category -> Rank Filter
+    const categorySelect = document.getElementById("id_officer_category");
+    const rankSelect = document.getElementById("id_rank");
+    const hiddenJobGrade = document.getElementById("job_grade");
+
+    function fetchRanksForCategory(category, targetRankId) {
+        if (!category) {
+            rankSelect.innerHTML = '<option value="">Select Rank / Job Grade</option>';
+            if (hiddenJobGrade) hiddenJobGrade.value = '';
+            return;
+        }
+
+        fetch(`/api/ranks/?category=${encodeURIComponent(category)}`)
+            .then(res => res.json())
+            .then(data => {
+                const currentVal = targetRankId !== undefined ? targetRankId : rankSelect.value;
+                rankSelect.innerHTML = '<option value="">Select Rank / Job Grade</option>';
+                let matched = false;
+                if (data.ranks) {
+                    data.ranks.forEach(r => {
+                        const opt = document.createElement("option");
+                        opt.value = r.id;
+                        opt.textContent = `${r.name} (${r.abbreviation})`;
+                        opt.dataset.category = r.officer_category;
+                        opt.dataset.abbr = r.abbreviation;
+                        if (String(r.id) === String(currentVal)) {
+                            opt.selected = true;
+                            matched = true;
+                            if (hiddenJobGrade) hiddenJobGrade.value = r.abbreviation;
+                        }
+                        rankSelect.appendChild(opt);
+                    });
+                }
+                if (!matched) {
+                    // Changing Officer Category immediately clears incompatible previously selected rank
+                    rankSelect.value = "";
+                    if (hiddenJobGrade) hiddenJobGrade.value = "";
+                }
+            })
+            .catch(err => console.error("Error loading ranks:", err));
+    }
+
+    if (categorySelect && rankSelect) {
+        categorySelect.addEventListener("change", function () {
+            fetchRanksForCategory(this.value, null);
+        });
+
+        rankSelect.addEventListener("change", function () {
+            const selectedOpt = rankSelect.options[rankSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.dataset.abbr && hiddenJobGrade) {
+                hiddenJobGrade.value = selectedOpt.dataset.abbr;
+            } else if (!rankSelect.value && hiddenJobGrade) {
+                hiddenJobGrade.value = '';
+            }
+        });
+
+        // Pre-populate if category is already selected
+        if (categorySelect.value && rankSelect.options.length <= 1) {
+            const initialRankVal = "{{ form.rank.value|default:'' }}";
+            fetchRanksForCategory(categorySelect.value, initialRankVal);
+        }
+    }
+});
+</script>
 {% endblock content %}

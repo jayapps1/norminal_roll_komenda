@@ -1,0 +1,71 @@
+{% extends 'main.html' %}
+
+{% block title %}Security Audit Logs — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+    <div>
+      <h3 class="fw-bold text-dark mb-0"><i class="fas fa-history text-danger me-2"></i>Security & Operational Audit Logs</h3>
+      <p class="text-muted small mb-0">Immutable records of personnel changes, approval decisions, and administrative actions</p>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-dark small text-uppercase">
+          <tr>
+            <th class="ps-3 py-3">Timestamp</th>
+            <th class="py-3">User</th>
+            <th class="py-3">Action</th>
+            <th class="py-3">Target</th>
+            <th class="py-3">Description</th>
+            <th class="py-3">Scope / Unit</th>
+            <th class="py-3">IP Address</th>
+          </tr>
+        </thead>
+        <tbody class="small">
+          {% for log in page_obj %}
+          <tr>
+            <td class="ps-3 text-muted text-nowrap">{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+            <td class="fw-bold text-dark">{{ log.user.username|default:"System" }}</td>
+            <td><span class="badge bg-secondary">{{ log.action }}</span></td>
+            <td class="font-monospace">{{ log.target_type }}: {{ log.target_id }}</td>
+            <td>{{ log.description }}</td>
+            <td>
+              {% if log.station %}{{ log.station.name }}
+              {% elif log.district %}{{ log.district.name }}
+              {% elif log.region %}{{ log.region.name }}
+              {% else %}Nationwide{% endif %}
+            </td>
+            <td class="text-muted font-monospace">{{ log.ip_address|default:"-" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">No audit logs recorded yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2 px-3 border-top">
+      <span class="small text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link" style="background-color:#8B0000; border-color:#8B0000;">{{ page_obj.number }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+        {% endif %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock content %}

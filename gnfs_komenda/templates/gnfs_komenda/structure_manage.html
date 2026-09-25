@@ -1,0 +1,1319 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}Organisational Structure Management — GNFS{% endblock title %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="background-color: #F8FAFC; min-height: 90vh;">
+
+  <!-- Page Header & Breadcrumbs -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'personnel' %}" class="text-decoration-none text-muted">Home</a></li>
+          {% if user_role == 'NATIONAL_ADMIN' or user.is_superuser %}
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-national' %}" class="text-decoration-none text-muted">National HQ</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active text-danger fw-bold" aria-current="page">Organisational Structure</li>
+        </ol>
+      </nav>
+      <h2 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+        <i class="fas fa-sitemap text-danger"></i> GNFS Organisational Structure Directory
+      </h2>
+      <p class="text-muted small mb-0">
+        Hierarchical command directory covering all 17 Service Administrative Regions, District Commands, Fire Stations, and Sub-Posts.
+      </p>
+    </div>
+
+    <!-- Header Action Controls -->
+    <div class="d-flex gap-2 mt-3 mt-md-0 flex-wrap">
+      <div class="dropdown">
+        <button class="btn btn-danger btn-sm dropdown-toggle shadow-sm fw-bold px-3 py-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: #8B0000; border-color: #8B0000;">
+          <i class="fas fa-plus-circle me-1"></i> Add Unit
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+          {% if can_edit_all %}
+          <li>
+            <button class="dropdown-item py-2" type="button" data-bs-toggle="modal" data-bs-target="#modalAddRegion">
+              <i class="fas fa-map-marker-alt text-danger me-2"></i> New Region (17 Service Regions)
+            </button>
+          </li>
+          {% endif %}
+          <li>
+            <button class="dropdown-item py-2" type="button" data-bs-toggle="modal" data-bs-target="#modalAddDistrict">
+              <i class="fas fa-building text-primary me-2"></i> New District / Municipal Command
+            </button>
+          </li>
+          <li>
+            <button class="dropdown-item py-2" type="button" data-bs-toggle="modal" data-bs-target="#modalAddStation">
+              <i class="fas fa-fire-extinguisher text-success me-2"></i> New Fire Station
+            </button>
+          </li>
+          <li>
+            <button class="dropdown-item py-2" type="button" data-bs-toggle="modal" data-bs-target="#modalAddPost">
+              <i class="fas fa-store text-warning me-2"></i> New Fire Post / Checkpoint
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <a href="{% url 'personnel' %}" class="btn btn-outline-secondary btn-sm shadow-sm py-2">
+        <i class="fas fa-users me-1"></i> Personnel Roll
+      </a>
+    </div>
+  </div>
+
+  <!-- Metric Statistics Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100" style="border-left: 4px solid #8B0000 !important;">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small text-uppercase fw-semibold">Service Regions</div>
+            <div class="fs-3 fw-bold text-dark mt-1">{{ total_regions_count }}</div>
+            <div class="text-success small"><i class="fas fa-check-circle"></i> {{ active_regions_count }} Active</div>
+          </div>
+          <div class="rounded-circle p-3 bg-danger bg-opacity-10 text-danger">
+            <i class="fas fa-map-marked-alt fs-4"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100" style="border-left: 4px solid #0d6efd !important;">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small text-uppercase fw-semibold">Districts / Municipals</div>
+            <div class="fs-3 fw-bold text-dark mt-1">{{ total_districts_count }}</div>
+            <div class="text-success small"><i class="fas fa-check-circle"></i> {{ active_districts_count }} Active</div>
+          </div>
+          <div class="rounded-circle p-3 bg-primary bg-opacity-10 text-primary">
+            <i class="fas fa-building fs-4"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100" style="border-left: 4px solid #198754 !important;">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small text-uppercase fw-semibold">Fire Stations</div>
+            <div class="fs-3 fw-bold text-dark mt-1">{{ total_stations_count }}</div>
+            <div class="text-success small"><i class="fas fa-check-circle"></i> {{ active_stations_count }} Active</div>
+          </div>
+          <div class="rounded-circle p-3 bg-success bg-opacity-10 text-success">
+            <i class="fas fa-fire-extinguisher fs-4"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100" style="border-left: 4px solid #ffc107 !important;">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small text-uppercase fw-semibold">Posts & Checkpoints</div>
+            <div class="fs-3 fw-bold text-dark mt-1">{{ total_posts_count }}</div>
+            <div class="text-success small"><i class="fas fa-check-circle"></i> {{ active_posts_count }} Active</div>
+          </div>
+          <div class="rounded-circle p-3 bg-warning bg-opacity-10 text-warning">
+            <i class="fas fa-store fs-4"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-7 position-relative">
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0 text-muted">
+            <i class="fas fa-search"></i>
+          </span>
+          <input type="text" id="structureLiveSearch" class="form-control border-start-0 ps-0" 
+                 placeholder="Type to filter regions, districts, stations, or posts in real-time..." 
+                 value="{{ search_query }}" autocomplete="off">
+          <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn" title="Clear Search">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <!-- Floating Live Search Dropdown -->
+        <div id="liveSearchResults" class="position-absolute w-100 bg-white shadow-lg rounded-3 mt-1 p-2 border" 
+             style="display: none; z-index: 1050; max-height: 380px; overflow-y: auto;">
+          <div id="searchResultsContent"></div>
+        </div>
+      </div>
+
+      <div class="col-md-5 d-flex justify-content-md-end gap-2 text-muted small">
+        <span class="align-self-center"><i class="fas fa-info-circle text-primary me-1"></i> Fast Client Filter + Live API Directory</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <ul class="nav nav-pills nav-fill mb-3 bg-white p-2 rounded-3 shadow-sm" id="structureTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link {% if active_tab == 'regions' or not active_tab %}active fw-bold{% endif %}" 
+              id="regions-tab" data-bs-toggle="pill" data-bs-target="#tab-regions" type="button" role="tab">
+        <i class="fas fa-map-marked-alt me-1 text-danger"></i> 17 Service Regions 
+        <span class="badge bg-secondary ms-1">{{ regions|length }}</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link {% if active_tab == 'districts' %}active fw-bold{% endif %}" 
+              id="districts-tab" data-bs-toggle="pill" data-bs-target="#tab-districts" type="button" role="tab">
+        <i class="fas fa-building me-1 text-primary"></i> District Commands 
+        <span class="badge bg-secondary ms-1">{{ districts|length }}</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link {% if active_tab == 'stations' %}active fw-bold{% endif %}" 
+              id="stations-tab" data-bs-toggle="pill" data-bs-target="#tab-stations" type="button" role="tab">
+        <i class="fas fa-fire-extinguisher me-1 text-success"></i> Fire Stations 
+        <span class="badge bg-secondary ms-1">{{ stations|length }}</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link {% if active_tab == 'posts' %}active fw-bold{% endif %}" 
+              id="posts-tab" data-bs-toggle="pill" data-bs-target="#tab-posts" type="button" role="tab">
+        <i class="fas fa-store me-1 text-warning"></i> Fire Posts & Checkpoints 
+        <span class="badge bg-secondary ms-1">{{ posts|length }}</span>
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tabs Content Panes -->
+  <div class="tab-content" id="structureTabsContent">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: REGIONS (ALL 17 SERVICE REGIONS)    -->
+    <!-- ========================================== -->
+    <div class="tab-pane fade {% if active_tab == 'regions' or not active_tab %}show active{% endif %}" id="tab-regions" role="tabpanel">
+      <div class="card border-0 shadow-sm rounded-3 overflow-hidden bg-white">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <span class="fw-bold text-dark">
+            <i class="fas fa-globe text-danger me-1"></i> Ghana National Fire Service Administrative Regions (17 Service Regions)
+          </span>
+          <span class="badge bg-danger text-white px-2 py-1">Includes Tema Region (TR)</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="tableRegions">
+            <thead class="table-light text-uppercase small text-muted">
+              <tr>
+                <th style="width: 80px;">Code</th>
+                <th>Region Name</th>
+                <th class="text-center" style="width: 140px;">Districts</th>
+                <th class="text-center" style="width: 140px;">Stations</th>
+                <th class="text-center" style="width: 120px;">Status</th>
+                <th class="text-end" style="width: 160px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for reg in regions %}
+              <tr data-search-target="{{ reg.name|lower }} {{ reg.code|lower }}" id="region-row-{{ reg.id }}">
+                <td>
+                  <span class="badge bg-dark font-monospace fs-6 px-2 py-1">{{ reg.code }}</span>
+                </td>
+                <td>
+                  <strong class="text-dark">{{ reg.name }}</strong>
+                  {% if reg.code == 'TR' %}
+                  <span class="badge bg-danger ms-1" style="font-size: 0.7rem;">17th GNFS Region</span>
+                  {% elif reg.code == 'CR' %}
+                  <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">Komenda Station</span>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold fs-7 px-2 py-1">
+                    {{ reg.num_districts }} Districts
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-success bg-opacity-10 text-success fw-semibold fs-7 px-2 py-1">
+                    {{ reg.num_stations }} Stations
+                  </span>
+                </td>
+                <td class="text-center">
+                  {% if reg.active %}
+                  <span class="badge bg-success text-white px-2 py-1"><i class="fas fa-check-circle me-1"></i>Active</span>
+                  {% else %}
+                  <span class="badge bg-secondary text-white px-2 py-1"><i class="fas fa-ban me-1"></i>Inactive</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    {% if can_edit_all %}
+                    <button type="button" class="btn btn-outline-secondary edit-region-btn" 
+                            data-id="{{ reg.id }}" 
+                            data-name="{{ reg.name }}" 
+                            data-code="{{ reg.code }}" 
+                            data-active="{{ reg.active|yesno:'true,false' }}"
+                            title="Edit Region">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <form method="POST" action="{% url 'toggle-unit-active' 'region' reg.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-outline-{% if reg.active %}warning{% else %}success{% endif %}" 
+                              title="{% if reg.active %}Deactivate{% else %}Activate{% endif %}">
+                        <i class="fas fa-power-off"></i>
+                      </button>
+                    </form>
+                    <button type="button" class="btn btn-outline-danger delete-unit-btn" 
+                            data-type="region" 
+                            data-id="{{ reg.id }}" 
+                            data-name="{{ reg.name }}"
+                            data-children="{{ reg.num_districts }}"
+                            title="Delete Region">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                    {% else %}
+                    <span class="text-muted small">View Only</span>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">
+                  <i class="fas fa-folder-open fs-3 d-block mb-2 text-secondary opacity-50"></i>
+                  No regions found matching your criteria.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: DISTRICTS                           -->
+    <!-- ========================================== -->
+    <div class="tab-pane fade {% if active_tab == 'districts' %}show active{% endif %}" id="tab-districts" role="tabpanel">
+      <div class="card border-0 shadow-sm rounded-3 overflow-hidden bg-white">
+        <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <span class="fw-bold text-dark">
+            <i class="fas fa-building text-primary me-1"></i> District & Municipal Fire Commands
+          </span>
+          <div class="d-flex align-items-center gap-2">
+            <label class="small text-muted mb-0">Filter Region:</label>
+            <select id="districtRegionFilter" class="form-select form-select-sm" style="width: 220px;">
+              <option value="">All 17 Service Regions</option>
+              {% for reg in regions %}
+              <option value="{{ reg.name|lower }}">{{ reg.name }} ({{ reg.code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="tableDistricts">
+            <thead class="table-light text-uppercase small text-muted">
+              <tr>
+                <th style="width: 200px;">Parent Region</th>
+                <th style="width: 100px;">Code</th>
+                <th>District / Municipal Command</th>
+                <th class="text-center" style="width: 140px;">Stations</th>
+                <th class="text-center" style="width: 140px;">Personnel</th>
+                <th class="text-center" style="width: 120px;">Status</th>
+                <th class="text-end" style="width: 160px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for dist in districts %}
+              <tr data-search-target="{{ dist.name|lower }} {{ dist.code|lower }} {{ dist.region.name|lower }}" 
+                  data-region="{{ dist.region.name|lower }}" id="district-row-{{ dist.id }}">
+                <td>
+                  <span class="badge bg-danger bg-opacity-10 text-danger fw-semibold px-2 py-1">
+                    {{ dist.region.name }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge bg-light text-dark font-monospace border">{{ dist.code|default:"—" }}</span>
+                </td>
+                <td>
+                  <strong class="text-dark">{{ dist.name }}</strong>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-success bg-opacity-10 text-success fw-semibold px-2 py-1">
+                    {{ dist.num_stations }} Stations
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold px-2 py-1">
+                    {{ dist.num_personnel }} Staff
+                  </span>
+                </td>
+                <td class="text-center">
+                  {% if dist.active %}
+                  <span class="badge bg-success text-white px-2 py-1"><i class="fas fa-check-circle me-1"></i>Active</span>
+                  {% else %}
+                  <span class="badge bg-secondary text-white px-2 py-1"><i class="fas fa-ban me-1"></i>Inactive</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary edit-district-btn" 
+                            data-id="{{ dist.id }}" 
+                            data-name="{{ dist.name }}" 
+                            data-code="{{ dist.code }}" 
+                            data-region-id="{{ dist.region.id }}"
+                            data-active="{{ dist.active|yesno:'true,false' }}"
+                            title="Edit District">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <form method="POST" action="{% url 'toggle-unit-active' 'district' dist.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-outline-{% if dist.active %}warning{% else %}success{% endif %}" 
+                              title="{% if dist.active %}Deactivate{% else %}Activate{% endif %}">
+                        <i class="fas fa-power-off"></i>
+                      </button>
+                    </form>
+                    {% if can_edit_all %}
+                    <button type="button" class="btn btn-outline-danger delete-unit-btn" 
+                            data-type="district" 
+                            data-id="{{ dist.id }}" 
+                            data-name="{{ dist.name }}"
+                            data-children="{{ dist.num_stations }}"
+                            title="Delete District">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">
+                  <i class="fas fa-folder-open fs-3 d-block mb-2 text-secondary opacity-50"></i>
+                  No districts found.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: STATIONS                            -->
+    <!-- ========================================== -->
+    <div class="tab-pane fade {% if active_tab == 'stations' %}show active{% endif %}" id="tab-stations" role="tabpanel">
+      <div class="card border-0 shadow-sm rounded-3 overflow-hidden bg-white">
+        <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <span class="fw-bold text-dark">
+            <i class="fas fa-fire-extinguisher text-success me-1"></i> Fire Stations Directory
+          </span>
+          <div class="d-flex align-items-center gap-2">
+            <label class="small text-muted mb-0">Filter Region:</label>
+            <select id="stationRegionFilter" class="form-select form-select-sm" style="width: 220px;">
+              <option value="">All Regions</option>
+              {% for reg in regions %}
+              <option value="{{ reg.name|lower }}">{{ reg.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="tableStations">
+            <thead class="table-light text-uppercase small text-muted">
+              <tr>
+                <th>Fire Station</th>
+                <th style="width: 140px;">Type</th>
+                <th style="width: 100px;">Code</th>
+                <th style="width: 200px;">District Command</th>
+                <th style="width: 160px;">Region</th>
+                <th class="text-center" style="width: 110px;">Personnel</th>
+                <th class="text-center" style="width: 90px;">Posts</th>
+                <th class="text-center" style="width: 110px;">Status</th>
+                <th class="text-end" style="width: 160px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for stn in stations %}
+              <tr data-search-target="{{ stn.name|lower }} {{ stn.code|lower }} {{ stn.district.name|lower }} {{ stn.district.region.name|lower }}" 
+                  data-region="{{ stn.district.region.name|lower }}" id="station-row-{{ stn.id }}">
+                <td>
+                  <strong class="text-dark">{{ stn.name }}</strong>
+                  {% if stn.name == 'Komenda Fire Station' %}
+                  <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">Active Roll Hub</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge bg-info bg-opacity-10 text-info fw-semibold px-2 py-1">
+                    {{ stn.get_station_type_display }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge bg-light text-dark font-monospace border">{{ stn.code|default:"—" }}</span>
+                </td>
+                <td>
+                  <span class="text-muted small">{{ stn.district.name }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-danger bg-opacity-10 text-danger fw-semibold px-2 py-1">
+                    {{ stn.district.region.name }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-primary text-white fw-bold px-2 py-1">
+                    {{ stn.num_personnel }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-secondary bg-opacity-10 text-secondary fw-semibold px-2 py-1">
+                    {{ stn.num_posts }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  {% if stn.active %}
+                  <span class="badge bg-success text-white px-2 py-1"><i class="fas fa-check-circle me-1"></i>Active</span>
+                  {% else %}
+                  <span class="badge bg-secondary text-white px-2 py-1"><i class="fas fa-ban me-1"></i>Inactive</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary edit-station-btn" 
+                            data-id="{{ stn.id }}" 
+                            data-name="{{ stn.name }}" 
+                            data-code="{{ stn.code }}" 
+                            data-district-id="{{ stn.district.id }}"
+                            data-type="{{ stn.station_type }}"
+                            data-active="{{ stn.active|yesno:'true,false' }}"
+                            title="Edit Station">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <form method="POST" action="{% url 'toggle-unit-active' 'station' stn.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-outline-{% if stn.active %}warning{% else %}success{% endif %}" 
+                              title="{% if stn.active %}Deactivate{% else %}Activate{% endif %}">
+                        <i class="fas fa-power-off"></i>
+                      </button>
+                    </form>
+                    {% if can_edit_all %}
+                    <button type="button" class="btn btn-outline-danger delete-unit-btn" 
+                            data-type="station" 
+                            data-id="{{ stn.id }}" 
+                            data-name="{{ stn.name }}"
+                            data-children="{{ stn.num_personnel }}"
+                            title="Delete Station">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="9" class="text-center py-4 text-muted">
+                  <i class="fas fa-folder-open fs-3 d-block mb-2 text-secondary opacity-50"></i>
+                  No fire stations found.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: POSTS & CHECKPOINTS                 -->
+    <!-- ========================================== -->
+    <div class="tab-pane fade {% if active_tab == 'posts' %}show active{% endif %}" id="tab-posts" role="tabpanel">
+      <div class="card border-0 shadow-sm rounded-3 overflow-hidden bg-white">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <span class="fw-bold text-dark">
+            <i class="fas fa-store text-warning me-1"></i> Market Posts, Sub-Posts & Operational Checkpoints
+          </span>
+          <span class="badge bg-secondary text-white">{{ posts|length }} Total Posts</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="tablePosts">
+            <thead class="table-light text-uppercase small text-muted">
+              <tr>
+                <th>Fire Post / Checkpoint</th>
+                <th style="width: 140px;">Post Type</th>
+                <th style="width: 120px;">Code</th>
+                <th>Parent Station</th>
+                <th>District</th>
+                <th class="text-center" style="width: 110px;">Personnel</th>
+                <th class="text-center" style="width: 110px;">Status</th>
+                <th class="text-end" style="width: 160px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for post in posts %}
+              <tr data-search-target="{{ post.name|lower }} {{ post.code|lower }} {{ post.station.name|lower }}" id="post-row-{{ post.id }}">
+                <td>
+                  <strong class="text-dark">{{ post.name }}</strong>
+                </td>
+                <td>
+                  <span class="badge bg-warning bg-opacity-20 text-dark fw-semibold px-2 py-1">
+                    {{ post.get_post_type_display }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge bg-light text-dark font-monospace border">{{ post.code|default:"—" }}</span>
+                </td>
+                <td>
+                  <span class="text-muted small">{{ post.station.name }}</span>
+                </td>
+                <td>
+                  <span class="text-muted small">{{ post.station.district.name }}</span>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-primary text-white fw-bold px-2 py-1">
+                    {{ post.num_personnel }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  {% if post.active %}
+                  <span class="badge bg-success text-white px-2 py-1"><i class="fas fa-check-circle me-1"></i>Active</span>
+                  {% else %}
+                  <span class="badge bg-secondary text-white px-2 py-1"><i class="fas fa-ban me-1"></i>Inactive</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary edit-post-btn" 
+                            data-id="{{ post.id }}" 
+                            data-name="{{ post.name }}" 
+                            data-code="{{ post.code }}" 
+                            data-station-id="{{ post.station.id }}"
+                            data-type="{{ post.post_type }}"
+                            data-active="{{ post.active|yesno:'true,false' }}"
+                            title="Edit Post">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <form method="POST" action="{% url 'toggle-unit-active' 'post' post.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-outline-{% if post.active %}warning{% else %}success{% endif %}" 
+                              title="{% if post.active %}Deactivate{% else %}Activate{% endif %}">
+                        <i class="fas fa-power-off"></i>
+                      </button>
+                    </form>
+                    {% if can_edit_all %}
+                    <button type="button" class="btn btn-outline-danger delete-unit-btn" 
+                            data-type="post" 
+                            data-id="{{ post.id }}" 
+                            data-name="{{ post.name }}"
+                            data-children="{{ post.num_personnel }}"
+                            title="Delete Post">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="8" class="text-center py-4 text-muted">
+                  <i class="fas fa-folder-open fs-3 d-block mb-2 text-secondary opacity-50"></i>
+                  No fire posts found.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================================== -->
+<!-- MODALS: ADD & EDIT FOR REGIONS, DISTRICTS, STATIONS, POSTS                     -->
+<!-- ============================================================================== -->
+
+<!-- 1. Modal: Add Region -->
+<div class="modal fade" id="modalAddRegion" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content shadow border-0">
+      <form method="POST" action="{% url 'add-region' %}">
+        {% csrf_token %}
+        <div class="modal-header text-white" style="background-color: #8B0000;">
+          <h5 class="modal-title fw-bold"><i class="fas fa-map-marker-alt me-2"></i>Add Service Region</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Region Name <span class="text-danger">*</span></label>
+            {{ region_form.name }}
+            <div class="form-text">e.g. Ahafo Region, Tema Region</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Region Code <span class="text-danger">*</span></label>
+            {{ region_form.code }}
+            <div class="form-text">e.g. AH, TR, CR (Unique identifier)</div>
+          </div>
+          <div class="form-check form-switch mb-2">
+            {{ region_form.active }}
+            <label class="form-check-label fw-semibold" for="{{ region_form.active.id_for_label }}">Active Status</label>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger btn-sm fw-bold px-3" style="background-color: #8B0000;">Save Region</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Modal: Edit Region -->
+<div class="modal fade" id="modalEditRegion" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content shadow border-0">
+      <form method="POST" id="editRegionForm" action="">
+        {% csrf_token %}
+        <div class="modal-header text-white" style="background-color: #8B0000;">
+          <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Edit Service Region</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Region Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" id="editRegionName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Region Code <span class="text-danger">*</span></label>
+            <input type="text" name="code" id="editRegionCode" class="form-control" required>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input type="checkbox" name="active" id="editRegionActive" class="form-check-input" value="true">
+            <label class="form-check-label fw-semibold" for="editRegionActive">Active Status</label>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger btn-sm fw-bold px-3" style="background-color: #8B0000;">Update Region</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Modal: Add District -->
+<div class="modal fade" id="modalAddDistrict" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content shadow border-0">
+      <form method="POST" action="{% url 'add-district' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold"><i class="fas fa-building me-2"></i>Add District / Municipal Command</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Parent Service Region <span class="text-danger">*</span></label>
+            {{ district_form.region }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">District Command Name <span class="text-danger">*</span></label>
+            {{ district_form.name }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">District Code</label>
+            {{ district_form.code }}
+          </div>
+          <div class="form-check form-switch mb-2">
+            {{ district_form.active }}
+            <label class="form-check-label fw-semibold" for="{{ district_form.active.id_for_label }}">Active Status</label>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm fw-bold px-3">Save District</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Modal: Edit District -->
+<div class="modal fade" id="modalEditDistrict" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content shadow border-0">
+      <form method="POST" id="editDistrictForm" action="">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Edit District / Municipal Command</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Parent Service Region <span class="text-danger">*</span></label>
+            <select name="region" id="editDistrictRegion" class="form-select" required>
+              {% for reg in regions %}
+              <option value="{{ reg.id }}">{{ reg.name }} ({{ reg.code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">District Command Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" id="editDistrictName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">District Code</label>
+            <input type="text" name="code" id="editDistrictCode" class="form-control">
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input type="checkbox" name="active" id="editDistrictActive" class="form-check-input" value="true">
+            <label class="form-check-label fw-semibold" for="editDistrictActive">Active Status</label>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm fw-bold px-3">Update District</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 5. Modal: Add Fire Station -->
+<div class="modal fade" id="modalAddStation" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content shadow border-0">
+      <form method="POST" action="{% url 'add-station' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title fw-bold"><i class="fas fa-fire-extinguisher me-2"></i>Add Fire Station</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Parent District Command <span class="text-danger">*</span></label>
+            {{ station_form.district }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Fire Station Name <span class="text-danger">*</span></label>
+            {{ station_form.name }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Station Type <span class="text-danger">*</span></label>
+            {{ station_form.station_type }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Station Code</label>
+            {{ station_form.code }}
+          </div>
+          <div class="form-check form-switch mb-2">
+            {{ station_form.active }}
+            <label class="form-check-label fw-semibold" for="{{ station_form.active.id_for_label }}">Active Status</label>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success btn-sm fw-bold px-3">Save Station</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 6. Modal: Edit Fire Station -->
+<div class="modal fade" id="modalEditStation" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content shadow border-0">
+      <form method="POST" id="editStationForm" action="">
+        {% csrf_token %}
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Edit Fire Station</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Parent District Command <span class="text-danger">*</span></label>
+            <select name="district" id="editStationDistrict" class="form-select" required>
+              {% for dist in districts %}
+              <option value="{{ dist.id }}">{{ dist.region.code }} - {{ dist.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Fire Station Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" id="editStationName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Station Type <span class="text-danger">*</span></label>
+            <select name="station_type" id="editStationType" class="form-select" required>
+              <option value="MUNICIPAL">Municipal Fire Station</option>
+              <option value="DISTRICT">District Fire Station</option>
+              <option value="METRO">Metropolitan Fire Station</option>
+              <option value="INSTITUTIONAL">Institutional Fire Station</option>
+              <option value="REGIONAL_HQ">Regional Headquarters Station</option>
+              <option value="NATIONAL_HQ">National Headquarters Station</option>
+              <option value="SUB_STATION">Sub-Station</option>
+              <option value="SPECIAL">Special Operational Station</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Station Code</label>
+            <input type="text" name="code" id="editStationCode" class="form-control">
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input type="checkbox" name="active" id="editStationActive" class="form-check-input" value="true">
+            <label class="form-check-label fw-semibold" for="editStationActive">Active Status</label>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success btn-sm fw-bold px-3">Update Station</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 7. Modal: Add Fire Post -->
+<div class="modal fade" id="modalAddPost" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content shadow border-0">
+      <form method="POST" action="{% url 'add-post' %}">
+        {% csrf_token %}
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title fw-bold"><i class="fas fa-store me-2"></i>Add Fire Post / Checkpoint</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Parent Fire Station <span class="text-danger">*</span></label>
+            {{ post_form.station }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Post / Checkpoint Name <span class="text-danger">*</span></label>
+            {{ post_form.name }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Post Type <span class="text-danger">*</span></label>
+            {{ post_form.post_type }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Post Code</label>
+            {{ post_form.code }}
+          </div>
+          <div class="form-check form-switch mb-2">
+            {{ post_form.active }}
+            <label class="form-check-label fw-semibold" for="{{ post_form.active.id_for_label }}">Active Status</label>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning btn-sm fw-bold px-3">Save Post</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 8. Modal: Edit Fire Post -->
+<div class="modal fade" id="modalEditPost" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content shadow border-0">
+      <form method="POST" id="editPostForm" action="">
+        {% csrf_token %}
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Edit Fire Post / Checkpoint</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Parent Fire Station <span class="text-danger">*</span></label>
+            <select name="station" id="editPostStation" class="form-select" required>
+              {% for stn in stations %}
+              <option value="{{ stn.id }}">{{ stn.name }} ({{ stn.district.name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Post Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" id="editPostName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Post Type <span class="text-danger">*</span></label>
+            <select name="post_type" id="editPostType" class="form-select" required>
+              <option value="MARKET_POST">Market Fire Post</option>
+              <option value="SUB_POST">Sub-Post</option>
+              <option value="CHECKPOINT">Fire Checkpoint</option>
+              <option value="COMMUNITY_POST">Community Post</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Post Code</label>
+            <input type="text" name="code" id="editPostCode" class="form-control">
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input type="checkbox" name="active" id="editPostActive" class="form-check-input" value="true">
+            <label class="form-check-label fw-semibold" for="editPostActive">Active Status</label>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning btn-sm fw-bold px-3">Update Post</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 9. Modal: Safe Delete Confirmation -->
+<div class="modal fade" id="modalDeleteUnit" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content shadow border-0">
+      <form method="POST" id="deleteUnitForm" action="">
+        {% csrf_token %}
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Unit Deletion</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4 text-center">
+          <i class="fas fa-trash-alt text-danger fs-1 mb-3"></i>
+          <h5 class="fw-bold mb-2" id="deleteUnitTitle">Are you sure?</h5>
+          <p class="text-muted small mb-0" id="deleteUnitMessage">
+            This action cannot be undone. If any child records or personnel are linked to this unit, deletion will be blocked to preserve service data integrity.
+          </p>
+        </div>
+        <div class="modal-footer bg-light justify-content-center">
+          <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger btn-sm fw-bold px-4">Yes, Delete Unit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================================== -->
+<!-- INTERACTIVE SCRIPTS: LIVE SEARCH, MODAL PRE-FILL & CLIENT FILTERS               -->
+<!-- ============================================================================== -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('structureLiveSearch');
+  const clearBtn = document.getElementById('clearSearchBtn');
+  const liveResultsDiv = document.getElementById('liveSearchResults');
+  const liveContentDiv = document.getElementById('searchResultsContent');
+  let searchDebounceTimer = null;
+
+  // 1. Instant Client-Side Row Filtering (Filtering across active table)
+  function filterActiveTables(query) {
+    const q = query.trim().toLowerCase();
+    const tables = ['#tableRegions', '#tableDistricts', '#tableStations', '#tablePosts'];
+
+    tables.forEach(selector => {
+      const table = document.querySelector(selector);
+      if (!table) return;
+      const rows = table.querySelectorAll('tbody tr[data-search-target]');
+      let matchedCount = 0;
+
+      rows.forEach(row => {
+        const text = row.getAttribute('data-search-target') || '';
+        if (!q || text.includes(q)) {
+          row.style.display = '';
+          matchedCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  }
+
+  // 2. Debounced API Live Search
+  function performApiSearch(query) {
+    if (!query || query.length < 2) {
+      liveResultsDiv.style.display = 'none';
+      return;
+    }
+
+    fetch(`/structure/api/search/?q=${encodeURIComponent(query)}`)
+      .then(res => res.json())
+      .then(data => {
+        const total = (data.counts.regions || 0) + (data.counts.districts || 0) + (data.counts.stations || 0) + (data.counts.posts || 0);
+        if (total === 0) {
+          liveContentDiv.innerHTML = `<div class="p-3 text-center text-muted small"><i class="fas fa-search me-1"></i> No matching units found for "<strong>${escapeHtml(query)}</strong>"</div>`;
+          liveResultsDiv.style.display = 'block';
+          return;
+        }
+
+        let html = `<div class="px-2 py-1 text-muted small fw-bold border-bottom d-flex justify-content-between">
+                      <span>Search Results (${total} matches)</span>
+                      <button type="button" class="btn-close btn-sm" id="closeLiveResults"></button>
+                    </div>`;
+
+        // Regions section
+        if (data.regions && data.regions.length > 0) {
+          html += `<div class="px-2 pt-2 pb-1 small fw-bold text-danger"><i class="fas fa-map-marked-alt me-1"></i> Regions (${data.regions.length})</div>`;
+          data.regions.forEach(r => {
+            html += `<a href="#region-row-${r.id}" class="d-flex justify-content-between align-items-center p-2 rounded text-decoration-none text-dark hover-bg search-jump-link" data-tab="regions-tab" data-target="region-row-${r.id}">
+                      <span><strong>${escapeHtml(r.name)}</strong> <span class="badge bg-secondary font-monospace">${escapeHtml(r.code)}</span></span>
+                      <span class="badge ${r.active ? 'bg-success' : 'bg-secondary'}">${r.active ? 'Active' : 'Inactive'}</span>
+                    </a>`;
+          });
+        }
+
+        // Districts section
+        if (data.districts && data.districts.length > 0) {
+          html += `<div class="px-2 pt-2 pb-1 small fw-bold text-primary"><i class="fas fa-building me-1"></i> Districts (${data.districts.length})</div>`;
+          data.districts.forEach(d => {
+            html += `<a href="#district-row-${d.id}" class="d-flex justify-content-between align-items-center p-2 rounded text-decoration-none text-dark hover-bg search-jump-link" data-tab="districts-tab" data-target="district-row-${d.id}">
+                      <span><strong>${escapeHtml(d.name)}</strong> <small class="text-muted">(${escapeHtml(d.region__name)})</small></span>
+                      <span class="badge ${d.active ? 'bg-success' : 'bg-secondary'}">${d.active ? 'Active' : 'Inactive'}</span>
+                    </a>`;
+          });
+        }
+
+        // Stations section
+        if (data.stations && data.stations.length > 0) {
+          html += `<div class="px-2 pt-2 pb-1 small fw-bold text-success"><i class="fas fa-fire-extinguisher me-1"></i> Stations (${data.stations.length})</div>`;
+          data.stations.forEach(s => {
+            html += `<a href="#station-row-${s.id}" class="d-flex justify-content-between align-items-center p-2 rounded text-decoration-none text-dark hover-bg search-jump-link" data-tab="stations-tab" data-target="station-row-${s.id}">
+                      <span><strong>${escapeHtml(s.name)}</strong> <small class="text-muted">(${escapeHtml(s.district__name)})</small></span>
+                      <span class="badge ${s.active ? 'bg-success' : 'bg-secondary'}">${s.active ? 'Active' : 'Inactive'}</span>
+                    </a>`;
+          });
+        }
+
+        // Posts section
+        if (data.posts && data.posts.length > 0) {
+          html += `<div class="px-2 pt-2 pb-1 small fw-bold text-warning"><i class="fas fa-store me-1"></i> Posts (${data.posts.length})</div>`;
+          data.posts.forEach(p => {
+            html += `<a href="#post-row-${p.id}" class="d-flex justify-content-between align-items-center p-2 rounded text-decoration-none text-dark hover-bg search-jump-link" data-tab="posts-tab" data-target="post-row-${p.id}">
+                      <span><strong>${escapeHtml(p.name)}</strong> <small class="text-muted">(${escapeHtml(p.station__name)})</small></span>
+                      <span class="badge ${p.active ? 'bg-success' : 'bg-secondary'}">${p.active ? 'Active' : 'Inactive'}</span>
+                    </a>`;
+          });
+        }
+
+        liveContentDiv.innerHTML = html;
+        liveResultsDiv.style.display = 'block';
+
+        // Attach jump listener
+        document.querySelectorAll('.search-jump-link').forEach(link => {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const tabId = this.getAttribute('data-tab');
+            const targetRowId = this.getAttribute('data-target');
+            const tabTrigger = document.getElementById(tabId);
+            if (tabTrigger) {
+              const tab = new bootstrap.Tab(tabTrigger);
+              tab.show();
+            }
+            liveResultsDiv.style.display = 'none';
+            setTimeout(() => {
+              const targetRow = document.getElementById(targetRowId);
+              if (targetRow) {
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetRow.classList.add('table-warning');
+                setTimeout(() => targetRow.classList.remove('table-warning'), 2500);
+              }
+            }, 200);
+          });
+        });
+
+        const closeBtn = document.getElementById('closeLiveResults');
+        if (closeBtn) closeBtn.onclick = () => { liveResultsDiv.style.display = 'none'; };
+      })
+      .catch(err => {
+        console.error("Live search error:", err);
+      });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const val = this.value;
+      filterActiveTables(val);
+
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        performApiSearch(val);
+      }, 300);
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
+      if (searchInput) {
+        searchInput.value = '';
+        filterActiveTables('');
+      }
+      liveResultsDiv.style.display = 'none';
+    });
+  }
+
+  // Close live results when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!liveResultsDiv.contains(e.target) && e.target !== searchInput) {
+      liveResultsDiv.style.display = 'none';
+    }
+  });
+
+  // 3. Dropdown Filters for Districts & Stations Tables
+  const distRegionFilter = document.getElementById('districtRegionFilter');
+  if (distRegionFilter) {
+    distRegionFilter.addEventListener('change', function() {
+      const val = this.value.toLowerCase();
+      const rows = document.querySelectorAll('#tableDistricts tbody tr[data-region]');
+      rows.forEach(r => {
+        if (!val || r.getAttribute('data-region') === val) {
+          r.style.display = '';
+        } else {
+          r.style.display = 'none';
+        }
+      });
+    });
+  }
+
+  const stationRegionFilter = document.getElementById('stationRegionFilter');
+  if (stationRegionFilter) {
+    stationRegionFilter.addEventListener('change', function() {
+      const val = this.value.toLowerCase();
+      const rows = document.querySelectorAll('#tableStations tbody tr[data-region]');
+      rows.forEach(r => {
+        if (!val || r.getAttribute('data-region') === val) {
+          r.style.display = '';
+        } else {
+          r.style.display = 'none';
+        }
+      });
+    });
+  }
+
+  // 4. Modal Edit Population: Regions
+  document.querySelectorAll('.edit-region-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.getAttribute('data-id');
+      const name = this.getAttribute('data-name');
+      const code = this.getAttribute('data-code');
+      const active = this.getAttribute('data-active') === 'true';
+
+      const form = document.getElementById('editRegionForm');
+      form.action = `/structure/region/${id}/edit/`;
+      document.getElementById('editRegionName').value = name;
+      document.getElementById('editRegionCode').value = code;
+      document.getElementById('editRegionActive').checked = active;
+
+      const modal = new bootstrap.Modal(document.getElementById('modalEditRegion'));
+      modal.show();
+    });
+  });
+
+  // 5. Modal Edit Population: Districts
+  document.querySelectorAll('.edit-district-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.getAttribute('data-id');
+      const name = this.getAttribute('data-name');
+      const code = this.getAttribute('data-code');
+      const regionId = this.getAttribute('data-region-id');
+      const active = this.getAttribute('data-active') === 'true';
+
+      const form = document.getElementById('editDistrictForm');
+      form.action = `/structure/district/${id}/edit/`;
+      document.getElementById('editDistrictName').value = name;
+      document.getElementById('editDistrictCode').value = code;
+      document.getElementById('editDistrictRegion').value = regionId;
+      document.getElementById('editDistrictActive').checked = active;
+
+      const modal = new bootstrap.Modal(document.getElementById('modalEditDistrict'));
+      modal.show();
+    });
+  });
+
+  // 6. Modal Edit Population: Stations
+  document.querySelectorAll('.edit-station-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.getAttribute('data-id');
+      const name = this.getAttribute('data-name');
+      const code = this.getAttribute('data-code');
+      const districtId = this.getAttribute('data-district-id');
+      const type = this.getAttribute('data-type');
+      const active = this.getAttribute('data-active') === 'true';
+
+      const form = document.getElementById('editStationForm');
+      form.action = `/structure/station/${id}/edit/`;
+      document.getElementById('editStationName').value = name;
+      document.getElementById('editStationCode').value = code;
+      document.getElementById('editStationDistrict').value = districtId;
+      document.getElementById('editStationType').value = type;
+      document.getElementById('editStationActive').checked = active;
+
+      const modal = new bootstrap.Modal(document.getElementById('modalEditStation'));
+      modal.show();
+    });
+  });
+
+  // 7. Modal Edit Population: Posts
+  document.querySelectorAll('.edit-post-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.getAttribute('data-id');
+      const name = this.getAttribute('data-name');
+      const code = this.getAttribute('data-code');
+      const stationId = this.getAttribute('data-station-id');
+      const type = this.getAttribute('data-type');
+      const active = this.getAttribute('data-active') === 'true';
+
+      const form = document.getElementById('editPostForm');
+      form.action = `/structure/post/${id}/edit/`;
+      document.getElementById('editPostName').value = name;
+      document.getElementById('editPostCode').value = code;
+      document.getElementById('editPostStation').value = stationId;
+      document.getElementById('editPostType').value = type;
+      document.getElementById('editPostActive').checked = active;
+
+      const modal = new bootstrap.Modal(document.getElementById('modalEditPost'));
+      modal.show();
+    });
+  });
+
+  // 8. Delete Confirmation Modal
+  document.querySelectorAll('.delete-unit-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const type = this.getAttribute('data-type');
+      const id = this.getAttribute('data-id');
+      const name = this.getAttribute('data-name');
+      const children = parseInt(this.getAttribute('data-children') || '0', 10);
+
+      const form = document.getElementById('deleteUnitForm');
+      form.action = `/structure/${type}/${id}/delete/`;
+      document.getElementById('deleteUnitTitle').innerText = `Delete ${type.toUpperCase()}: ${name}`;
+
+      if (children > 0) {
+        document.getElementById('deleteUnitMessage').innerHTML = `
+          <div class="alert alert-warning text-start small mb-0">
+            <i class="fas fa-exclamation-circle me-1"></i>
+            <strong>Warning:</strong> This ${type} currently has <strong>${children}</strong> attached record(s).
+            The system will prevent hard deletion to preserve personnel & command integrity. 
+            Consider toggling this unit to <strong>Inactive</strong> instead.
+          </div>`;
+      } else {
+        document.getElementById('deleteUnitMessage').innerHTML = `
+          Are you sure you want to permanently delete <strong>${escapeHtml(name)}</strong>? This operation cannot be reversed.`;
+      }
+
+      const modal = new bootstrap.Modal(document.getElementById('modalDeleteUnit'));
+      modal.show();
+    });
+  });
+});
+</script>
+
+<style>
+.hover-bg:hover {
+  background-color: #f1f5f9;
+}
+.letter-spacing-1 {
+  letter-spacing: 0.5px;
+}
+</style>
+{% endblock content %}

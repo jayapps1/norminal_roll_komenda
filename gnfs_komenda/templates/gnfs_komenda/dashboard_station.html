@@ -1,0 +1,159 @@
+{% extends 'main.html' %}
+
+{% block title %}{{ station.name }} — Fire Station Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-national' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> National</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-regional' region.id %}" class="text-decoration-none text-secondary">{{ region.name }}</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-district' district.id %}" class="text-decoration-none text-secondary">{{ district.name }}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ station.name }}</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">{{ station.name }}</h3>
+      <p class="text-muted small mb-0">Station Type: <strong>{{ station.get_station_type_display }}</strong> | {{ district.name }}, {{ region.name }}</p>
+    </div>
+
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+      <a href="{% url 'addstaff' %}" class="btn btn-danger btn-sm shadow-sm" style="background-color:#8B0000; border-color:#8B0000;">
+        <i class="fas fa-user-plus me-1"></i> Add Station Personnel
+      </a>
+      <a href="{% url 'personnel' %}" class="btn btn-outline-danger btn-sm shadow-sm">
+        <i class="fas fa-users me-1"></i> Station Roll
+      </a>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #8B0000 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Personnel</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ total_personnel }}</span>
+          <a href="{% url 'personnel' %}" class="btn btn-sm btn-outline-danger py-0 px-2">All</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #ffc107 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Senior Officers</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ senior_officers }}</span>
+          <a href="{% url 'personnel' %}?category=SENIOR" class="btn btn-sm btn-outline-warning text-dark py-0 px-2">Drill Down</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #0dcaf0 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Junior Officers</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ junior_officers }}</span>
+          <a href="{% url 'personnel' %}?category=JUNIOR" class="btn btn-sm btn-outline-info text-dark py-0 px-2">Drill Down</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #198754 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">At Post</div>
+        <div class="fs-4 fw-bold text-success mt-1">{{ at_post }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #dc3545 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">On Leave</div>
+        <div class="fs-4 fw-bold text-danger mt-1">{{ on_leave }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #B8860B !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Sub-Posts</div>
+        <div class="fs-4 fw-bold text-dark mt-1">{{ posts|length }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subordinate Posts -->
+  {% if posts %}
+  <h5 class="fw-bold text-dark mb-2">Subordinate Market / Sub-Posts</h5>
+  <div class="row g-2 mb-4">
+    {% for post in posts %}
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 bg-light p-3 d-flex justify-content-between align-items-center flex-row">
+        <div>
+          <h6 class="fw-bold mb-1 text-dark">{{ post.name }}</h6>
+          <span class="badge bg-secondary small">{{ post.get_post_type_display }}</span>
+        </div>
+        <a href="{% url 'dashboard-post' post.id %}" class="btn btn-sm btn-outline-danger" style="border-color:#8B0000; color:#8B0000;">
+          View Post
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Station Personnel Roster Table -->
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h5 class="fw-bold text-dark mb-0">Station Personnel Roster ({{ total_personnel }})</h5>
+  </div>
+  <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead style="background-color: #8B0000; color: #FFFFFF;">
+          <tr class="small text-uppercase">
+            <th class="ps-3 py-3">Staff ID</th>
+            <th class="py-3">Full Name</th>
+            <th class="py-3">Job Grade</th>
+            <th class="py-3">Assigned Unit</th>
+            <th class="py-3 text-center">Leave Status</th>
+            <th class="py-3 text-center">Payroll</th>
+            <th class="py-3 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for staff in personnel %}
+          <tr>
+            <td class="ps-3 fw-bold font-monospace">{{ staff.staffID }}</td>
+            <td class="fw-semibold text-dark">{{ staff.fullname }}</td>
+            <td><span class="badge bg-light text-dark border">{{ staff.job_grade }}</span></td>
+            <td>{{ staff.post.name|default:station.name }}</td>
+            <td class="text-center">
+              {% if staff.leave_status == 'ON LEAVE' %}
+              <span class="badge bg-danger">ON LEAVE</span>
+              {% else %}
+              <span class="badge bg-success">AT POST</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if staff.payroll_status == 'ACTIVE' %}
+              <span class="badge bg-light text-success border border-success">ACTIVE</span>
+              {% else %}
+              <span class="badge bg-light text-secondary border">NON-ACTIVE</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'staff-detail' staff.staffID %}" class="btn btn-outline-info" title="View"><i class="fas fa-eye"></i></a>
+                <a href="{% url 'editstaff' staff.staffID %}" class="btn btn-outline-warning" title="Edit"><i class="fas fa-edit"></i></a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">No personnel assigned to this fire station yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock content %}

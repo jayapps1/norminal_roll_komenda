@@ -1,0 +1,182 @@
+{% extends "main.html" %}
+
+{% block title %}Leave Deferments — GNFS Leave Management{% endblock title %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Breadcrumb -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h3 class="fw-bold mb-0 text-dark">
+                <i class="fas fa-history text-danger me-2"></i>Annual Leave Deferment Requests
+            </h3>
+            <span class="text-muted small">Official deferment review queue and statutory carry-forward authorization.</span>
+        </div>
+        <div class="d-flex gap-2 mt-2 mt-md-0">
+            <a href="{% url 'leave-deferment-apply' %}" class="btn btn-danger btn-sm shadow-sm">
+                <i class="fas fa-plus-circle me-1"></i> Request Deferment
+            </a>
+            <a href="{% url 'leave-dashboard' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="fas fa-arrow-left me-1"></i> Back to Roster
+            </a>
+        </div>
+    </div>
+
+    <!-- Deferment Requests Table -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold text-dark">
+                <i class="fas fa-list me-2 text-danger"></i>Deferment Applications
+            </h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase">
+                    <tr>
+                        <th class="ps-3">ID</th>
+                        <th>Officer Name</th>
+                        <th>Rank / Category</th>
+                        <th>Station</th>
+                        <th>Source Year</th>
+                        <th>Target Year</th>
+                        <th>Days Requested</th>
+                        <th>Days Approved</th>
+                        <th>Status</th>
+                        <th>Carry-Forward Applied</th>
+                        <th class="text-end pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in deferments %}
+                    <tr>
+                        <td class="ps-3 font-monospace fw-bold text-danger">#{{ d.id }}</td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ d.personnel.fullname }}</div>
+                            <small class="text-muted">{{ d.personnel.staffID }}</small>
+                        </td>
+                        <td>
+                            <div>{{ d.personnel.rank_short }}</div>
+                            <span class="badge {% if d.personnel.officer_category == 'SENIOR' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}" style="font-size: 0.65rem;">
+                                {{ d.personnel.get_officer_category_display }}
+                            </span>
+                        </td>
+                        <td><small>{{ d.personnel.station.name|default:"Unassigned" }}</small></td>
+                        <td class="fw-semibold">{{ d.leave_year }}</td>
+                        <td class="fw-semibold text-primary">{{ d.target_year }}</td>
+                        <td><strong class="text-dark">{{ d.days_requested }}</strong> days</td>
+                        <td>
+                            {% if d.status == 'APPROVED' %}
+                            <strong class="text-success">{{ d.approved_days }}</strong> days
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if d.status == 'PENDING' %}
+                            <span class="badge bg-warning text-dark px-2 py-1">Pending Approval</span>
+                            {% elif d.status == 'APPROVED' %}
+                            <span class="badge bg-success px-2 py-1">Approved</span>
+                            {% elif d.status == 'REJECTED' %}
+                            <span class="badge bg-danger px-2 py-1">Rejected</span>
+                            {% else %}
+                            <span class="badge bg-secondary px-2 py-1">{{ d.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if d.carried_forward_applied %}
+                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>Applied to {{ d.target_year }}</span>
+                            {% else %}
+                            <span class="text-muted small">Not Applied</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-3">
+                            {% if d.status == 'PENDING' %}
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#approveDeferModal{{ d.id }}">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectDeferModal{{ d.id }}">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+
+                            <!-- Approve Deferment Modal -->
+                            <div class="modal fade" id="approveDeferModal{{ d.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <form method="post" action="{% url 'leave-deferment-approve' d.id %}">
+                                        {% csrf_token %}
+                                        <div class="modal-content text-start">
+                                            <div class="modal-header bg-success text-white">
+                                                <h5 class="modal-title fs-6"><i class="fas fa-check-circle me-2"></i>Approve Leave Deferment</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="small mb-2">Approve deferment for <strong>{{ d.personnel.fullname }}</strong> ({{ d.personnel.staffID }}).</p>
+                                                <div class="alert alert-light border small">
+                                                    <strong>Source Year:</strong> {{ d.leave_year }}<br>
+                                                    <strong>Target Year:</strong> {{ d.target_year }}<br>
+                                                    <strong>Requested Days:</strong> {{ d.days_requested }} days<br>
+                                                    <strong>Reason:</strong> <em>"{{ d.reason }}"</em>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label small fw-semibold text-uppercase text-secondary">Approved Days to Carry Forward</label>
+                                                    <input type="number" name="approved_days" class="form-control" value="{{ d.days_requested }}" min="1" max="{{ d.days_requested }}" required>
+                                                </div>
+                                                <div class="mb-0">
+                                                    <label class="form-label small fw-semibold text-uppercase text-secondary">Approval Remarks</label>
+                                                    <textarea name="remarks" class="form-control" rows="3" placeholder="Approval justification / memo reference..."></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-success btn-sm px-3">Confirm Deferment</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Reject Deferment Modal -->
+                            <div class="modal fade" id="rejectDeferModal{{ d.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <form method="post" action="{% url 'leave-deferment-reject' d.id %}">
+                                        {% csrf_token %}
+                                        <div class="modal-content text-start">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title fs-6"><i class="fas fa-times-circle me-2"></i>Reject Leave Deferment</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="small mb-2">Reject deferment request for <strong>{{ d.personnel.fullname }}</strong>.</p>
+                                                <div class="mb-0">
+                                                    <label class="form-label small fw-semibold text-uppercase text-danger">Rejection Remarks</label>
+                                                    <textarea name="remarks" class="form-control" rows="3" required placeholder="Specify why the deferment is rejected..."></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-danger btn-sm px-3">Confirm Rejection</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted small">Decided</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="11" class="text-center py-5 text-muted">
+                            <i class="fas fa-folder-open fs-2 mb-2 d-block text-secondary"></i>
+                            No leave deferment requests found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}

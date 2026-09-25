@@ -1,0 +1,69 @@
+{% extends "main.html" %}
+
+{% block title %}Apply for Leave Deferment — GNFS Leave Management{% endblock title %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4" style="max-width: 800px;">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'leave-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-calendar-alt me-1"></i> Leave Management</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'leave-deferments' %}" class="text-decoration-none text-secondary">Deferments</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Apply</li>
+        </ol>
+    </nav>
+
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-header text-white py-3" style="background-color: #8B0000;">
+            <h5 class="mb-0 fw-bold">
+                <i class="fas fa-calendar-times me-2"></i>Annual Leave Deferment Application
+            </h5>
+            <div class="small text-white-50">Annual leave is mandatory once per leave year unless an officer has an approved deferment.</div>
+        </div>
+
+        <div class="card-body p-4 bg-light">
+            <div class="alert alert-info border-0 rounded-3 mb-4 small">
+                <i class="fas fa-info-circle me-1"></i>
+                Only approved deferments generate carry-forward into subsequent leave years. Unapproved unused annual leave expires automatically at year end.
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="card border-0 shadow-sm rounded-3 bg-white p-4 mb-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-secondary">Select Officer <span class="text-danger">*</span></label>
+                        {{ form.personnel }}
+                        {% if form.personnel.errors %}<div class="text-danger small mt-1">{{ form.personnel.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-uppercase text-secondary">Source Leave Year <span class="text-danger">*</span></label>
+                            {{ form.leave_year }}
+                            {% if form.leave_year.errors %}<div class="text-danger small mt-1">{{ form.leave_year.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-uppercase text-secondary">Days Requested for Deferment <span class="text-danger">*</span></label>
+                            {{ form.days_requested }}
+                            {% if form.days_requested.errors %}<div class="text-danger small mt-1">{{ form.days_requested.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold small text-uppercase text-secondary">Operational Justification / Reason <span class="text-danger">*</span></label>
+                        {{ form.reason }}
+                        {% if form.reason.errors %}<div class="text-danger small mt-1">{{ form.reason.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'leave-deferments' %}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-danger px-4 fw-semibold shadow-sm">
+                        <i class="fas fa-paper-plane me-1"></i> Submit Deferment Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}

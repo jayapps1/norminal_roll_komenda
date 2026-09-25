@@ -1,7 +1,8 @@
-/* Dropdown hover (desktop only) */
+/* GNFS Responsive & Dropdown Stability Rules */
 @media (min-width: 992px) {
-  .navbar .dropdown:hover .dropdown-menu {
-    display: block;
-    margin-top: 0;
+  .navbar .dropdown-menu {
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+    margin-top: 0.25rem;
   }
 }

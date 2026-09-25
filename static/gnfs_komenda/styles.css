@@ -13,7 +13,11 @@
   --gnfs-blue: #0d6efd;       /* Info/links */
 }
 
-/* === Body Reset === */
+/* === Base & Stability Reset === */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -24,49 +28,201 @@ body {
   color: #000000;              /* default black text */
 }
 
-/* navbar */
-/* Navbar shrink effect */
-#mainNavbar.shrink {
-  padding-top: 0.2rem;
-  padding-bottom: 0.2rem;
+/* === GNFS Navbar (Compact & Sleek) === */
+.gnfs-navbar {
+  min-height: 50px !important;
+  height: 50px !important;
+  box-sizing: border-box;
+  background-color: var(--gnfs-dark-red) !important;
+  border-bottom: 2px solid #B8860B !important;
 }
-#mainNavbar.shrink .navbar-brand {
-  font-size: 1rem;
-}
-#mainNavbar.shrink .brand-logo {
+
+.gnfs-navbar .brand-logo {
   width: 30px;
   height: 30px;
+  flex-shrink: 0;
 }
 
-/* Navbar links */
-.nav-link {
-  transition: color 0.3s ease;
-}
-.nav-link:hover {
-  color: #FFD700 !important; /* Gold hover */
+.gnfs-navbar .nav-link {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
-/* Dropdown Menu Background */
+/* === Modern Dropdown Styling === */
 .dropdown-menu {
-  background-color: var(--gnfs-dark-red) !important;  /* Dark Red background */
-  border: none;  /* Removes default gray border */
+  background-color: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  padding: 0.5rem !important;
+  min-width: 230px !important;
+  animation: dropdownFadeIn 0.15s ease-out;
 }
 
-/* Dropdown Items */
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .dropdown-item {
-  color: var(--gnfs-white) !important;   /* White text */
-  font-weight: 500;
+  color: #1e293b !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  padding: 0.55rem 0.9rem !important;
+  font-size: 0.85rem !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: all 0.15s ease-in-out !important;
 }
 
-/* Hover Effect */
 .dropdown-item:hover,
 .dropdown-item:focus {
-  background-color: var(--gnfs-gold) !important;  /* Gold hover */
-  color: var(--gnfs-black) !important;           /* Black text for contrast */
+  background-color: #FEF2F2 !important;
+  color: #8B0000 !important;
+  font-weight: 600 !important;
+  transform: translateX(3px);
 }
 
+.dropdown-item i {
+  width: 22px;
+  margin-right: 8px;
+  text-align: center;
+}
 
-/* endnavbar */
+.dropdown-divider {
+  margin: 0.4rem 0 !important;
+  border-top: 1px solid #f1f5f9 !important;
+}
+
+/* === GNFS Sidenav (Sidebar) Layout === */
+.gnfs-app-layout {
+  overflow-x: hidden;
+}
+
+.gnfs-sidebar {
+  position: fixed;
+  top: 50px;
+  bottom: 0;
+  left: 0;
+  width: 250px;
+  background-color: #0F172A;
+  border-right: 1px solid #1E293B;
+  color: #E2E8F0;
+  overflow-y: auto;
+  z-index: 1030;
+  transition: transform 0.25s ease-in-out, width 0.25s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.gnfs-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+.gnfs-sidebar::-webkit-scrollbar-track {
+  background: #0F172A;
+}
+.gnfs-sidebar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.gnfs-sidebar-nav {
+  padding: 0.75rem 0.75rem 2rem 0.75rem;
+  flex: 1;
+}
+
+.gnfs-sidebar-header {
+  padding: 0.75rem 1rem;
+  background-color: #1E293B;
+  border-bottom: 1px solid #334155;
+}
+
+.gnfs-sidebar-section-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #64748B;
+  padding: 0.9rem 0.75rem 0.35rem 0.75rem;
+  margin-top: 0.3rem;
+}
+
+.gnfs-sidebar-link {
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  color: #CBD5E1;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 8px;
+  margin-bottom: 2px;
+  transition: all 0.15s ease;
+}
+
+.gnfs-sidebar-link:hover {
+  background-color: #1E293B;
+  color: #FFFFFF;
+  text-decoration: none;
+  transform: translateX(3px);
+}
+
+.gnfs-sidebar-link.active {
+  background-color: #8B0000;
+  color: #FFFFFF;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(139, 0, 0, 0.4);
+}
+
+.gnfs-sidebar-link i {
+  width: 22px;
+  font-size: 0.95rem;
+  margin-right: 10px;
+  text-align: center;
+}
+
+.gnfs-main-content {
+  margin-left: 250px;
+  min-height: calc(100vh - 50px);
+  background-color: #F8FAFC;
+  transition: margin-left 0.25s ease-in-out;
+}
+
+/* Sidebar collapsed / toggled on desktop */
+body.sidebar-collapsed .gnfs-sidebar {
+  transform: translateX(-250px);
+}
+body.sidebar-collapsed .gnfs-main-content {
+  margin-left: 0;
+}
+
+/* Responsive Tablet & Mobile */
+@media (max-width: 991.98px) {
+  .gnfs-sidebar {
+    transform: translateX(-260px);
+  }
+  body.sidebar-open .gnfs-sidebar {
+    transform: translateX(0);
+    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.5);
+  }
+  .gnfs-main-content {
+    margin-left: 0;
+  }
+  .gnfs-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 50px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1025;
+  }
+  body.sidebar-open .gnfs-sidebar-backdrop {
+    display: block;
+  }
+}
 
 /* table icons */
 /* Hover effects for action icons */
@@ -173,3 +329,76 @@ body {
 .custom-hover:hover {
     color: #ff5733;
 }
+
+/* === GNFS Brand Theme Utilities === */
+.gnfs-header {
+    background: linear-gradient(135deg, #8B0000 0%, #aa1414 100%) !important;
+    color: #ffffff !important;
+}
+
+.btn-gnfs {
+    background: linear-gradient(135deg, #8B0000 0%, #a01010 100%) !important;
+    border-color: #8B0000 !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    transition: all 0.25s ease-in-out;
+}
+
+.btn-gnfs:hover, .btn-gnfs:focus {
+    background: linear-gradient(135deg, #700000 0%, #8B0000 100%) !important;
+    border-color: #700000 !important;
+    color: #FFD700 !important; /* Gold text on hover */
+    box-shadow: 0 4px 12px rgba(139, 0, 0, 0.35);
+    transform: translateY(-1px);
+}
+
+/* === 6-Block Independent OTP Input (Compact Rectangles) === */
+.otp-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin: 1.25rem 0;
+}
+
+.otp-box {
+    width: 36px;
+    height: 46px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    text-align: center;
+    border: 1.5px solid #ced4da;
+    border-radius: 4px; /* Crisp rectangular shape */
+    background-color: #ffffff;
+    color: #8B0000;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    caret-color: #8B0000;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    padding: 0;
+    line-height: 46px;
+}
+
+.otp-box:focus {
+    border-color: #8B0000;
+    box-shadow: 0 0 0 2px rgba(139, 0, 0, 0.2);
+    outline: none;
+    background-color: #fffaf9;
+}
+
+.otp-box.filled {
+    border-color: #8B0000;
+    background-color: #fff9f9;
+    color: #8B0000;
+}
+
+@media (max-width: 400px) {
+    .otp-container {
+        gap: 6px;
+    }
+    .otp-box {
+        width: 32px;
+        height: 42px;
+        font-size: 1.15rem;
+        line-height: 42px;
+    }
+}

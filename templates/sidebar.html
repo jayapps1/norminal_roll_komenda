@@ -1,0 +1,143 @@
+{% load static %}
+<aside id="gnfsSidebar" class="gnfs-sidebar shadow-sm">
+  <!-- Sidebar Header Profile Card -->
+  <div class="gnfs-sidebar-header">
+    <div class="d-flex align-items-center gap-2 overflow-hidden">
+      <div class="avatar-circle bg-danger text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; font-size: 0.75rem; flex-shrink: 0;">
+        {{ user.username|slice:":1"|upper }}
+      </div>
+      <div class="text-truncate">
+        <strong class="d-block text-white text-truncate" style="font-size: 0.8rem;">{{ user.username }}</strong>
+        <span class="badge bg-warning text-dark py-0 px-1" style="font-size: 0.65rem;">{{ gnfs_role|default:"STAFF" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="gnfs-sidebar-nav">
+    <!-- 1. OPERATIONAL COMMAND -->
+    <div class="gnfs-sidebar-section-title">Operational Command</div>
+    {% if user.is_superuser or gnfs_role == 'NATIONAL_ADMIN' %}
+    <a href="{% url 'dashboard-national' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'dashboard-national' %}active{% endif %}">
+      <i class="fas fa-landmark text-warning"></i>
+      <span>National HQ</span>
+    </a>
+    {% elif gnfs_role == 'REGIONAL_ADMIN' and gnfs_assignment.region %}
+    <a href="{% url 'dashboard-regional' gnfs_assignment.region.id %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'dashboard-regional' %}active{% endif %}">
+      <i class="fas fa-map-marked-alt text-warning"></i>
+      <span>{{ gnfs_assignment.region.name }}</span>
+    </a>
+    {% elif gnfs_role in 'DFO,DISTRICT_ADMIN' and gnfs_assignment.district %}
+    <a href="{% url 'dashboard-district' gnfs_assignment.district.id %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'dashboard-district' %}active{% endif %}">
+      <i class="fas fa-building text-warning"></i>
+      <span>{{ gnfs_assignment.district.name }}</span>
+    </a>
+    {% elif gnfs_role == 'STATION_ADMIN' and gnfs_assignment.station %}
+    <a href="{% url 'dashboard-station' gnfs_assignment.station.id %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'dashboard-station' %}active{% endif %}">
+      <i class="fas fa-fire-extinguisher text-warning"></i>
+      <span>{{ gnfs_assignment.station.name }}</span>
+    </a>
+    {% elif gnfs_role == 'POST_ADMIN' and gnfs_assignment.post %}
+    <a href="{% url 'dashboard-post' gnfs_assignment.post.id %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'dashboard-post' %}active{% endif %}">
+      <i class="fas fa-store text-warning"></i>
+      <span>{{ gnfs_assignment.post.name }}</span>
+    </a>
+    {% else %}
+    <a href="{% url 'personnel' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'personnel' %}active{% endif %}">
+      <i class="fas fa-home text-warning"></i>
+      <span>Command Roster</span>
+    </a>
+    {% endif %}
+
+    <!-- 2. PERSONNEL MANAGEMENT -->
+    <div class="gnfs-sidebar-section-title">Personnel Roll</div>
+    <a href="{% url 'personnel' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'personnel' %}active{% endif %}">
+      <i class="fas fa-users text-info"></i>
+      <span>Nominal Roll</span>
+    </a>
+    <a href="{% url 'addstaff' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'addstaff' %}active{% endif %}">
+      <i class="fas fa-user-plus text-success"></i>
+      <span>Add Personnel</span>
+    </a>
+    <a href="{% url 'officers_at_post' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'officers_at_post' %}active{% endif %}">
+      <i class="fas fa-user-check text-success"></i>
+      <span>Staff At Post</span>
+    </a>
+    <a href="{% url 'officers_on_leave' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'officers_on_leave' %}active{% endif %}">
+      <i class="fas fa-user-clock text-danger"></i>
+      <span>Staff On Leave</span>
+    </a>
+    <a href="{% url 'export-personnel' %}" class="gnfs-sidebar-link">
+      <i class="fas fa-file-excel text-success"></i>
+      <span>Export Excel</span>
+    </a>
+    <a href="{% url 'import-personnel' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'import-personnel' %}active{% endif %}">
+      <i class="fas fa-file-import text-primary"></i>
+      <span>Import Excel</span>
+    </a>
+
+    <!-- 3. LEAVE MANAGEMENT HUB -->
+    <div class="gnfs-sidebar-section-title">Leave Hub</div>
+    <a href="{% url 'leave-dashboard' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'leave-dashboard' %}active{% endif %}">
+      <i class="fas fa-tachometer-alt text-danger"></i>
+      <span>Leave Dashboard</span>
+    </a>
+    <a href="{% url 'leave-apply' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'leave-apply' %}active{% endif %}">
+      <i class="fas fa-calendar-plus text-success"></i>
+      <span>Apply for Leave</span>
+    </a>
+    <a href="{% url 'leave-calendar' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'leave-calendar' %}active{% endif %}">
+      <i class="fas fa-calendar-week text-primary"></i>
+      <span>Roster Calendar</span>
+    </a>
+    <a href="{% url 'leave-balances' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'leave-balances' %}active{% endif %}">
+      <i class="fas fa-wallet text-info"></i>
+      <span>Entitlement Balances</span>
+    </a>
+    <a href="{% url 'leave-deferments' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'leave-deferments' %}active{% endif %}">
+      <i class="fas fa-history text-secondary"></i>
+      <span>Deferment Requests</span>
+    </a>
+    <a href="{% url 'leave-holidays' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'leave-holidays' %}active{% endif %}">
+      <i class="fas fa-flag text-warning"></i>
+      <span>Public Holidays</span>
+    </a>
+
+    <!-- 4. GOVERNANCE & APPROVALS -->
+    <div class="gnfs-sidebar-section-title">Governance & Approvals</div>
+    <a href="{% url 'approval-list' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'approval-list' %}active{% endif %} justify-content-between">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-clipboard-check text-warning"></i>
+        <span>Approvals Queue</span>
+      </div>
+      {% if pending_approvals_count > 0 %}
+      <span class="badge bg-warning text-dark rounded-pill" style="font-size: 0.65rem;">{{ pending_approvals_count }}</span>
+      {% endif %}
+    </a>
+
+    {% if user.is_superuser or user.is_staff or gnfs_role in 'NATIONAL_ADMIN,REGIONAL_ADMIN' %}
+    <a href="{% url 'structure-manage' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'structure-manage' %}active{% endif %}">
+      <i class="fas fa-sitemap text-warning"></i>
+      <span>Command Structure</span>
+    </a>
+    <a href="{% url 'audit-logs' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'audit-logs' %}active{% endif %}">
+      <i class="fas fa-shield-alt text-info"></i>
+      <span>Security Audit Logs</span>
+    </a>
+    {% endif %}
+
+    <!-- 5. ACCOUNT & SETTINGS -->
+    <div class="gnfs-sidebar-section-title">User Account</div>
+    <a href="{% url 'profile' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+      <i class="fas fa-user-circle text-primary"></i>
+      <span>My Profile</span>
+    </a>
+    <a href="{% url 'totp-setup' %}" class="gnfs-sidebar-link {% if request.resolver_match.url_name == 'totp-setup' %}active{% endif %}">
+      <i class="fas fa-key text-success"></i>
+      <span>Two-Factor Auth</span>
+    </a>
+    <a href="{% url 'logout-staff' %}" class="gnfs-sidebar-link text-danger mt-2">
+      <i class="fas fa-sign-out-alt text-danger"></i>
+      <span>Sign Out</span>
+    </a>
+  </div>
+</aside>

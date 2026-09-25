@@ -1,0 +1,79 @@
+{% extends "main.html" %}
+
+{% block title %}Recall Officer from Leave — GNFS Leave Management{% endblock title %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4" style="max-width: 800px;">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'leave-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-calendar-alt me-1"></i> Leave Management</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'leave-detail' leave_req.pk %}" class="text-decoration-none text-secondary">Request #{{ leave_req.id }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Recall Officer</li>
+        </ol>
+    </nav>
+
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-header bg-dark text-white py-3">
+            <h5 class="mb-0 fw-bold">
+                <i class="fas fa-phone-alt text-warning me-2"></i>Official Officer Recall / Call-Off Order
+            </h5>
+            <div class="small text-white-50">Recall active personnel back to active duty due to operational exigencies.</div>
+        </div>
+
+        <div class="card-body p-4 bg-light">
+            <!-- Officer Summary Box -->
+            <div class="bg-white border rounded-3 p-3 mb-4">
+                <div class="row g-2 align-items-center">
+                    <div class="col-sm-6">
+                        <span class="text-muted small d-block">Officer Name & ID:</span>
+                        <strong class="text-dark fs-6">{{ leave_req.personnel.fullname }}</strong> ({{ leave_req.personnel.staffID }})
+                        <div class="small text-muted">{{ leave_req.personnel.rank_short }} &bull; {{ leave_req.personnel.station.name|default:"Unassigned" }}</div>
+                    </div>
+                    <div class="col-sm-6 text-sm-end">
+                        <span class="text-muted small d-block">Current Approved Leave:</span>
+                        <span class="badge bg-danger fs-6">{{ leave_req.leave_type.name }}</span>
+                        <div class="small text-dark mt-1">
+                            {{ leave_req.start_date|date:"M d, Y" }} &rarr; {{ leave_req.last_leave_date|date:"M d, Y" }}
+                            ({{ leave_req.working_days_count }} working days)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-warning border-0 rounded-3 mb-4 small">
+                <i class="fas fa-exclamation-circle me-1"></i>
+                <strong>Statutory Balance Restoration:</strong> Recalling this officer will automatically restore their unused working days back to their {{ leave_req.leave_year }} Leave Entitlement balance and update their duty status to <strong>AT POST</strong>.
+            </div>
+
+            <!-- Recall Form -->
+            <form method="post">
+                {% csrf_token %}
+                <div class="card border-0 shadow-sm rounded-3 bg-white p-4 mb-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-secondary">Effective Recall Date <span class="text-danger">*</span></label>
+                        {{ form.recall_date }}
+                        {% if form.recall_date.errors %}<div class="text-danger small mt-1">{{ form.recall_date.errors }}</div>{% endif %}
+                        <div class="form-text small">The date the officer reports back to duty. Leave days before this date will be counted as consumed.</div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold small text-uppercase text-secondary">Official Operational Reason for Recall <span class="text-danger">*</span></label>
+                        {{ form.recall_reason }}
+                        {% if form.recall_reason.errors %}<div class="text-danger small mt-1">{{ form.recall_reason.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'leave-detail' leave_req.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-dark px-4 fw-semibold shadow-sm">
+                        <i class="fas fa-check-circle text-warning me-1"></i> Confirm Recall Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}

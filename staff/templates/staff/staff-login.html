@@ -38,15 +38,27 @@ Login Staff
                                     {% endif %}
                                 </div>
 
-                                <input type="password" name="password"
-                                    class="form-control {% if form.password.errors %}is-invalid{% endif %}"
-                                    id="id_password"
-                                    autocomplete="new-password">
+                                <div class="mb-3">
+                                    <label for="id_password" class="form-label">Password</label>
+                                    <input type="password" name="password"
+                                        class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+                                        id="id_password"
+                                        autocomplete="current-password">
+                                    {% if form.password.errors %}
+                                        <div class="invalid-feedback">{{ form.password.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
 
                                 <div class="d-grid mt-4">
                                     <button type="submit" class="btn btn-danger btn-block">Login</button>
                                 </div>
                             </form>
+
+                            <div class="text-center mt-3">
+                                <a href="{% url 'forgot-password' %}" class="text-decoration-none text-muted small">
+                                    <i class="fas fa-key me-1"></i> Forgot Password?
+                                </a>
+                            </div>
                         </div> <!-- card-body -->
                     </div> <!-- col-md-7 -->
 

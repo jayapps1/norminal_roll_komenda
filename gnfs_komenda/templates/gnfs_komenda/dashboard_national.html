@@ -1,0 +1,145 @@
+{% extends 'main.html' %}
+
+{% block title %}National Headquarters Dashboard — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Header & Breadcrumbs -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item active text-danger fw-bold"><i class="fas fa-landmark me-1"></i> National Headquarters</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">GNFS National Command & Operations Dashboard</h3>
+      <p class="text-muted small mb-0">Nationwide Personnel & Station Hierarchy Overview</p>
+    </div>
+
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+      <a href="{% url 'personnel' %}" class="btn btn-outline-danger btn-sm shadow-sm">
+        <i class="fas fa-users me-1"></i> View Nationwide Personnel Roll
+      </a>
+      <a href="{% url 'approval-list' %}" class="btn btn-warning btn-sm shadow-sm fw-bold">
+        <i class="fas fa-clipboard-check me-1"></i> National Approvals ({{ pending_approvals }})
+      </a>
+    </div>
+  </div>
+
+  <!-- Nationwide Metric Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #8B0000 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Total Personnel</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ total_personnel }}</span>
+          <a href="{% url 'personnel' %}" class="btn btn-sm btn-outline-danger py-0 px-2" title="All Personnel">All</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #ffc107 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Senior Officers</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ senior_officers }}</span>
+          <a href="{% url 'personnel' %}?category=SENIOR" class="btn btn-sm btn-outline-warning text-dark py-0 px-2" title="View Senior Officers">Drill Down</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #0dcaf0 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Junior Officers</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ junior_officers }}</span>
+          <a href="{% url 'personnel' %}?category=JUNIOR" class="btn btn-sm btn-outline-info text-dark py-0 px-2" title="View Junior Officers">Drill Down</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #198754 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">At Post</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-success">{{ personnel_at_post }}</span>
+          <i class="fas fa-user-check text-success fs-5 opacity-50"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #dc3545 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">On Leave</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-danger">{{ personnel_on_leave }}</span>
+          <i class="fas fa-calendar-times text-danger fs-5 opacity-50"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #B8860B !important;">
+        <div class="text-muted small text-uppercase fw-semibold">HQ Approvals</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-warning">{{ pending_approvals }}</span>
+          <a href="{% url 'approval-list' %}" class="btn btn-sm btn-outline-warning text-dark py-0 px-2">Inbox</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational Structure Grid -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 bg-light p-3 text-center">
+        <div class="text-muted small text-uppercase">Regional Commands</div>
+        <div class="fs-4 fw-bold text-dark mt-1">{{ total_regions }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 bg-light p-3 text-center">
+        <div class="text-muted small text-uppercase">Districts</div>
+        <div class="fs-4 fw-bold text-dark mt-1">{{ total_districts }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 bg-light p-3 text-center">
+        <div class="text-muted small text-uppercase">Stations & Market Posts</div>
+        <div class="fs-4 fw-bold text-dark mt-1">{{ total_stations }} Stations / {{ total_posts }} Posts</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- All 16 Regional Commands Grid -->
+  <h4 class="fw-bold text-dark mb-3">Ghana Regional Commands</h4>
+  <div class="row g-3">
+    {% for reg in regions %}
+    <div class="col-md-6 col-lg-4 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 h-100 bg-white">
+        <div class="card-header bg-white border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+          <span class="badge bg-danger fw-bold" style="background-color:#8B0000 !important;">{{ reg.code }}</span>
+          <span class="badge bg-light text-muted border">{{ reg.district_count }} Districts</span>
+        </div>
+        <div class="card-body">
+          <h5 class="fw-bold text-dark mb-2">{{ reg.name }}</h5>
+          <div class="d-flex justify-content-between text-muted small mb-1">
+            <span>Fire Stations:</span>
+            <strong class="text-dark">{{ reg.station_count }}</strong>
+          </div>
+          <div class="d-flex justify-content-between text-muted small mb-3">
+            <span>Personnel:</span>
+            <strong class="text-dark">{{ reg.personnel_count }}</strong>
+          </div>
+          <a href="{% url 'dashboard-regional' reg.id %}" class="btn btn-outline-danger btn-sm w-100 fw-semibold" style="border-color:#8B0000; color:#8B0000;">
+            <i class="fas fa-map-marker-alt me-1"></i> View Region
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock content %}

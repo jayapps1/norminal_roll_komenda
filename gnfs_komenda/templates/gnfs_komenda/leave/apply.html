@@ -1,0 +1,599 @@
+{% extends "main.html" %}
+
+{% block title %}Apply for Leave — GNFS Leave Management{% endblock title %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1250px;">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'leave-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-calendar-alt me-1"></i> Leave Management</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Apply for Leave</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom gap-2">
+        <div>
+            <h3 class="fw-bold mb-0 text-dark">
+                <i class="fas fa-calendar-plus text-danger me-2"></i>Official Leave Application
+            </h3>
+            <span class="text-muted small">Submit statutory leave requests with real-time entitlement validation, gender-appropriate rules, and working-day calculations.</span>
+        </div>
+        <a href="{% url 'leave-dashboard' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Back to Roster
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="leaveApplicationForm">
+        {% csrf_token %}
+        <div class="row g-4">
+            <!-- Form Inputs Column -->
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-header bg-white py-3 border-bottom">
+                        <h6 class="mb-0 fw-bold text-dark">
+                            <i class="fas fa-user-shield me-2 text-danger"></i>Officer & Leave Selection
+                        </h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Personnel Field -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-uppercase text-secondary">Select Officer <span class="text-danger">*</span></label>
+                            {{ form.personnel }}
+                            {% if form.personnel.errors %}<div class="text-danger small mt-1">{{ form.personnel.errors }}</div>{% endif %}
+                        </div>
+
+                        <!-- Officer Info Badge Box (Auto Populated) -->
+                        <div id="officerInfoBox" class="alert alert-light border rounded-3 p-3 mb-3 d-none">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-sm-4">
+                                    <span class="text-muted small d-block">Rank & Category:</span>
+                                    <strong id="badgeRank" class="text-dark">-</strong>
+                                    <span id="badgeCategory" class="badge bg-secondary ms-1">-</span>
+                                </div>
+                                <div class="col-sm-4">
+                                    <span class="text-muted small d-block">Gender:</span>
+                                    <strong id="badgeGender" class="text-dark">-</strong>
+                                </div>
+                                <div class="col-sm-4">
+                                    <span class="text-muted small d-block">Current Available Balance:</span>
+                                    <span id="badgeAvailableBalance" class="fs-5 fw-bold text-success">--</span>
+                                    <span class="small text-muted">days remaining</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Leave Type Field -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-uppercase text-secondary">Leave Type <span class="text-danger">*</span></label>
+                            <select name="leave_type" class="form-select" id="id_leave_type" required>
+                                <option value="">Select Leave Type</option>
+                                {% for lt in leave_types %}
+                                <option value="{{ lt.id }}" 
+                                        data-code="{{ lt.code }}" 
+                                        data-mode="{{ lt.calculation_mode }}"
+                                        data-gender="{{ lt.allowed_gender }}"
+                                        data-junior="{{ lt.default_days_junior }}"
+                                        data-senior="{{ lt.default_days_senior }}"
+                                        data-attachment="{{ lt.requires_attachment|yesno:'true,false' }}"
+                                        data-months="{{ lt.calendar_months }}"
+                                        {% if form.leave_type.value|stringformat:"s" == lt.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ lt.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.leave_type.errors %}<div class="text-danger small mt-1">{{ form.leave_type.errors }}</div>{% endif %}
+                            <small id="leaveTypeDescription" class="text-muted d-block mt-1"></small>
+                        </div>
+
+                        <!-- Proportionate / Part Leave Option (Annual Leave Only) -->
+                        <div class="mb-3 p-3 bg-light border rounded-3 d-none" id="proportionateBox">
+                            <label class="form-label fw-bold small text-uppercase text-danger mb-2">
+                                <i class="fas fa-layer-group me-1"></i>Annual Leave Mode
+                            </label>
+                            <div class="d-flex gap-3 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="annual_mode" id="modeFull" value="FULL" checked>
+                                    <label class="form-check-label fw-semibold small" for="modeFull" id="modeFullLabel">
+                                        Full Annual Leave (<span id="fullDaysDisplay">36</span> working days)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="annual_mode" id="modePart" value="PART">
+                                    <label class="form-check-label fw-semibold small" for="modePart">
+                                        Proportionate Leave (Part Days, e.g. 10 or 15 days)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-text small text-muted">
+                                <i class="fas fa-info-circle me-1 text-primary"></i>
+                                If you take proportionate leave, the unused remaining days will remain in your balance for future requests this year.
+                            </div>
+                            <!-- Hidden checkbox that syncs with form -->
+                            <div style="display: none;">
+                                {{ form.is_proportionate }}
+                            </div>
+                        </div>
+
+                        <!-- Dates & Duration Grid -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-uppercase text-secondary">Start Date <span class="text-danger">*</span></label>
+                                {{ form.start_date }}
+                                {% if form.start_date.errors %}<div class="text-danger small mt-1">{{ form.start_date.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-uppercase text-secondary" id="durationLabel">
+                                    Duration (Working Days) <span class="text-danger">*</span>
+                                </label>
+                                {{ form.duration }}
+                                <div class="form-text small" id="durationHelp">Working days automatically exclude weekends and statutory public holidays.</div>
+                                {% if form.duration.errors %}<div class="text-danger small mt-1">{{ form.duration.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Medical Reference / Hospital Facility (Shown ONLY for Sick / Maternity as relevant) -->
+                        <div class="mb-3 d-none" id="medicalRefContainer">
+                            <label class="form-label fw-semibold small text-uppercase text-danger" id="medicalRefLabel">
+                                <i class="fas fa-hospital me-1"></i>Hospital / Health Centre & Attending Doctor <span class="text-danger">*</span>
+                            </label>
+                            {{ form.medical_reference }}
+                            <div class="form-text small" id="medicalRefHelp">Specify the hospital, clinic, or certified medical facility issuing this excuse duty.</div>
+                            {% if form.medical_reference.errors %}<div class="text-danger small mt-1">{{ form.medical_reference.errors }}</div>{% endif %}
+                        </div>
+
+                        <!-- Attachment / Supporting Document (Dynamic Context) -->
+                        <div class="mb-3" id="attachmentContainer">
+                            <label class="form-label fw-semibold small text-uppercase text-secondary" id="attachmentLabel">
+                                <i class="fas fa-paperclip me-1"></i>Supporting Document (Optional)
+                            </label>
+                            {{ form.attachment }}
+                            {% if form.attachment.errors %}<div class="text-danger small mt-1">{{ form.attachment.errors }}</div>{% endif %}
+                            <div class="form-text small" id="attachmentHelp">Accepted formats: PDF, JPG, PNG.</div>
+                        </div>
+
+                        <!-- Reason -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-uppercase text-secondary">Reason / Remarks <span class="text-danger">*</span></label>
+                            {{ form.reason }}
+                            {% if form.reason.errors %}<div class="text-danger small mt-1">{{ form.reason.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emergency Contact & Handover Details -->
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-header bg-white py-3 border-bottom">
+                        <h6 class="mb-0 fw-bold text-dark">
+                            <i class="fas fa-phone-alt me-2 text-primary"></i>Contact During Leave & Handover
+                        </h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-uppercase text-secondary">Contact Phone</label>
+                                {{ form.contact_phone }}
+                                {% if form.contact_phone.errors %}<div class="text-danger small mt-1">{{ form.contact_phone.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-uppercase text-secondary">Contact Address</label>
+                                {{ form.contact_address }}
+                                {% if form.contact_address.errors %}<div class="text-danger small mt-1">{{ form.contact_address.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-uppercase text-secondary">Handover Notes / Relieving Officer Brief</label>
+                            {{ form.handover_notes }}
+                            {% if form.handover_notes.errors %}<div class="text-danger small mt-1">{{ form.handover_notes.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Action Card -->
+                <div class="card border-0 shadow-sm rounded-3 mb-4 bg-light">
+                    <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small d-block">All leave applications are subject to command review and formal approval.</span>
+                        </div>
+                        <button type="submit" class="btn btn-danger px-4 py-2 fw-semibold" id="submitBtn">
+                            <i class="fas fa-paper-plane me-1"></i> Submit Application
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-Time Calculation & Preview Column -->
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm rounded-3 sticky-top" style="top: 75px;">
+                    <div class="card-header bg-danger text-white py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="fas fa-calculator me-2"></i>Live Calculation Preview
+                            </h6>
+                            <span class="badge bg-light text-danger" id="calcBadge">Real-Time</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div id="calcLoading" class="text-center py-4 d-none">
+                            <div class="spinner-border text-danger" role="status">
+                                <span class="visually-hidden">Calculating...</span>
+                            </div>
+                            <p class="text-muted small mt-2 mb-0">Computing working days & public holidays...</p>
+                        </div>
+
+                        <div id="calcResults">
+                            <!-- Leave Period Dates -->
+                            <div class="border rounded-3 p-3 mb-3 bg-light">
+                                <div class="row g-2 text-center">
+                                    <div class="col-6 border-end">
+                                        <span class="text-muted small d-block">Start Date</span>
+                                        <strong id="previewStartDate" class="text-dark fs-6">--</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span class="text-muted small d-block">Last Day of Leave</span>
+                                        <strong id="previewLastDate" class="text-danger fs-6">--</strong>
+                                    </div>
+                                </div>
+                                <hr class="my-2">
+                                <div class="text-center">
+                                    <span class="text-muted small d-block">Resume Duty Date (Next Working Day)</span>
+                                    <strong id="previewResumeDate" class="text-success fs-5">--</strong>
+                                </div>
+                            </div>
+
+                            <!-- Duration Breakdown Metrics -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-4">
+                                    <div class="p-2 border rounded-3 text-center bg-white">
+                                        <span class="text-muted" style="font-size: 0.72rem; display: block;">WORKING DAYS</span>
+                                        <strong id="previewWorkingDays" class="text-dark fs-6">--</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded-3 text-center bg-white">
+                                        <span class="text-muted" style="font-size: 0.72rem; display: block;">WEEKENDS</span>
+                                        <strong id="previewWeekendDays" class="text-secondary fs-6">--</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded-3 text-center bg-white">
+                                        <span class="text-muted" style="font-size: 0.72rem; display: block;">TOTAL CALENDAR</span>
+                                        <strong id="previewCalendarDays" class="text-secondary fs-6">--</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Holidays Skipped Box -->
+                            <div class="bg-white border rounded-3 p-3 mb-3" id="holidaysBox">
+                                <h6 class="small text-uppercase fw-bold text-secondary mb-2">Statutory Holidays Skipped</h6>
+                                <div id="holidaysList" class="small text-muted">
+                                    <em>None encountered in this date span.</em>
+                                </div>
+                            </div>
+
+                            <!-- Balance Projection Box -->
+                            <div class="bg-white border rounded-3 p-3 mb-0" id="balanceProjectionBox">
+                                <h6 class="small text-uppercase fw-bold text-secondary mb-2">Entitlement Balance Projection</h6>
+                                <div class="d-flex justify-content-between mb-1 small">
+                                    <span class="text-muted">Available Balance:</span>
+                                    <strong id="projCurrentBalance" class="text-dark">--</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1 small">
+                                    <span class="text-muted">Days to Consume:</span>
+                                    <strong id="projDaysToConsume" class="text-danger">--</strong>
+                                </div>
+                                <hr class="my-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-semibold text-dark small">Projected Remaining:</span>
+                                    <strong id="projRemainingBalance" class="fs-5 text-success">--</strong>
+                                </div>
+                                <div id="balanceAlert" class="alert alert-danger py-2 px-3 small mt-3 d-none">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <strong>Insufficient Balance!</strong> The requested days exceed the officer's available balance.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const personnelSelect = document.getElementById('id_personnel');
+    const leaveTypeSelect = document.getElementById('id_leave_type');
+    const startDateInput = document.getElementById('id_start_date');
+    const durationInput = document.getElementById('id_duration');
+    const durationLabel = document.getElementById('durationLabel');
+    const durationHelp = document.getElementById('durationHelp');
+    const isProportionateInput = document.getElementById('id_is_proportionate');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Proportionate Box
+    const proportionateBox = document.getElementById('proportionateBox');
+    const modeFull = document.getElementById('modeFull');
+    const modePart = document.getElementById('modePart');
+    const fullDaysDisplay = document.getElementById('fullDaysDisplay');
+
+    // UI Badges
+    const officerInfoBox = document.getElementById('officerInfoBox');
+    const badgeRank = document.getElementById('badgeRank');
+    const badgeCategory = document.getElementById('badgeCategory');
+    const badgeGender = document.getElementById('badgeGender');
+    const badgeAvailableBalance = document.getElementById('badgeAvailableBalance');
+
+    // Dynamic Context Fields
+    const medicalRefContainer = document.getElementById('medicalRefContainer');
+    const medicalRefLabel = document.getElementById('medicalRefLabel');
+    const medicalRefHelp = document.getElementById('medicalRefHelp');
+    const attachmentLabel = document.getElementById('attachmentLabel');
+    const attachmentHelp = document.getElementById('attachmentHelp');
+
+    // Preview elements
+    const previewStartDate = document.getElementById('previewStartDate');
+    const previewLastDate = document.getElementById('previewLastDate');
+    const previewResumeDate = document.getElementById('previewResumeDate');
+    const previewWorkingDays = document.getElementById('previewWorkingDays');
+    const previewWeekendDays = document.getElementById('previewWeekendDays');
+    const previewCalendarDays = document.getElementById('previewCalendarDays');
+    const holidaysList = document.getElementById('holidaysList');
+
+    const projCurrentBalance = document.getElementById('projCurrentBalance');
+    const projDaysToConsume = document.getElementById('projDaysToConsume');
+    const projRemainingBalance = document.getElementById('projRemainingBalance');
+    const balanceAlert = document.getElementById('balanceAlert');
+    const calcLoading = document.getElementById('calcLoading');
+
+    let currentAvailable = 0;
+    let officerCategory = 'JUNIOR';
+    let officerGender = 'MALE';
+    let requiresEntitlement = true;
+
+    // Filter Leave Types in the dropdown based on officer gender
+    function filterLeaveTypesByGender() {
+        if (!leaveTypeSelect) return;
+        const options = leaveTypeSelect.querySelectorAll('option');
+        options.forEach(opt => {
+            if (!opt.value) return;
+            const allowedGender = opt.dataset.gender || 'ALL';
+            if (allowedGender === 'MALE' && officerGender !== 'MALE') {
+                opt.disabled = true;
+                opt.style.display = 'none';
+                if (opt.selected) leaveTypeSelect.value = '';
+            } else if (allowedGender === 'FEMALE' && officerGender !== 'FEMALE') {
+                opt.disabled = true;
+                opt.style.display = 'none';
+                if (opt.selected) leaveTypeSelect.value = '';
+            } else {
+                opt.disabled = false;
+                opt.style.display = '';
+            }
+        });
+    }
+
+    // Configure fields according to selected leave type
+    function updateFieldVisibility() {
+        const selectedOpt = leaveTypeSelect ? leaveTypeSelect.selectedOptions[0] : null;
+        if (!selectedOpt || !selectedOpt.value) {
+            if (medicalRefContainer) medicalRefContainer.classList.add('d-none');
+            if (proportionateBox) proportionateBox.classList.add('d-none');
+            return;
+        }
+
+        const code = selectedOpt.dataset.code || '';
+        const mode = selectedOpt.dataset.mode || 'WORKING_DAYS';
+
+        // Update Duration Label based on mode
+        if (mode === 'CALENDAR_MONTHS') {
+            durationLabel.innerHTML = 'Duration (Calendar Months) <span class="text-danger">*</span>';
+            durationHelp.textContent = 'Calculated by whole calendar months.';
+        } else if (mode === 'CALENDAR_DAYS') {
+            durationLabel.innerHTML = 'Duration (Calendar Days) <span class="text-danger">*</span>';
+            durationHelp.textContent = 'Consecutive calendar days including weekends and public holidays.';
+        } else {
+            durationLabel.innerHTML = 'Duration (Working Days) <span class="text-danger">*</span>';
+            durationHelp.textContent = 'Working days automatically exclude weekends and statutory public holidays.';
+        }
+
+        // 1. Annual Leave: Proportionate Option, Hide Medical Ref
+        if (code === 'ANNUAL') {
+            if (medicalRefContainer) medicalRefContainer.classList.add('d-none');
+            if (proportionateBox) proportionateBox.classList.remove('d-none');
+
+            const fullAnnualDays = officerCategory === 'SENIOR' ? 42 : 36;
+            if (fullDaysDisplay) fullDaysDisplay.textContent = fullAnnualDays;
+
+            if (modeFull.checked) {
+                durationInput.value = Math.min(fullAnnualDays, currentAvailable > 0 ? currentAvailable : fullAnnualDays);
+                if (isProportionateInput) isProportionateInput.checked = false;
+            } else {
+                if (isProportionateInput) isProportionateInput.checked = true;
+            }
+
+            attachmentLabel.innerHTML = '<i class="fas fa-paperclip me-1"></i>Supporting Memo / Handover Letter (Optional)';
+            attachmentHelp.textContent = 'Optional recommendation memo from Station Officer or supervisor.';
+        } else {
+            if (proportionateBox) proportionateBox.classList.add('d-none');
+            if (isProportionateInput) isProportionateInput.checked = false;
+        }
+
+        // 2. Sick Leave: Show Medical Facility & Excuse Duty upload
+        if (code === 'SICK') {
+            if (medicalRefContainer) medicalRefContainer.classList.remove('d-none');
+            medicalRefLabel.innerHTML = '<i class="fas fa-hospital me-1 text-danger"></i>Hospital / Health Centre & Attending Doctor <span class="text-danger">*</span>';
+            medicalRefHelp.textContent = 'State the official medical facility and doctor that issued the excuse duty.';
+            attachmentLabel.innerHTML = '<i class="fas fa-file-medical me-1 text-danger"></i>Hospital Excuse Duty Letter / Medical Recommendation <span class="text-danger">*</span>';
+            attachmentHelp.textContent = 'Attach the official hospital excuse duty paper indicating recommended rest days.';
+        } else if (code === 'MATERNITY') {
+            if (medicalRefContainer) medicalRefContainer.classList.add('d-none');
+            attachmentLabel.innerHTML = '<i class="fas fa-baby me-1 text-danger"></i>Maternity Clinical Card / EDD Medical Report <span class="text-danger">*</span>';
+            attachmentHelp.textContent = 'Upload copy of clinical card or report showing Expected Date of Delivery (EDD).';
+            durationInput.value = 90;
+        } else if (code === 'PATERNITY') {
+            if (medicalRefContainer) medicalRefContainer.classList.add('d-none');
+            attachmentLabel.innerHTML = '<i class="fas fa-child me-1 text-primary"></i>Hospital Delivery Notification / Proof of Birth';
+            attachmentHelp.textContent = 'Upload baby birth notification or hospital delivery certificate.';
+            durationInput.value = 5;
+        } else if (code === 'TERMINAL') {
+            if (medicalRefContainer) medicalRefContainer.classList.add('d-none');
+            attachmentLabel.innerHTML = '<i class="fas fa-file-contract me-1"></i>Retirement Notice / Service Transition Letter';
+            attachmentHelp.textContent = 'Attach service transition confirmation.';
+            durationInput.value = 6;
+        } else if (code === 'STUDY') {
+            if (medicalRefContainer) medicalRefContainer.classList.add('d-none');
+            attachmentLabel.innerHTML = '<i class="fas fa-graduation-cap me-1 text-info"></i>Institution Admission Letter / Service Approval Memo <span class="text-danger">*</span>';
+            attachmentHelp.textContent = 'Upload the official admission letter and headquarters approval.';
+        } else if (code === 'CASUAL') {
+            if (medicalRefContainer) medicalRefContainer.classList.add('d-none');
+            attachmentLabel.innerHTML = '<i class="fas fa-paperclip me-1"></i>Casual Leave Memo / Note (Optional)';
+            attachmentHelp.textContent = 'Optional personal justification memo.';
+            if (!durationInput.value) durationInput.value = Math.min(12, currentAvailable > 0 ? currentAvailable : 12);
+        }
+
+        triggerCalculation();
+    }
+
+    // Proportionate Radio Handlers
+    if (modeFull) {
+        modeFull.addEventListener('change', function() {
+            if (this.checked) {
+                const fullAnnualDays = officerCategory === 'SENIOR' ? 42 : 36;
+                durationInput.value = Math.min(fullAnnualDays, currentAvailable > 0 ? currentAvailable : fullAnnualDays);
+                if (isProportionateInput) isProportionateInput.checked = false;
+                triggerCalculation();
+            }
+        });
+    }
+
+    if (modePart) {
+        modePart.addEventListener('change', function() {
+            if (this.checked) {
+                if (isProportionateInput) isProportionateInput.checked = true;
+                // Leave duration editable for user entry
+                durationInput.focus();
+                triggerCalculation();
+            }
+        });
+    }
+
+    function fetchEntitlement() {
+        const personnelId = personnelSelect ? personnelSelect.value : '';
+        const leaveTypeId = leaveTypeSelect ? leaveTypeSelect.value : '';
+        if (!personnelId) {
+            if (officerInfoBox) officerInfoBox.classList.add('d-none');
+            return;
+        }
+
+        const url = `/api/leave/entitlement/?personnel_id=${encodeURIComponent(personnelId)}&leave_type_id=${encodeURIComponent(leaveTypeId || '')}`;
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (officerInfoBox) officerInfoBox.classList.remove('d-none');
+                    if (badgeRank) badgeRank.textContent = data.rank || '-';
+                    if (badgeCategory) {
+                        officerCategory = data.officer_category || 'JUNIOR';
+                        badgeCategory.textContent = officerCategory;
+                        badgeCategory.className = officerCategory === 'SENIOR' ? 'badge bg-warning text-dark ms-1' : 'badge bg-info text-dark ms-1';
+                    }
+                    if (badgeGender) {
+                        officerGender = data.gender || 'MALE';
+                        const icon = officerGender === 'FEMALE' ? '<i class="fas fa-venus text-danger me-1"></i>Female' : '<i class="fas fa-mars text-primary me-1"></i>Male';
+                        badgeGender.innerHTML = icon;
+                    }
+                    if (badgeAvailableBalance) badgeAvailableBalance.textContent = data.remaining_balance;
+                    if (projCurrentBalance) projCurrentBalance.textContent = `${data.remaining_balance} days`;
+                    currentAvailable = data.remaining_balance;
+
+                    filterLeaveTypesByGender();
+                    updateFieldVisibility();
+                }
+            })
+            .catch(err => console.error("Error fetching entitlement:", err));
+    }
+
+    function triggerCalculation() {
+        const startDate = startDateInput ? startDateInput.value : '';
+        const duration = durationInput ? durationInput.value : '';
+        const leaveTypeId = leaveTypeSelect ? leaveTypeSelect.value : '';
+
+        if (!startDate || !duration || duration <= 0) {
+            return;
+        }
+
+        if (calcLoading) calcLoading.classList.remove('d-none');
+
+        const url = `/api/leave/calculate/?start_date=${encodeURIComponent(startDate)}&duration=${encodeURIComponent(duration)}&leave_type_id=${encodeURIComponent(leaveTypeId || '')}`;
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (calcLoading) calcLoading.classList.add('d-none');
+                if (data.success) {
+                    if (previewStartDate) previewStartDate.textContent = data.start_date;
+                    if (previewLastDate) previewLastDate.textContent = data.last_leave_date;
+                    if (previewResumeDate) previewResumeDate.textContent = data.resume_date;
+                    if (previewWorkingDays) previewWorkingDays.textContent = `${data.working_days_count} days`;
+                    if (previewWeekendDays) previewWeekendDays.textContent = `${data.weekend_days_count} days`;
+                    if (previewCalendarDays) previewCalendarDays.textContent = `${data.calendar_days_count} days`;
+
+                    // Holidays
+                    if (holidaysList) {
+                        if (data.holidays_encountered && data.holidays_encountered.length > 0) {
+                            holidaysList.innerHTML = data.holidays_encountered.map(h => 
+                                `<span class="badge bg-warning text-dark me-1 mb-1"><i class="fas fa-flag me-1"></i>${h}</span>`
+                            ).join(' ');
+                        } else {
+                            holidaysList.innerHTML = '<span class="text-muted small"><em>None encountered in this date span.</em></span>';
+                        }
+                    }
+
+                    // Balance Projection
+                    const selectedOpt = leaveTypeSelect ? leaveTypeSelect.selectedOptions[0] : null;
+                    const code = selectedOpt ? selectedOpt.dataset.code : '';
+                    const daysToConsume = (code === 'ANNUAL' || code === 'CASUAL') ? data.working_days_count : 0;
+                    if (projDaysToConsume) projDaysToConsume.textContent = `${daysToConsume} days`;
+                    
+                    if (code === 'ANNUAL' || code === 'CASUAL') {
+                        const remaining = currentAvailable - daysToConsume;
+                        if (projRemainingBalance) {
+                            projRemainingBalance.textContent = `${remaining} days`;
+                            projRemainingBalance.className = remaining >= 0 ? 'fs-5 text-success' : 'fs-5 text-danger';
+                        }
+
+                        if (remaining < 0) {
+                            if (balanceAlert) balanceAlert.classList.remove('d-none');
+                            if (submitBtn) submitBtn.disabled = true;
+                        } else {
+                            if (balanceAlert) balanceAlert.classList.add('d-none');
+                            if (submitBtn) submitBtn.disabled = false;
+                        }
+                    } else {
+                        if (projRemainingBalance) projRemainingBalance.textContent = 'N/A';
+                        if (balanceAlert) balanceAlert.classList.add('d-none');
+                        if (submitBtn) submitBtn.disabled = false;
+                    }
+                }
+            })
+            .catch(err => {
+                if (calcLoading) calcLoading.classList.add('d-none');
+                console.error("Calculation preview error:", err);
+            });
+    }
+
+    if (personnelSelect) personnelSelect.addEventListener('change', fetchEntitlement);
+    if (leaveTypeSelect) leaveTypeSelect.addEventListener('change', () => {
+        fetchEntitlement();
+        updateFieldVisibility();
+    });
+    if (startDateInput) startDateInput.addEventListener('change', triggerCalculation);
+    if (durationInput) durationInput.addEventListener('input', triggerCalculation);
+
+    // Initial trigger if values exist
+    if (personnelSelect && personnelSelect.value) {
+        fetchEntitlement();
+    }
+});
+</script>
+{% endblock content %}

@@ -1,81 +1,282 @@
 {% extends "main.html" %}
-{%block title%}
-Staff Details
-{%endblock title%}
+
+{% block title %}{{ staff.fullname }} — Personnel Details{% endblock title %}
+
 {% block content %}
-<div class="container mt-4">
+<div class="container my-4" style="max-width: 900px;">
+    <!-- Breadcrumbs -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'personnel' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> Personnel Roll</a></li>
+            {% if staff.current_region %}
+            <li class="breadcrumb-item"><a href="{% url 'dashboard-regional' staff.current_region.id %}" class="text-decoration-none text-secondary">{{ staff.current_region.name }}</a></li>
+            {% endif %}
+            {% if staff.current_district %}
+            <li class="breadcrumb-item"><a href="{% url 'dashboard-district' staff.current_district.id %}" class="text-decoration-none text-secondary">{{ staff.current_district.name }}</a></li>
+            {% endif %}
+            {% if staff.station %}
+            <li class="breadcrumb-item"><a href="{% url 'dashboard-station' staff.station.id %}" class="text-decoration-none text-secondary">{{ staff.station.name }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item active" aria-current="page">{{ staff.staffID }}</li>
+        </ol>
+    </nav>
+
     <!-- Card Layout -->
-    <div class="card shadow-lg border-0 rounded-3">
-        <div class="card-header bg-dark text-white text-center py-3">
-            <h3 class="mb-0">Staff Profile</h3>
-        </div>
-        <div class="card-body p-4">
-
-            <!-- Staff Info Grid -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <h5 class="text-muted">Staff ID</h5>
-                    <p class="fw-bold">{{ staff.staffID }}</p>
-                </div>
-                <div class="col-md-6">
-                    <h5 class="text-muted">Full Name</h5>
-                    <p class="fw-bold">{{ staff.fullname }}</p>
-                </div>
+    <div class="card shadow border-0 rounded-3 overflow-hidden">
+        <div class="card-header text-white py-3 d-flex justify-content-between align-items-center" style="background-color: #8B0000;">
+            <div>
+                <h4 class="mb-0 fw-bold">{{ staff.fullname }}</h4>
+                <div class="small text-white-50">Staff ID: <strong>{{ staff.staffID }}</strong> &bull; Rank: <strong>{{ staff.rank_short }}</strong> &bull; Category: <strong>{{ staff.get_officer_category_display|default:"Unclassified" }}</strong></div>
             </div>
-
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <h5 class="text-muted">Job Grade</h5>
-                    <p class="fw-bold">{{ staff.job_grade }}</p>
-                </div>
-                <div class="col-md-6">
-                    <h5 class="text-muted">Management Unit</h5>
-                    <p class="fw-bold">{{ staff.mgmt_units }}</p>
-                </div>
-            </div>
-
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <h5 class="text-muted">Ghana Card</h5>
-                    <p class="fw-bold">{{ staff.ghana_card }}</p>
-                </div>
-                <div class="col-md-6">
-                    <h5 class="text-muted">Bank</h5>
-                    <p class="fw-bold">{{ staff.bank }}</p>
-                </div>
-            </div>
-
-            <!-- Dates Section -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <h5 class="text-muted">Start Leave</h5>
-                    <p class="fw-bold">{{ staff.start_leave|date:"M d, Y" }}</p>
-                </div>
-                <div class="col-md-6">
-                    <h5 class="text-muted">End Leave</h5>
-                    <p class="fw-bold">{{ staff.end_leave|date:"M d, Y" }}</p>
-                </div>
-            </div>
-
-            <!-- Status Section -->
-            <div class="row mb-3">
-                <div class="col-md-12">
-                    <h5 class="text-muted">Leave Status</h5>
-                    <span class="badge 
-                        {% if staff.leave_status == 'ACTIVE' %} bg-success 
-                        {% elif staff.leave_status == 'PENDING' %} bg-warning text-dark
-                        {% else %} bg-secondary 
-                        {% endif %}">
-                        {{ staff.leave_status }}
-                    </span>
-                </div>
+            <div>
+                {% if staff.is_active %}
+                <span class="badge bg-success px-3 py-2">ACTIVE PERSONNEL</span>
+                {% else %}
+                <span class="badge bg-danger px-3 py-2">ARCHIVED</span>
+                {% endif %}
             </div>
         </div>
 
-        <div class="card-footer text-center">
-            <a href="{% url 'personnel' %}" class="btn btn-outline-dark">Back to Staff List</a>
-            <a href="{% url 'deletestaff' staff.staffID %}" class="btn btn-danger">Delete Staff</a>
-            <a href="{% url 'editstaff' staff.staffID %}" class="btn btn-primary">Edit Staff</a>
+        <div class="card-body p-4 bg-light">
+            <!-- Rank & Classification Card -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3">
+                <h6 class="fw-bold text-dark text-uppercase small border-bottom pb-2 mb-3" style="color: #8B0000 !important;">
+                    <i class="fas fa-medal me-2"></i>Rank & Officer Classification
+                </h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Officer Category:</span>
+                        <strong class="text-dark fs-6">
+                            {% if staff.officer_category == 'SENIOR' %}
+                            <span class="badge bg-warning text-dark me-1">SENIOR</span>
+                            {% elif staff.officer_category == 'JUNIOR' %}
+                            <span class="badge bg-info text-dark me-1">JUNIOR</span>
+                            {% endif %}
+                            {{ staff.get_officer_category_display|default:"Unclassified" }}
+                        </strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Gender:</span>
+                        <strong class="text-dark fs-6">
+                            {% if staff.gender == 'FEMALE' %}
+                            <i class="fas fa-venus text-danger me-1"></i>Female
+                            {% else %}
+                            <i class="fas fa-mars text-primary me-1"></i>Male
+                            {% endif %}
+                        </strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Rank / Job Grade:</span>
+                        <strong class="text-dark fs-6">{{ staff.rank_display|default:staff.job_grade }}</strong>
+                        {% if staff.rank.hierarchy_order %}
+                        <span class="text-muted small ms-1">(Level: {{ staff.rank.hierarchy_order }})</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unit Deployment -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3">
+                <h6 class="fw-bold text-dark text-uppercase small border-bottom pb-2 mb-3" style="color: #8B0000 !important;">
+                    <i class="fas fa-sitemap me-2"></i>Organisational Deployment
+                </h6>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">Regional Command:</span>
+                        <strong class="text-dark">{{ staff.current_region.name|default:"Unassigned" }} ({{ staff.current_region.code|default:"-" }})</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">District:</span>
+                        <strong class="text-dark">{{ staff.current_district.name|default:"Unassigned" }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">Fire Station:</span>
+                        <strong class="text-dark">{{ staff.station.name|default:"Unassigned" }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">Market / Sub-Post:</span>
+                        <strong class="text-dark">{{ staff.post.name|default:"Station Direct" }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Identity & Personal Information -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3">
+                <h6 class="fw-bold text-dark text-uppercase small border-bottom pb-2 mb-3" style="color: #8B0000 !important;">
+                    <i class="fas fa-id-card me-2"></i>Identification & Payroll Details
+                </h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Ghana Card Number:</span>
+                        <strong class="text-dark font-monospace">{{ staff.ghana_card }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Birth Date:</span>
+                        <strong class="text-dark">{{ staff.birth_date|date:"F d, Y" }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Management Unit:</span>
+                        <strong class="text-dark">{{ staff.mgmt_units|default:"None" }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Bank Name:</span>
+                        <strong class="text-dark">{{ staff.bank|default:"-" }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Account Number:</span>
+                        <strong class="text-dark font-monospace">{{ staff.account_number|default:"-" }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Payroll Status:</span>
+                        {% if staff.payroll_status == 'ACTIVE' %}
+                        <span class="badge bg-success">ACTIVE</span>
+                        {% else %}
+                        <span class="badge bg-secondary">NON ACTIVE</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leave Lifecycle Status -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                    <h6 class="fw-bold text-dark text-uppercase small mb-0" style="color: #8B0000 !important;">
+                        <i class="fas fa-calendar-alt me-2"></i>Leave Status & Lifecycle
+                    </h6>
+                    <a href="{% url 'leave-apply' %}?staffID={{ staff.staffID }}" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-plus-circle me-1"></i> Apply for Leave
+                    </a>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">Current Status:</span>
+                        {% if staff.leave_status == 'ON LEAVE' %}
+                        <span class="badge bg-danger fs-6 px-3 py-1">ON LEAVE</span>
+                        {% else %}
+                        <span class="badge bg-success fs-6 px-3 py-1">AT POST</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">Leave Category:</span>
+                        <strong class="text-dark">{{ staff.leave_type|default:"None" }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">Leave Start Date:</span>
+                        <strong class="text-dark">{{ staff.start_leave|date:"M d, Y"|default:"-" }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">Leave End Date:</span>
+                        <strong class="text-dark">{{ staff.end_leave|date:"M d, Y"|default:"-" }}</strong>
+                    </div>
+                </div>
+
+                <!-- Entitlement Balances -->
+                {% if leave_entitlements %}
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="small fw-bold text-uppercase text-secondary mb-2">Current Year Entitlement Balances</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle text-center mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-start ps-2">Leave Type</th>
+                                    <th>Base</th>
+                                    <th>Carry Fwd</th>
+                                    <th>Adjust</th>
+                                    <th>Total Available</th>
+                                    <th class="text-danger">Taken</th>
+                                    <th class="text-warning">Reserved</th>
+                                    <th class="bg-success text-white">Remaining Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ent in leave_entitlements %}
+                                <tr>
+                                    <td class="text-start ps-2 fw-semibold">{{ ent.leave_type.name }}</td>
+                                    <td>{{ ent.base_entitlement }}</td>
+                                    <td class="text-primary">{{ ent.carried_forward }}</td>
+                                    <td>{{ ent.adjustments }}</td>
+                                    <td class="fw-bold">{{ ent.total_available }}</td>
+                                    <td class="text-danger fw-semibold">{{ ent.days_taken }}</td>
+                                    <td class="text-warning fw-semibold">{{ ent.days_reserved }}</td>
+                                    <td class="bg-success bg-opacity-10 fw-bold fs-6 text-success">{{ ent.remaining_balance }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Recent Leave Applications / History -->
+                {% if leave_history %}
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="small fw-bold text-uppercase text-secondary mb-2">Leave History & Applications</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Period</th>
+                                    <th>Days</th>
+                                    <th>Resume Date</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in leave_history %}
+                                <tr>
+                                    <td class="fw-semibold">{{ req.leave_type.name }}</td>
+                                    <td>{{ req.start_date|date:"M d" }} &rarr; {{ req.last_leave_date|date:"M d, Y" }}</td>
+                                    <td><strong>{{ req.working_days_count }}</strong> w/days</td>
+                                    <td><span class="badge bg-light text-success border">{{ req.resume_date|date:"M d, Y" }}</span></td>
+                                    <td>
+                                        {% if req.status == 'PENDING_APPROVAL' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif req.status == 'ACTIVE' %}
+                                        <span class="badge bg-danger">On Leave</span>
+                                        {% elif req.status == 'APPROVED' %}
+                                        <span class="badge bg-success">Approved</span>
+                                        {% elif req.status == 'COMPLETED' %}
+                                        <span class="badge bg-secondary">Completed</span>
+                                        {% elif req.status == 'RECALLED' %}
+                                        <span class="badge bg-dark">Recalled</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ req.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{% url 'leave-detail' req.pk %}" class="btn btn-outline-secondary btn-sm py-0 px-2" title="View Detail">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if not staff.is_active %}
+            <div class="alert alert-danger mb-0">
+                <h6 class="fw-bold"><i class="fas fa-archive me-1"></i>Archived Record Information</h6>
+                <p class="small mb-1">Archived by <strong>{{ staff.archived_by.username|default:"System" }}</strong> on {{ staff.archived_at|date:"F d, Y H:i" }}.</p>
+                <p class="small mb-0">Reason: <em>"{{ staff.archive_reason }}"</em></p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
+            <a href="{% url 'personnel' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Back to Personnel Roll
+            </a>
+            <div class="btn-group">
+                <a href="{% url 'editstaff' staff.staffID %}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-edit me-1"></i> Edit Details
+                </a>
+            </div>
         </div>
     </div>
 </div>

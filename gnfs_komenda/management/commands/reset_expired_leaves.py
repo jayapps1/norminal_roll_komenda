@@ -3,19 +3,25 @@ from django.utils import timezone
 from gnfs_komenda.models import NorminalRoll
 
 class Command(BaseCommand):
-    help = "Reset expired leaves to AT POST automatically"
+    help = "Reset expired leaves to AT POST automatically and complete expired LeaveRequests"
 
     def handle(self, *args, **kwargs):
-        today = timezone.now().date()
-        expired = NorminalRoll.objects.filter(end_leave__lt=today, called_off=False)
+        today = timezone.localdate()
+        expired = NorminalRoll.objects.filter(
+            end_leave__lt=today,
+            leave_status="ON LEAVE",
+            called_off=False,
+            manual_override=False,
+        )
+        count = expired.count()
+        expired.update(leave_status="AT POST")
 
-        count = 0
-        for staff in expired:
-            staff.leave_type = "AT POST"
-            staff.leave_status = "AT POST"
-            staff.start_leave = None
-            staff.end_leave = None
-            staff.save()
-            count += 1
+        # Also mark active LeaveRequests past their last_leave_date as COMPLETED
+        from gnfs_komenda.models import LeaveRequest
+        completed_reqs = LeaveRequest.objects.filter(
+            last_leave_date__lt=today,
+            status__in=[LeaveRequest.Status.ACTIVE, LeaveRequest.Status.APPROVED]
+        ).update(status=LeaveRequest.Status.COMPLETED)
 
-        self.stdout.write(self.style.SUCCESS(f"✅ Reset {count} expired leaves"))
+        self.stdout.write(self.style.SUCCESS(f"Reset {count} expired leaves. Completed {completed_reqs} active requests."))
+

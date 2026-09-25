@@ -1,0 +1,264 @@
+{% extends "main.html" %}
+
+{% block title %}Leave Request #{{ leave_req.id }} — GNFS Personnel Management{% endblock title %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4" style="max-width: 1100px;">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'leave-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-calendar-alt me-1"></i> Leave Management</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Request #{{ leave_req.id }}</li>
+        </ol>
+    </nav>
+
+    <!-- Top Card Header -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
+        <div class="card-header text-white py-3 d-flex justify-content-between align-items-center" style="background-color: #8B0000;">
+            <div>
+                <h4 class="mb-0 fw-bold">{{ leave_req.personnel.fullname }}</h4>
+                <div class="small text-white-50">
+                    Staff ID: <strong>{{ leave_req.personnel.staffID }}</strong> &bull; 
+                    Rank: <strong>{{ leave_req.personnel.rank_short }}</strong> &bull; 
+                    Station: <strong>{{ leave_req.personnel.station.name|default:"Unassigned" }}</strong>
+                </div>
+            </div>
+            <div>
+                {% if leave_req.status == 'PENDING_APPROVAL' %}
+                <span class="badge bg-warning text-dark px-3 py-2 fs-6">PENDING APPROVAL</span>
+                {% elif leave_req.status == 'ACTIVE' %}
+                <span class="badge bg-danger px-3 py-2 fs-6">ON LEAVE (ACTIVE)</span>
+                {% elif leave_req.status == 'APPROVED' %}
+                <span class="badge bg-success px-3 py-2 fs-6">APPROVED (SCHEDULED)</span>
+                {% elif leave_req.status == 'COMPLETED' %}
+                <span class="badge bg-secondary px-3 py-2 fs-6">COMPLETED</span>
+                {% elif leave_req.status == 'RECALLED' %}
+                <span class="badge bg-dark px-3 py-2 fs-6">RECALLED</span>
+                {% elif leave_req.status == 'REJECTED' %}
+                <span class="badge bg-light text-danger border border-danger px-3 py-2 fs-6">REJECTED</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-body p-4 bg-light">
+            <!-- Recall Notice if Recalled -->
+            {% if leave_req.is_recalled %}
+            <div class="alert alert-dark border-0 rounded-3 p-3 mb-4 shadow-sm">
+                <h6 class="fw-bold text-warning mb-1">
+                    <i class="fas fa-phone-slash me-2"></i>Officer Recalled from Leave
+                </h6>
+                <div class="row g-2 small">
+                    <div class="col-md-3"><strong>Recall Date:</strong> {{ leave_req.recall_date|date:"F d, Y" }}</div>
+                    <div class="col-md-3"><strong>Days Consumed:</strong> {{ leave_req.actual_days_consumed }} days</div>
+                    <div class="col-md-3"><strong>Days Restored to Balance:</strong> {{ leave_req.days_restored }} days</div>
+                    <div class="col-md-3"><strong>Recalled By:</strong> {{ leave_req.recalled_by.username|default:"Command" }}</div>
+                    <div class="col-12 mt-2"><strong>Reason for Recall:</strong> <em>"{{ leave_req.recall_reason }}"</em></div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Leave Specifics Cards -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-4">
+                <h6 class="fw-bold text-dark text-uppercase small border-bottom pb-2 mb-3" style="color: #8B0000 !important;">
+                    <i class="fas fa-calendar-check me-2"></i>Leave Dates & Calculation Breakdown
+                </h6>
+                <div class="row g-4 text-center">
+                    <div class="col-md-3 col-6 border-end">
+                        <span class="text-muted small d-block">Leave Category</span>
+                        <strong class="text-dark fs-6">{{ leave_req.leave_type.name }}</strong>
+                        <div class="small text-muted" style="font-size: 0.72rem;">{{ leave_req.get_calculation_mode_display }}</div>
+                    </div>
+                    <div class="col-md-3 col-6 border-end">
+                        <span class="text-muted small d-block">Leave Start Date</span>
+                        <strong class="text-dark fs-6">{{ leave_req.start_date|date:"F d, Y" }}</strong>
+                    </div>
+                    <div class="col-md-3 col-6 border-end">
+                        <span class="text-muted small d-block">Last Leave Date</span>
+                        <strong class="text-danger fs-6">{{ leave_req.last_leave_date|date:"F d, Y" }}</strong>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <span class="text-muted small d-block">Resume Duty Date</span>
+                        <strong class="text-success fs-6">{{ leave_req.resume_date|date:"F d, Y" }}</strong>
+                        <div class="small text-muted" style="font-size: 0.72rem;">Next working day</div>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Working Days Counted:</span>
+                        <strong class="text-dark">{{ leave_req.working_days_count }} working days</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Total Calendar Span:</span>
+                        <strong class="text-dark">{{ leave_req.calendar_days_count }} days</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Leave Year:</span>
+                        <strong class="text-dark">{{ leave_req.leave_year }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details & Attachments -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-4">
+                <h6 class="fw-bold text-dark text-uppercase small border-bottom pb-2 mb-3" style="color: #8B0000 !important;">
+                    <i class="fas fa-file-alt me-2"></i>Application Details & Justification
+                </h6>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Reason / Remarks:</span>
+                        <p class="text-dark mb-0">{{ leave_req.reason|default:"No reason specified." }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Medical Facility / Doctor Ref:</span>
+                        <p class="text-dark mb-0">{{ leave_req.medical_reference|default:"None" }}</p>
+                    </div>
+                </div>
+
+                {% if leave_req.attachment %}
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Attached Document:</span>
+                    <a href="{{ leave_req.attachment.url }}" target="_blank" class="btn btn-outline-danger btn-sm mt-1">
+                        <i class="fas fa-paperclip me-1"></i> View Attached Document
+                    </a>
+                </div>
+                {% endif %}
+
+                <div class="row g-3 pt-2 border-top">
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Emergency Contact:</span>
+                        <strong class="text-dark">{{ leave_req.contact_phone|default:"-" }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Address on Leave:</span>
+                        <strong class="text-dark">{{ leave_req.contact_address|default:"-" }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Duties Handover:</span>
+                        <p class="small text-dark mb-0">{{ leave_req.handover_notes|default:"-" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approval Decisions & Timeline -->
+            <div class="card border-0 shadow-sm rounded-3 mb-0 bg-white p-4">
+                <h6 class="fw-bold text-dark text-uppercase small border-bottom pb-2 mb-3" style="color: #8B0000 !important;">
+                    <i class="fas fa-history me-2"></i>Workflow Timeline & Decisions
+                </h6>
+                <div class="timeline small">
+                    <div class="mb-2">
+                        <i class="fas fa-user-edit text-primary me-2"></i>
+                        Submitted by <strong>{{ leave_req.requested_by.username|default:"Officer" }}</strong> on {{ leave_req.created_at|date:"F d, Y H:i" }}.
+                    </div>
+                    {% for dec in decisions %}
+                    <div class="mb-2 p-2 rounded {% if dec.decision == 'APPROVED' %}bg-success bg-opacity-10 text-success{% else %}bg-danger bg-opacity-10 text-danger{% endif %}">
+                        <i class="fas {% if dec.decision == 'APPROVED' %}fa-check-circle text-success{% else %}fa-times-circle text-danger{% endif %} me-2"></i>
+                        <strong>{{ dec.get_decision_display }}</strong> by <strong>{{ dec.approver.username }}</strong> ({{ dec.approver_role }}) on {{ dec.timestamp|date:"F d, Y H:i" }}.
+                        {% if dec.comments %}
+                        <div class="ms-4 text-dark fst-italic">"{{ dec.comments }}"</div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    {% if leave_req.status == 'PENDING_APPROVAL' %}
+                    <div class="text-muted fst-italic">
+                        <i class="fas fa-hourglass-half me-1"></i> Awaiting commanding officer review and decision.
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Actions Bar -->
+        <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center">
+            <a href="{% url 'leave-dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Back to Roster
+            </a>
+
+            <div class="d-flex gap-2">
+                {% if leave_req.status == 'PENDING_APPROVAL' %}
+                    {% if can_approve %}
+                    <!-- Approve Button triggers Modal -->
+                    <button type="button" class="btn btn-success btn-sm shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#approveModal">
+                        <i class="fas fa-check me-1"></i> Approve Leave
+                    </button>
+                    <!-- Reject Button triggers Modal -->
+                    <button type="button" class="btn btn-danger btn-sm shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="fas fa-times me-1"></i> Reject Leave
+                    </button>
+                    {% else %}
+                    <span class="text-muted small fst-italic py-1">
+                        <i class="fas fa-lock me-1"></i> Review restricted to authorized commanding officer (DFO / Regional / HQ).
+                    </span>
+                    {% endif %}
+                {% elif leave_req.status == 'ACTIVE' or leave_req.status == 'APPROVED' %}
+                    {% if can_approve %}
+                    <a href="{% url 'leave-recall' leave_req.pk %}" class="btn btn-warning btn-sm text-dark shadow-sm px-3">
+                        <i class="fas fa-phone-alt me-1"></i> Recall Officer from Leave
+                    </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" action="{% url 'leave-approve' leave_req.pk %}">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="approveModalLabel"><i class="fas fa-check-circle me-2"></i>Approve Leave Request</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to approve this leave request for <strong>{{ leave_req.personnel.fullname }}</strong>?</p>
+                    <div class="alert alert-light border small">
+                        <strong>Working Days:</strong> {{ leave_req.working_days_count }} days<br>
+                        <strong>Period:</strong> {{ leave_req.start_date }} to {{ leave_req.last_leave_date }}<br>
+                        <strong>Resume Date:</strong> {{ leave_req.resume_date }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-uppercase text-muted">Approval Remarks / Directive (Optional)</label>
+                        <textarea name="comments" class="form-control" rows="3" placeholder="Enter any directives or approval comments..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success btn-sm px-3">Confirm Approval</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" action="{% url 'leave-reject' leave_req.pk %}">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="rejectModalLabel"><i class="fas fa-times-circle me-2"></i>Reject Leave Request</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are about to reject the leave request for <strong>{{ leave_req.personnel.fullname }}</strong>.</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-uppercase text-danger">Reason for Rejection <span class="text-danger">*</span></label>
+                        <textarea name="comments" class="form-control" rows="3" required placeholder="Specify why the leave cannot be approved (operational demands, roster coverage, etc.)..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger btn-sm px-3">Confirm Rejection</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

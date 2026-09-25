@@ -1,0 +1,845 @@
+{
+  "schema_version": "2.0",
+  "dataset_name": "GNFS organisational seed starter - all 17 service administrative regions",
+  "generated_for": "Antigravity / Django seed_gnfs_structure",
+  "IMPORTANT": [
+    "This file contains all 17 GNFS Service Administrative Regions.",
+    "It is NOT represented as a complete authoritative national directory of every GNFS district command, station and post, because no complete public GNFS directory was found.",
+    "Only verified public-source station examples are populated below.",
+    "Antigravity must NOT invent missing districts, stations, posts, codes or command relationships.",
+    "Production seeding should allow verified data to be expanded later without schema changes."
+  ],
+  "official_structure": {
+    "hierarchy": [
+      "National Headquarters",
+      "Service Administrative Region",
+      "Metropolitan/Municipal/District Fire Station",
+      "Fire Post"
+    ],
+    "region_count": 17,
+    "tema_is_seventeenth_service_region": true,
+    "source": "GNFS official Structure / Rank & Structure pages"
+  },
+  "regions": [
+    {
+      "name": "Ahafo Region",
+      "code": "AH",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [],
+      "data_status": "region_verified; district/station/post directory pending authoritative data"
+    },
+    {
+      "name": "Ashanti Region",
+      "code": "AS",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [
+        {
+          "name": "Ejisu Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Ejisu Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Kumasi Metropolitan",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "KNUST Fire Station",
+              "code": null,
+              "station_type": "Institutional Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Asokore Mampong Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Asokore Mampong Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Bekwai Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Bekwai Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Atwima Nwabiagya South Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Nkawie Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Atwima Kwanwoma District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Twedie Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bono Region",
+      "code": "BO",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [
+        {
+          "name": "Sunyani Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Abesim Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bono East Region",
+      "code": "BE",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [],
+      "data_status": "region_verified; district/station/post directory pending authoritative data"
+    },
+    {
+      "name": "Central Region",
+      "code": "CR",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [
+        {
+          "name": "Abura-Asebu-Kwamankese District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Abura Dunkwa Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Komenda-Edina-Eguafo-Abirem Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Komenda Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "parent_needs_gnfs_command_confirmation",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Cape Coast Metropolitan",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Cape Coast Metro Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            },
+            {
+              "name": "University of Cape Coast (UCC) Fire Station",
+              "code": null,
+              "station_type": "Institutional Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Gomoa West District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Apam Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "parent_needs_gnfs_command_confirmation",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Effutu Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Winneba Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "parent_needs_gnfs_command_confirmation",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Mfantseman Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Mankessim Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "parent_needs_gnfs_command_confirmation",
+              "posts": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Eastern Region",
+      "code": "ER",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [
+        {
+          "name": "Akuapem South Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Aburi Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "New Juaben North Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "New Juaben North Municipal Fire Station",
+              "code": null,
+              "station_type": "Municipal Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Upper Manya Krobo District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Asesewa Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Kwahu East District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Aduamoa Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Lower Manya Krobo Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Kpong Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Suhum Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Suhum Municipal Fire Station",
+              "code": null,
+              "station_type": "Municipal Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Greater Accra Region",
+      "code": "GAR",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [
+        {
+          "name": "Accra Metropolitan",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Accra City Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            },
+            {
+              "name": "Industrial Area Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "La Dade-Kotopon Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Trade Fair Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "La Nkwantanang-Madina Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Madina Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Ablekuma West Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Dansoman Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Ga South Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Weija Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Ada West District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Sege Fire Station",
+              "code": null,
+              "station_type": "District Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "North East Region",
+      "code": "NER",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [],
+      "data_status": "region_verified; district/station/post directory pending authoritative data"
+    },
+    {
+      "name": "Northern Region",
+      "code": "NR",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [
+        {
+          "name": "Saboba District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Saboba Fire Station",
+              "code": null,
+              "station_type": "District Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Yendi Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Yendi Municipal Fire Station",
+              "code": null,
+              "station_type": "Municipal Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Tamale Metropolitan",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Tamale Metro Fire Station",
+              "code": null,
+              "station_type": "Metro Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            },
+            {
+              "name": "Tamale Teaching Hospital Fire Station",
+              "code": null,
+              "station_type": "Institutional Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Sagnarigu Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Sagnarigu Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Oti Region",
+      "code": "OR",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [],
+      "data_status": "region_verified; district/station/post directory pending authoritative data"
+    },
+    {
+      "name": "Savannah Region",
+      "code": "SR",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [],
+      "data_status": "region_verified; district/station/post directory pending authoritative data"
+    },
+    {
+      "name": "Upper East Region",
+      "code": "UER",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [],
+      "data_status": "region_verified; district/station/post directory pending authoritative data"
+    },
+    {
+      "name": "Upper West Region",
+      "code": "UWR",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [],
+      "data_status": "region_verified; district/station/post directory pending authoritative data"
+    },
+    {
+      "name": "Volta Region",
+      "code": "VR",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [
+        {
+          "name": "Ho Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Ho Municipal Fire Station",
+              "code": null,
+              "station_type": "Municipal Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "North Dayi District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Anfoega Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "South Dayi District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Peki Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Ketu North Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Ketu North Municipal Fire Station (Penyi)",
+              "code": null,
+              "station_type": "Municipal Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Western Region",
+      "code": "WR",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [
+        {
+          "name": "Wassa East District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Daboase Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Ellembelle District",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Esiama Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            },
+            {
+              "name": "Ellembelle Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Western North Region",
+      "code": "WNR",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [],
+      "data_status": "region_verified; district/station/post directory pending authoritative data"
+    },
+    {
+      "name": "Tema Region",
+      "code": "TR",
+      "code_status": "application_suggested_not_official_gnfs_code",
+      "seed_enabled": true,
+      "districts": [
+        {
+          "name": "Tema Metropolitan",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Tema Metro Fire Station",
+              "code": null,
+              "station_type": "Metro Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Tema West Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Motorway Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        },
+        {
+          "name": "Kpone-Katamanso Municipal",
+          "code": null,
+          "seed_enabled": true,
+          "relationship_note": "Geographic/administrative placement from public source; verify GNFS command naming where required.",
+          "stations": [
+            {
+              "name": "Devtraco Fire Station",
+              "code": null,
+              "station_type": "Fire Station",
+              "seed_enabled": true,
+              "verification_status": "verified_station",
+              "posts": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "seeder_rules": {
+    "command": "python manage.py seed_gnfs_structure",
+    "idempotent": true,
+    "use": "update_or_create",
+    "rules": [
+      "Always seed the 17 Region records.",
+      "Seed district/station/post records only when seed_enabled=true.",
+      "Never fabricate missing child units.",
+      "Treat region codes in this file as application-friendly suggestions, not official GNFS codes.",
+      "Preserve existing Komenda personnel.",
+      "Before assigning existing Komenda personnel, verify the exact GNFS parent command for Komenda Fire Station.",
+      "Use transactions and report created/updated/skipped counts."
+    ]
+  },
+  "known_additional_station_names_requiring_parent_verification": {
+    "Central Region": [
+      "Assin Fosu Fire Station",
+      "Agona Nsaba Fire Station",
+      "Agona Swedru Fire Station",
+      "Buduburam Fire Station",
+      "Breman Asikuma Fire Station",
+      "Breman Essiam Fire Station",
+      "Dunkwa-on-Offin Fire Station",
+      "Kasoa Fire Station"
+    ],
+    "Northern Region": [
+      "Savelugu Fire Station",
+      "Bimbilla Fire Station",
+      "Regional Headquarters Sub-Station"
+    ],
+    "Eastern Region": [
+      "Akropong Fire Station",
+      "Anyinam Fire Station",
+      "Kade Fire Station"
+    ],
+    "Greater Accra Region": [
+      "Ministries Fire Station",
+      "Anyaa Fire Station",
+      "National Headquarters Fire Station"
+    ],
+    "Tema Region": [
+      "Industrial Area Fire Station"
+    ]
+  }
+}

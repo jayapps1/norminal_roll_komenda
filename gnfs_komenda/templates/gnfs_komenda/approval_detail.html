@@ -1,0 +1,112 @@
+{% extends 'main.html' %}
+
+{% block title %}Action Request #{{ req.id }} — Approval Decision{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{% url 'approval-list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-arrow-left me-1"></i> Back to Approval Queue
+    </a>
+    <span class="badge {% if req.status == 'APPROVED' %}bg-success{% elif req.status == 'REJECTED' %}bg-danger{% else %}bg-warning text-dark{% endif %} fs-6 px-3 py-2">
+      {{ req.get_status_display }}
+    </span>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
+    <div class="card-header text-white py-3" style="background-color: #8B0000;">
+      <h4 class="fw-bold mb-0">Personnel Action Request #{{ req.id }}</h4>
+      <div class="small text-white-50">Initiated by {{ req.requested_by.username }} on {{ req.created_at|date:"F d, Y at H:i" }}</div>
+    </div>
+    <div class="card-body p-4">
+
+      <!-- Personnel Snapshot -->
+      <h5 class="fw-bold text-dark mb-3 border-bottom pb-2">Target Personnel Information</h5>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <div class="text-muted small">Officer Name:</div>
+          <div class="fw-bold text-dark fs-5">{{ personnel.fullname }}</div>
+        </div>
+        <div class="col-md-6">
+          <div class="text-muted small">Staff ID:</div>
+          <div class="fw-bold font-monospace fs-5 text-dark">{{ personnel.staffID }}</div>
+        </div>
+        <div class="col-md-6">
+          <div class="text-muted small">Rank / Grade:</div>
+          <div class="fw-semibold text-dark">{{ personnel.job_grade }}</div>
+        </div>
+        <div class="col-md-6">
+          <div class="text-muted small">Assigned Unit:</div>
+          <div class="fw-semibold text-dark">{{ personnel.station.name|default:"Unassigned" }} ({{ personnel.current_region.name|default:"N/A" }})</div>
+        </div>
+      </div>
+
+      <!-- Action Justification -->
+      <h5 class="fw-bold text-dark mb-2 border-bottom pb-2">Operational Justification / Reason</h5>
+      <div class="alert alert-light border p-3 mb-4 text-dark" style="white-space: pre-wrap;">
+        {{ req.reason }}
+      </div>
+
+      <!-- Approval Decision Submission Form (if authorized) -->
+      {% if can_approve and req.status not in 'APPROVED,REJECTED,CANCELLED' %}
+      <div class="card border border-warning shadow-sm rounded-3 p-4 mb-4 bg-light">
+        <h5 class="fw-bold text-dark mb-2"><i class="fas fa-stamp text-danger me-2"></i>Record Official Approval Decision</h5>
+        <p class="text-muted small mb-3">You are reviewing this request as <strong>{{ req.get_current_approval_level_display }}</strong>. Decisions are final and recorded in the audit trail.</p>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-bold text-dark">Decision <span class="text-danger">*</span></label>
+            <div class="d-flex gap-4">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="decision" id="decisionApprove" value="APPROVED" required checked>
+                <label class="form-check-label fw-semibold text-success" for="decisionApprove">
+                  <i class="fas fa-check-circle me-1"></i> Approve Request
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="decision" id="decisionReject" value="REJECTED" required>
+                <label class="form-check-label fw-semibold text-danger" for="decisionReject">
+                  <i class="fas fa-times-circle me-1"></i> Reject Request
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="commentInput" class="form-label fw-bold text-dark">Administrative Comment / Instructions</label>
+            <textarea name="comment" id="commentInput" rows="3" class="form-control" placeholder="Provide notes or mandatory justification if rejecting..."></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-danger px-4" style="background-color:#8B0000;">
+            Submit Decision
+          </button>
+        </form>
+      </div>
+      {% endif %}
+
+      <!-- Audit History Timeline -->
+      <h5 class="fw-bold text-dark mb-3 border-bottom pb-2">Approval Decision History</h5>
+      <div class="timeline">
+        {% for step in history %}
+        <div class="p-3 mb-2 rounded-2 {% if step.decision == 'APPROVED' %}bg-light border-start border-4 border-success{% else %}bg-light border-start border-4 border-danger{% endif %}">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <strong>{{ step.get_approval_level_display }} — {{ step.decision }}</strong>
+            <span class="text-muted small">{{ step.timestamp|date:"M d, Y H:i" }}</span>
+          </div>
+          <div class="text-muted small">Decided by: <strong>{{ step.approver.username }}</strong></div>
+          {% if step.comment %}
+          <div class="mt-1 text-dark small"><em>"{{ step.comment }}"</em></div>
+          {% endif %}
+        </div>
+        {% empty %}
+        <p class="text-muted small">No review decisions recorded yet. Request is currently at the <strong>{{ req.get_current_approval_level_display }}</strong> stage.</p>
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock content %}

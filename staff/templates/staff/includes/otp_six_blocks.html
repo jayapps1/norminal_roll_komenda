@@ -1,0 +1,137 @@
+<div class="otp-component text-center my-3">
+    <!-- Hidden input bound to Django Form field -->
+    <input type="hidden" name="token" id="id_token" value="{{ form.token.value|default:'' }}">
+
+    <!-- 6 Independent Digit Blocks -->
+    <div class="otp-container" id="otp-blocks">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box form-control" data-index="0" autocomplete="off" autofocus aria-label="Digit 1">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box form-control" data-index="1" autocomplete="off" aria-label="Digit 2">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box form-control" data-index="2" autocomplete="off" aria-label="Digit 3">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box form-control" data-index="3" autocomplete="off" aria-label="Digit 4">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box form-control" data-index="4" autocomplete="off" aria-label="Digit 5">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box form-control" data-index="5" autocomplete="off" aria-label="Digit 6">
+    </div>
+
+    {% if form.token.errors %}
+        <div class="text-danger small mt-2 fw-semibold">
+            <i class="fas fa-exclamation-circle me-1"></i> {{ form.token.errors.0 }}
+        </div>
+    {% endif %}
+    <small class="text-muted d-block mt-2">
+        <i class="fas fa-info-circle me-1"></i> Tip: You can paste your 6-digit code directly into the boxes.
+    </small>
+</div>
+
+<script>
+(function() {
+    function initOTP() {
+        const container = document.getElementById("otp-blocks");
+        if (!container) return;
+
+        const boxes = Array.from(container.querySelectorAll(".otp-box"));
+        const hiddenInput = document.getElementById("id_token");
+        if (!boxes.length || !hiddenInput) return;
+
+        function sync() {
+            const code = boxes.map(b => b.value.trim()).join("");
+            hiddenInput.value = code;
+            boxes.forEach(b => {
+                if (b.value) b.classList.add("filled");
+                else b.classList.remove("filled");
+            });
+        }
+
+        // Initialize from existing value if any
+        if (hiddenInput.value) {
+            const raw = hiddenInput.value.replace(/\D/g, "").slice(0, 6);
+            raw.split("").forEach((char, i) => {
+                if (boxes[i]) boxes[i].value = char;
+            });
+            sync();
+        }
+
+        boxes.forEach((box, index) => {
+            box.addEventListener("input", function(e) {
+                const digits = this.value.replace(/\D/g, "");
+                if (digits.length === 0) {
+                    this.value = "";
+                    sync();
+                    return;
+                }
+
+                if (digits.length === 1) {
+                    this.value = digits;
+                    sync();
+                    if (index < boxes.length - 1) {
+                        boxes[index + 1].focus();
+                        boxes[index + 1].select();
+                    }
+                } else {
+                    // Multi-digit entry (e.g. autofill)
+                    let cur = index;
+                    for (let i = 0; i < digits.length && cur < boxes.length; i++, cur++) {
+                        boxes[cur].value = digits[i];
+                    }
+                    sync();
+                    const nextTarget = Math.min(cur, boxes.length - 1);
+                    boxes[nextTarget].focus();
+                }
+            });
+
+            box.addEventListener("keydown", function(e) {
+                if (e.key === "Backspace") {
+                    if (!this.value && index > 0) {
+                        boxes[index - 1].focus();
+                        boxes[index - 1].value = "";
+                        sync();
+                        e.preventDefault();
+                    } else {
+                        this.value = "";
+                        sync();
+                    }
+                } else if (e.key === "ArrowLeft" && index > 0) {
+                    boxes[index - 1].focus();
+                    boxes[index - 1].select();
+                    e.preventDefault();
+                } else if (e.key === "ArrowRight" && index < boxes.length - 1) {
+                    boxes[index + 1].focus();
+                    boxes[index + 1].select();
+                    e.preventDefault();
+                }
+            });
+
+            box.addEventListener("paste", function(e) {
+                e.preventDefault();
+                const pasteText = (e.clipboardData || window.clipboardData).getData("text") || "";
+                const cleanDigits = pasteText.replace(/\D/g, "").slice(0, 6);
+                if (!cleanDigits) return;
+
+                cleanDigits.split("").forEach((d, i) => {
+                    if (boxes[i]) boxes[i].value = d;
+                });
+                sync();
+                const focusIdx = Math.min(cleanDigits.length, boxes.length - 1);
+                boxes[focusIdx].focus();
+            });
+
+            box.addEventListener("focus", function() {
+                this.select();
+            });
+        });
+
+        // Ensure sync before form submit
+        const form = container.closest("form");
+        if (form) {
+            form.addEventListener("submit", function() {
+                sync();
+            });
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initOTP);
+    } else {
+        initOTP();
+    }
+})();
+</script>

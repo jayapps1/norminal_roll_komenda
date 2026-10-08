@@ -1,0 +1,51 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}Personnel Account Notice — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-5" style="max-width: 800px;">
+  <div class="card border-0 shadow-sm rounded-4 text-center p-5 bg-white border-top border-warning border-4">
+    <div class="mb-4">
+      <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-10 text-warning rounded-circle p-4 mb-2">
+        <i class="fas fa-id-badge fa-3x"></i>
+      </div>
+      <h3 class="fw-bold text-dark mt-3">Personnel Profile Not Linked</h3>
+      <p class="text-muted mb-0">Your login account (<strong>{{ user.username }}</strong>) is not currently connected to an active GNFS Nominal Roll personnel profile.</p>
+    </div>
+
+    <div class="alert alert-light border rounded-3 text-start p-3 mb-4 mx-auto" style="max-width: 600px;">
+      {% if user.is_superuser or gnfs_role == 'NATIONAL_ADMIN' %}
+      <div class="d-flex align-items-center mb-3 p-2 bg-success bg-opacity-10 text-success rounded">
+        <i class="fas fa-shield-alt fa-lg me-2"></i>
+        <div>
+          <strong class="d-block">Active Role: Super Administrator (National Command)</strong>
+          <span class="small">You have full nationwide authority to manage all personnel, structure, roles, and leave policies.</span>
+        </div>
+      </div>
+      {% endif %}
+      <h6 class="fw-bold text-dark mb-2"><i class="fas fa-info-circle text-primary me-2"></i>Why you are seeing this:</h6>
+      <ul class="text-muted small mb-0 ps-3">
+        <li class="mb-1"><strong>"My Dashboard" & "My Profile"</strong> are for <em>personal officer self-service</em> (e.g. personal leave balance, personal profile photo).</li>
+        <li class="mb-1">As a system superuser, your account is not tied to a single firefighter's nominal roll record.</li>
+        <li class="mb-1">Your primary dashboard is the <strong>National Dashboard</strong> (accessible via the red button below or sidebar).</li>
+        <li>To use personal self-service with this account, you can link it to an officer under <strong>Roles & Assignments</strong>.</li>
+      </ul>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-center gap-3">
+      {% if user.is_superuser or gnfs_role == 'NATIONAL_ADMIN' %}
+      <a href="{% url 'dashboard-national' %}" class="btn btn-danger px-4">
+        <i class="fas fa-landmark me-2"></i>National Dashboard
+      </a>
+      {% endif %}
+      <a href="{% url 'personnel' %}" class="btn btn-outline-danger px-4">
+        <i class="fas fa-users me-2"></i>Personnel Nominal Roll
+      </a>
+      <a href="{% url 'profile' %}" class="btn btn-outline-secondary px-4">
+        <i class="fas fa-user-cog me-2"></i>Account Settings
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

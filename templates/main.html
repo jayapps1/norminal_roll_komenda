@@ -10,6 +10,7 @@
         <link rel="stylesheet" href="{% static 'gnfs_komenda/styles.css'%}">
         <link rel="stylesheet" href="{% static 'gnfs_komenda/query.css'%}">
         <link rel="stylesheet" href="{% static 'gnfs_komenda/css/all.css'%}">
+        {% block extra_head %}{% endblock extra_head %}
     </head>
     <body class="{% if user.is_authenticated %}gnfs-app-layout{% endif %}">
        {% include 'navbar.html'%}
@@ -25,7 +26,11 @@
            {% endblock content %}
        </div>
 
+       {% block modals %}
+       {% endblock modals %}
+
        <script src="{% static 'gnfs_komenda/bootstrap.bundle.min.js'%}"></script>
        <script src="{% static 'gnfs_komenda/scripts.js'%}"></script>
+       {% block extra_js %}{% endblock extra_js %}
     </body>
 </html>

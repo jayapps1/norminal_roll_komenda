@@ -1,0 +1,193 @@
+{% extends "main.html" %}
+
+{% block title %}Configure Proportionate / Prorated Entitlement — GNFS Leave Management{% endblock title %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4" style="max-width: 820px;">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'leave-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-calendar-alt me-1"></i> Leave Management</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'leave-balances' %}" class="text-decoration-none text-secondary">Balances</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Proportionate Entitlement</li>
+        </ol>
+    </nav>
+
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-header text-white py-3" style="background-color: #8B0000;">
+            <h5 class="mb-0 fw-bold">
+                <i class="fas fa-percentage me-2"></i>Configure Annual Leave Entitlement
+            </h5>
+            <div class="small text-white-50">Set statutory or proportionate/prorated annual entitlement for authorised personnel.</div>
+        </div>
+
+        <div class="card-body p-4 bg-light">
+            <!-- Officer Summary Box -->
+            <div class="card border-0 shadow-sm rounded-3 bg-white p-4 mb-4">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 border-bottom pb-3 mb-3">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0 fs-5">{{ entitlement.personnel.fullname }}</h6>
+                        <span class="text-muted small">
+                            Staff ID: <strong class="text-danger">{{ entitlement.personnel.staffID }}</strong> &bull;
+                            Rank: <strong>{{ entitlement.personnel.rank.name|default:entitlement.personnel.job_grade|default:"Officer" }}</strong>
+                            <span class="badge {% if entitlement.personnel.officer_category == 'SENIOR' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %} ms-1">
+                                {{ entitlement.personnel.get_officer_category_display }}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="text-end">
+                        <span class="text-muted small d-block">Leave Year</span>
+                        <strong class="fs-5 text-dark">{{ entitlement.leave_year }}</strong>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="p-2 border rounded-2 bg-light text-center">
+                            <span class="text-muted small d-block">Full Annual Entitlement</span>
+                            <strong class="text-dark fs-6">{{ standard_days }} Working Days</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-2 border rounded-2 bg-light text-center">
+                            <span class="text-muted small d-block">Current Base Entitlement</span>
+                            <strong class="text-primary fs-6">{{ entitlement.base_entitlement }} Days</strong>
+                            {% if entitlement.is_prorated %}
+                            <span class="badge bg-warning text-dark d-block mx-auto mt-1" style="width: fit-content;">PRORATED</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-2 border rounded-2 bg-light text-center">
+                            <span class="text-muted small d-block">Available Remaining Balance</span>
+                            <strong class="text-success fs-6">{{ entitlement.remaining_balance }} Days</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Form -->
+            <form method="post" id="proportionateForm">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2 small mb-3 rounded-2 shadow-sm">
+                    {% for error in form.non_field_errors %}
+                    <div><i class="fas fa-exclamation-triangle me-1"></i> {{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="card border-0 shadow-sm rounded-3 bg-white p-4 mb-4">
+                    <!-- Entitlement Type -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-secondary" for="id_entitlement_type">
+                            Entitlement Type <span class="text-danger">*</span>
+                        </label>
+                        {{ form.entitlement_type }}
+                        {% if form.entitlement_type.errors %}
+                        <div class="text-danger small mt-1">{{ form.entitlement_type.errors }}</div>
+                        {% endif %}
+                        <div class="form-text small text-muted">
+                            Choose between statutory full-year entitlement ({{ standard_days }} working days) or an audited proportionate entitlement.
+                        </div>
+                    </div>
+
+                    <!-- Proportionate Days (Numeric Input) -->
+                    <div class="mb-3" id="proportionateDaysContainer">
+                        <label class="form-label fw-semibold small text-uppercase text-danger" for="id_proportionate_days" id="proportionateDaysLabel">
+                            Proportionate Days <span class="text-danger">*</span>
+                        </label>
+                        {{ form.proportionate_days }}
+                        {% if form.proportionate_days.errors %}
+                        <div class="text-danger small mt-1">{{ form.proportionate_days.errors }}</div>
+                        {% endif %}
+                        <div class="form-text small text-muted" id="proportionateDaysHelp">
+                            Enter the authorised proportionate working days (1 to {{ standard_days }}).
+                        </div>
+                    </div>
+
+                    <!-- Reason -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-uppercase text-secondary" for="id_proration_reason" id="prorationReasonLabel">
+                            Reason / Memo Reference <span class="text-danger" id="reasonRequiredStar">*</span>
+                        </label>
+                        {{ form.reason }}
+                        {% if form.reason.errors %}
+                        <div class="text-danger small mt-1">{{ form.reason.errors }}</div>
+                        {% endif %}
+                        <div class="form-text small text-muted">
+                            Mandatory operational justification or official letter reference for proration.
+                        </div>
+                    </div>
+
+                    <!-- Effective Date / Period -->
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold small text-uppercase text-secondary" for="id_proration_effective_date">
+                            Effective Date / Period
+                        </label>
+                        {{ form.effective_date }}
+                        {% if form.effective_date.errors %}
+                        <div class="text-danger small mt-1">{{ form.effective_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'leave-balances' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger fw-bold px-4" style="background-color: #8B0000; border-color: #8B0000;">
+                        <i class="fas fa-save me-1"></i> Save Entitlement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const entTypeSelect = document.getElementById('id_entitlement_type');
+    const propContainer = document.getElementById('proportionateDaysContainer');
+    const propInput = document.getElementById('id_proportionate_days');
+    const reasonInput = document.getElementById('id_proration_reason');
+    const reasonStar = document.getElementById('reasonRequiredStar');
+    const standardDays = {{ standard_days }};
+
+    function updateProrationUI() {
+        if (!entTypeSelect) return;
+        const isProp = entTypeSelect.value === 'PROPORTIONATE';
+
+        if (isProp) {
+            if (propContainer) propContainer.classList.remove('d-none');
+            if (propInput) {
+                propInput.readOnly = false;
+                propInput.disabled = false;
+                propInput.required = true;
+                if (!propInput.value || propInput.value == standardDays) {
+                    propInput.value = '';
+                }
+                propInput.focus();
+            }
+            if (reasonInput) reasonInput.required = true;
+            if (reasonStar) reasonStar.style.display = 'inline';
+        } else {
+            if (propContainer) propContainer.classList.add('d-none');
+            if (propInput) {
+                propInput.required = false;
+                propInput.value = standardDays;
+            }
+            if (reasonInput) reasonInput.required = false;
+            if (reasonStar) reasonStar.style.display = 'none';
+        }
+    }
+
+    if (entTypeSelect) {
+        entTypeSelect.addEventListener('change', updateProrationUI);
+        // Initial setup
+        updateProrationUI();
+    }
+});
+</script>
+{% endblock content %}

@@ -1,0 +1,96 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}My Notifications — GNFS Self-Service{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1000px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'my-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-user-circle me-1"></i> My Dashboard</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Notifications</li>
+        </ol>
+      </nav>
+      <div class="d-flex align-items-center gap-2">
+        <h3 class="fw-bold mb-0 text-dark">
+          <i class="fas fa-bell text-warning me-2"></i>Notifications Center
+        </h3>
+        {% if unread_count > 0 %}
+        <span class="badge bg-danger rounded-pill">{{ unread_count }} unread</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      {% if unread_count > 0 %}
+      <a href="?mark_all_read=1" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-check-double me-1"></i> Mark All as Read
+      </a>
+      {% endif %}
+      <a href="{% url 'my-dashboard' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-arrow-left me-1"></i> Dashboard
+      </a>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+    <div class="list-group list-group-flush">
+      {% for notif in page_obj %}
+      <div class="list-group-item p-3 d-flex justify-content-between align-items-start gap-3 {% if not notif.is_read %}bg-warning bg-opacity-10 border-start border-warning border-4{% endif %}">
+        <div class="d-flex gap-3">
+          <div class="mt-1">
+            {% if not notif.is_read %}
+            <i class="fas fa-circle text-warning" style="font-size: 0.6rem;"></i>
+            {% else %}
+            <i class="fas fa-check text-muted" style="font-size: 0.75rem;"></i>
+            {% endif %}
+          </div>
+          <div>
+            <h6 class="fw-bold text-dark mb-1">{{ notif.title }}</h6>
+            <p class="text-muted small mb-1">{{ notif.message }}</p>
+            <span class="text-muted" style="font-size: 0.75rem;">
+              <i class="fas fa-clock me-1"></i>{{ notif.created_at|date:"d M Y, H:i" }} ({{ notif.created_at|timesince }} ago)
+            </span>
+          </div>
+        </div>
+
+        <div class="text-nowrap">
+          <a href="?toggle_read={{ notif.id }}" class="btn btn-sm btn-light border py-1 px-2" title="Toggle Read Status">
+            {% if not notif.is_read %}
+            <i class="fas fa-envelope-open text-secondary"></i>
+            {% else %}
+            <i class="fas fa-envelope text-secondary"></i>
+            {% endif %}
+          </a>
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center py-5 text-muted">
+        <i class="fas fa-bell-slash fa-3x mb-3 text-secondary opacity-50"></i>
+        <h6 class="fw-bold text-dark">No Notifications</h6>
+        <p class="small text-muted mb-0">You're completely caught up! New workflow alerts will appear here.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+      <span class="small text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+        {% endif %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

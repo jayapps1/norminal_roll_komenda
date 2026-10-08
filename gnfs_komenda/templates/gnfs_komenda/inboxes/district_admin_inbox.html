@@ -1,0 +1,193 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}District Administration Leave Inbox — {{ district.name }} — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1400px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-district' district.id %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-building me-1"></i> {{ district.name }} Command</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Leave Administration Inbox</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-clipboard-list text-danger me-2"></i>District Leave Administration
+      </h3>
+      <p class="text-muted small mb-0">Administrative processing point: Verify requests, validate dates & balances, and forward to {{ co_desig|default:"DFO" }}.</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'dashboard-district' district.id %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-arrow-left me-1"></i> District Dashboard
+      </a>
+      <a href="{% url 'district-leave-approvals' district.id %}" class="btn btn-outline-danger btn-sm shadow-sm fw-bold">
+        <i class="fas fa-stamp me-1"></i> {{ co_desig|default:"DFO" }} Approval Queue &rarr;
+      </a>
+    </div>
+  </div>
+
+  <!-- Summary Metric Cards (Section 12) -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white border-start border-secondary border-4">
+        <span class="text-muted small text-uppercase fw-bold">New Requests</span>
+        <div class="fs-3 fw-bold text-dark mt-1">{{ pending_processing.count }}</div>
+        <span class="small text-muted">Awaiting processing</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white border-start border-warning border-4">
+        <span class="text-muted small text-uppercase fw-bold">With {{ co_desig|default:"DFO" }}</span>
+        <div class="fs-3 fw-bold text-warning mt-1">{{ forwarded.count }}</div>
+        <span class="small text-muted">Forwarded for decision</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white border-start border-info border-4">
+        <span class="text-muted small text-uppercase fw-bold">Correction</span>
+        <div class="fs-3 fw-bold text-info mt-1">{{ returned.count }}</div>
+        <span class="small text-muted">Returned to officer</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white border-start border-success border-4">
+        <span class="text-muted small text-uppercase fw-bold">Approved</span>
+        <div class="fs-3 fw-bold text-success mt-1">{{ approved.count }}</div>
+        <span class="small text-muted">Recent approvals</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white border-start border-danger border-4">
+        <span class="text-muted small text-uppercase fw-bold">On Leave</span>
+        <div class="fs-3 fw-bold text-danger mt-1">{{ currently_on_leave.count }}</div>
+        <span class="small text-muted">Officers away</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white border-start border-primary border-4">
+        <span class="text-muted small text-uppercase fw-bold">Command CO</span>
+        <div class="fs-6 fw-bold text-dark mt-1 text-truncate">{{ co.personnel.fullname|default:"Unassigned" }}</div>
+        <span class="small text-muted">{{ co_desig|default:"DFO" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Table: Leave Requests Awaiting Administrative Processing (Section 13) -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <h6 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-inbox text-danger me-2"></i>New Leave Requests Awaiting Verification
+      </h6>
+      <span class="badge bg-secondary">{{ pending_processing.count }} Pending</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Officer & Staff ID</th>
+            <th>Rank</th>
+            <th>Station</th>
+            <th>Leave Type</th>
+            <th>Days</th>
+            <th>Start Date</th>
+            <th>Submitted</th>
+            <th>Status</th>
+            <th class="text-end pe-4">Processing Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in pending_processing %}
+          <tr>
+            <td class="ps-4">
+              <strong class="text-dark">{{ req.personnel.fullname }}</strong>
+              <div class="small text-muted font-monospace">{{ req.personnel.staffID }}</div>
+            </td>
+            <td><span class="badge bg-light text-dark border">{{ req.personnel.rank.name|default:req.personnel.job_grade }}</span></td>
+            <td>{{ req.personnel.station.name|default:"District HQ" }}</td>
+            <td>
+              <div class="fw-semibold text-dark">{{ req.leave_type.name }}</div>
+              <span class="small text-muted">{{ req.leave_type.get_calculation_mode_display }}</span>
+            </td>
+            <td><strong class="text-danger">{{ req.duration }}d</strong></td>
+            <td>{{ req.start_date|date:"d M Y" }}</td>
+            <td>{{ req.created_at|date:"d M Y" }}</td>
+            <td>
+              <span class="badge bg-secondary"><i class="fas fa-clipboard me-1"></i>New Request</span>
+            </td>
+            <td class="text-end pe-4">
+              <a href="{% url 'district-leave-process' district.id req.pk %}" class="btn btn-sm btn-danger fw-bold shadow-sm">
+                <i class="fas fa-clipboard-check me-1"></i> Process / Verify
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center py-5 text-muted">
+              <i class="fas fa-check-circle fa-2x mb-2 d-block text-success opacity-50"></i>
+              No new leave requests awaiting processing in {{ district.name }}.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Forwarded to DFO/MFO Tabular Overview -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <h6 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-share-square text-warning me-2"></i>Requests Forwarded to {{ co_desig|default:"DFO" }} for Decision
+      </h6>
+      <span class="badge bg-warning text-dark">{{ forwarded.count }} Awaiting Decision</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Officer</th>
+            <th>Leave Type</th>
+            <th>Days</th>
+            <th>Start Date</th>
+            <th>Processed On</th>
+            <th>Processed By</th>
+            <th class="text-end pe-4">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in forwarded %}
+          <tr>
+            <td class="ps-4">
+              <strong class="text-dark">{{ req.personnel.fullname }}</strong>
+              <div class="small text-muted">{{ req.personnel.staffID }} &bull; {{ req.personnel.station.name }}</div>
+            </td>
+            <td>{{ req.leave_type.name }}</td>
+            <td>{{ req.duration }} days</td>
+            <td>{{ req.start_date|date:"d M Y" }}</td>
+            <td>{{ req.processed_at|date:"d M Y H:i" }}</td>
+            <td><span class="small text-muted">{{ req.processed_by.username }}</span></td>
+            <td class="text-end pe-4">
+              <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half me-1"></i>With {{ co_desig|default:"DFO" }}</span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-3 text-muted">
+              No requests currently pending with the Commanding Officer.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

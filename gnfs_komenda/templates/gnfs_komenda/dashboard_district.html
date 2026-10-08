@@ -1,11 +1,11 @@
 {% extends 'main.html' %}
 
-{% block title %}{{ district.name }} — GNFS District Dashboard{% endblock %}
+{% block title %}{{ district.name }} District Administration — GNFS{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4 py-3">
 
-  <!-- Breadcrumbs & Header -->
+  <!-- Breadcrumbs & Header (Section 20) -->
   <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
     <div>
       <nav aria-label="breadcrumb">
@@ -15,101 +15,245 @@
           <li class="breadcrumb-item active" aria-current="page">{{ district.name }}</li>
         </ol>
       </nav>
-      <h3 class="fw-bold mb-0 text-dark">{{ district.name }} Administration</h3>
-      <p class="text-muted small mb-0">District Fire Officer (DFO) & Operational Command Overview</p>
+      <div class="text-uppercase text-danger fw-bold small" style="letter-spacing: 1px;">
+        {{ district.name|upper }}
+      </div>
+      <h2 class="fw-bold mb-0 text-dark" style="color: #8B0000 !important;">DISTRICT ADMINISTRATION</h2>
+      <p class="text-muted small mb-0">District Application Data, Processing & Roster Management</p>
     </div>
 
     <div class="d-flex gap-2 mt-2 mt-md-0">
-      <a href="{% url 'personnel' %}" class="btn btn-outline-danger btn-sm shadow-sm">
-        <i class="fas fa-users me-1"></i> District Personnel Roll
+      <a href="{% url 'district-leave-inbox' district.id %}" class="btn btn-warning btn-sm shadow-sm fw-bold">
+        <i class="fas fa-tasks me-1"></i> Leave Processing ({{ leave_awaiting_processing }})
       </a>
-      {% if pending_approvals > 0 %}
-      <a href="{% url 'approval-list' %}" class="btn btn-warning btn-sm shadow-sm fw-bold">
-        <i class="fas fa-clipboard-check me-1"></i> DFO Approvals ({{ pending_approvals }})
+      <a href="{% url 'personnel' %}" class="btn btn-outline-danger btn-sm shadow-sm fw-semibold">
+        <i class="fas fa-users me-1"></i> District Personnel
+      </a>
+      {% if can_manage %}
+      <a href="{% url 'manage-district-leadership' district.id %}" class="btn btn-danger btn-sm shadow-sm fw-bold" style="background-color: #8B0000; border-color: #8B0000;">
+        <i class="fas fa-users-cog me-1"></i> Leadership
       </a>
       {% endif %}
     </div>
   </div>
 
-  <!-- Summary Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-md-2">
-      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #8B0000 !important;">
-        <div class="text-muted small text-uppercase fw-semibold">Personnel</div>
-        <div class="d-flex justify-content-between align-items-center mt-1">
-          <span class="fs-4 fw-bold text-dark">{{ total_personnel }}</span>
-          <a href="{% url 'personnel' %}" class="btn btn-sm btn-outline-danger py-0 px-2">All</a>
+  <!-- Command Leadership Banner (Section 20) -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3 border-top border-danger border-3">
+    <div class="row align-items-center g-3">
+      <div class="col-md-5">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+            <i class="fas fa-user-shield fa-2x"></i>
+          </div>
+          <div>
+            <span class="badge bg-danger mb-1">{{ district.co_designation|default:"DFO" }} / MFO</span>
+            {% if current_co %}
+            <h5 class="fw-bold mb-0 text-dark">
+              {{ current_co.personnel.fullname }}
+              {% if current_co.is_acting %}<span class="badge bg-warning text-dark">Acting</span>{% endif %}
+            </h5>
+            <div class="text-muted small">{{ current_co.personnel.rank.name|default:current_co.personnel.job_grade }} &bull; {{ current_co.personnel.staffID }}</div>
+            {% else %}
+            <div class="text-secondary fw-semibold">No Active Commanding Officer Appointed</div>
+            {% endif %}
+          </div>
         </div>
       </div>
-    </div>
-    <div class="col-6 col-md-2">
-      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #ffc107 !important;">
-        <div class="text-muted small text-uppercase fw-semibold">Senior Officers</div>
-        <div class="d-flex justify-content-between align-items-center mt-1">
-          <span class="fs-4 fw-bold text-dark">{{ senior_officers }}</span>
-          <a href="{% url 'personnel' %}?category=SENIOR" class="btn btn-sm btn-outline-warning text-dark py-0 px-2">Drill Down</a>
+      <div class="col-md-4">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+            <i class="fas fa-user-check fa-2x"></i>
+          </div>
+          <div>
+            <span class="badge bg-primary mb-1">District 2IC</span>
+            {% if current_2ic %}
+            <h5 class="fw-bold mb-0 text-dark">
+              {{ current_2ic.personnel.fullname }}
+              {% if current_2ic.is_acting %}<span class="badge bg-warning text-dark">Acting</span>{% endif %}
+            </h5>
+            <div class="text-muted small">{{ current_2ic.personnel.rank.name|default:current_2ic.personnel.job_grade }} &bull; {{ current_2ic.personnel.staffID }}</div>
+            {% else %}
+            <div class="text-secondary fw-semibold">No Active 2IC Appointed</div>
+            {% endif %}
+          </div>
         </div>
       </div>
-    </div>
-    <div class="col-6 col-md-2">
-      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #0dcaf0 !important;">
-        <div class="text-muted small text-uppercase fw-semibold">Junior Officers</div>
-        <div class="d-flex justify-content-between align-items-center mt-1">
-          <span class="fs-4 fw-bold text-dark">{{ junior_officers }}</span>
-          <a href="{% url 'personnel' %}?category=JUNIOR" class="btn btn-sm btn-outline-info text-dark py-0 px-2">Drill Down</a>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-2">
-      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #198754 !important;">
-        <div class="text-muted small text-uppercase fw-semibold">At Post</div>
-        <div class="fs-4 fw-bold text-success mt-1">{{ at_post }}</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-2">
-      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #dc3545 !important;">
-        <div class="text-muted small text-uppercase fw-semibold">On Leave</div>
-        <div class="fs-4 fw-bold text-danger mt-1">{{ on_leave }}</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-2">
-      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #6c757d !important;">
-        <div class="text-muted small text-uppercase fw-semibold">Stations / Posts</div>
-        <div class="fs-6 fw-bold text-dark mt-1">{{ station_count }} Stn / {{ post_count }} Post</div>
+      <div class="col-md-3 text-md-end">
+        {% if can_manage %}
+        <a href="{% url 'manage-district-leadership' district.id %}" class="btn btn-outline-danger btn-sm fw-bold">
+          <i class="fas fa-sliders-h me-1"></i> Configure & Appoint
+        </a>
+        {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Stations in District -->
-  <h4 class="fw-bold text-dark mb-3">Fire Stations in {{ district.name }}</h4>
-  <div class="row g-3">
-    {% for stn in stations %}
-    <div class="col-md-6 col-lg-4">
-      <div class="card border-0 shadow-sm rounded-3 h-100 bg-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <h5 class="fw-bold text-dark mb-0">{{ stn.name }}</h5>
-            <span class="badge bg-danger small" style="background-color:#8B0000 !important;">{{ stn.get_station_type_display }}</span>
-          </div>
-          <div class="d-flex justify-content-between text-muted small mb-1">
-            <span>Market / Sub-Posts:</span>
-            <strong class="text-dark">{{ stn.post_count }}</strong>
-          </div>
-          <div class="d-flex justify-content-between text-muted small mb-3">
-            <span>Personnel Assigned:</span>
-            <strong class="text-dark">{{ stn.personnel_count }}</strong>
-          </div>
-          <a href="{% url 'dashboard-station' stn.id %}" class="btn btn-outline-danger btn-sm w-100 fw-semibold" style="border-color:#8B0000; color:#8B0000;">
-            <i class="fas fa-fire-extinguisher me-1"></i> View Fire Station
-          </a>
+  <!-- Summary Cards (Section 20) -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #8B0000 !important;">
+        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">Total Personnel</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ total_personnel }}</span>
+          <span class="badge bg-danger" style="background-color: #8B0000 !important;">All</span>
         </div>
       </div>
     </div>
-    {% empty %}
-    <div class="col-12">
-      <div class="alert alert-info">No fire stations recorded for this district yet.</div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #B8860B !important;">
+        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">Senior Officers</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ senior_officers }}</span>
+          <span class="badge bg-warning text-dark">Senior</span>
+        </div>
+      </div>
     </div>
-    {% endfor %}
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #0dcaf0 !important;">
+        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">Junior Officers</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ junior_officers }}</span>
+          <span class="badge bg-info text-dark">Junior</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #198754 !important;">
+        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">At Post</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-success">{{ at_post }}</span>
+          <i class="fas fa-user-check text-success fs-5 opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #dc3545 !important;">
+        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">On Leave</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-danger">{{ on_leave }}</span>
+          <i class="fas fa-calendar-times text-danger fs-5 opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #ffc107 !important;">
+        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.7rem;">Leave In Review</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-warning">{{ leave_awaiting_processing }}</span>
+          <a href="{% url 'district-leave-inbox' district.id %}" class="badge bg-warning text-dark text-decoration-none">Inbox</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational Structure & Transfer Metrics -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 text-center">
+        <div class="text-muted small text-uppercase">Stations</div>
+        <div class="fs-4 fw-bold text-dark mt-1">{{ station_count }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 text-center">
+        <div class="text-muted small text-uppercase">Market / Fire Posts</div>
+        <div class="fs-4 fw-bold text-dark mt-1">{{ post_count }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 text-center">
+        <div class="text-muted small text-uppercase">Incoming Transfers</div>
+        <div class="fs-4 fw-bold text-info mt-1">{{ incoming_transfers }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 text-center">
+        <div class="text-muted small text-uppercase">Outgoing Transfers</div>
+        <div class="fs-4 fw-bold text-secondary mt-1">{{ outgoing_transfers }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stations & Recent Activity Table (Section 20) -->
+  <div class="row g-3 mb-4">
+    <!-- Stations in District -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+        <div class="card-header bg-white border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="fas fa-fire-extinguisher text-danger me-2"></i>Stations in {{ district.name }}
+          </h5>
+          <span class="badge bg-light text-muted border">{{ stations.count }} Stations</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light text-muted">
+                <tr>
+                  <th class="ps-3">Station</th>
+                  <th>Posts</th>
+                  <th>Personnel</th>
+                  <th class="text-end pe-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for stn in stations %}
+                <tr>
+                  <td class="ps-3 fw-bold text-dark">{{ stn.name }}</td>
+                  <td>{{ stn.post_count }}</td>
+                  <td><strong>{{ stn.personnel_count }}</strong></td>
+                  <td class="text-end pe-3">
+                    <a href="{% url 'dashboard-station' stn.id %}" class="btn btn-sm btn-outline-danger py-0 px-2">
+                      View
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-3">No stations configured in this district.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Administrative Activity -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+        <div class="card-header bg-white border-0 pt-3 pb-2">
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="fas fa-history text-secondary me-2"></i>Recent Administrative Activity
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light text-muted">
+                <tr>
+                  <th class="ps-3">Date</th>
+                  <th>Actor</th>
+                  <th>Action</th>
+                  <th>Target</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for act in recent_activity %}
+                <tr>
+                  <td class="ps-3 text-muted">{{ act.timestamp|date:"d M H:i" }}</td>
+                  <td class="fw-semibold">{{ act.user.username|default:"System" }}</td>
+                  <td><span class="badge bg-light text-dark border">{{ act.action }}</span></td>
+                  <td class="text-truncate" style="max-width: 180px;">{{ act.target }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-3">No recent activity logged for this district.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>

@@ -1,0 +1,114 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}Create Leave for Officer — {{ district.name }} Administration{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3" style="max-width: 900px;">
+
+  <!-- Breadcrumbs & Header (Section 46) -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'workspace-admin-district' district.id %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> {{ district.name }} Admin</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Initiate Leave for Officer</li>
+        </ol>
+      </nav>
+      <h2 class="fw-bold mb-0 text-dark" style="color: #8B0000 !important;">INITIATE LEAVE REQUEST</h2>
+      <p class="text-muted small mb-0">Authorized Administration creation of leave on behalf of a district personnel member (Section 46)</p>
+    </div>
+
+    <div>
+      <a href="{% url 'workspace-admin-district' district.id %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-arrow-left me-1"></i> Back to Administration
+      </a>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+    <div class="alert alert-info border-0 rounded-3 p-3 mb-4 d-flex align-items-center gap-2 small">
+      <i class="fas fa-info-circle fa-lg text-info"></i>
+      <div>
+        <strong>Audit Trail Notice:</strong> This request will be logged with <code>creation_mode='ADMIN'</code>. It will proceed through the standard District review pipeline: Administration Verification &rarr; Operations Recommendation &rarr; DFO / MFO Command Decision &rarr; Watch Room Entry.
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+        <!-- Target Officer Selection -->
+        <div class="col-md-12">
+          <label class="form-label small fw-bold text-dark">Select Personnel *</label>
+          <select name="personnel_id" class="form-select" required>
+            <option value="">-- Choose Officer under {{ district.name }} --</option>
+            {% for p in personnel_list %}
+            <option value="{{ p.id }}">{{ p.fullname }} ({{ p.staffID }}) &bull; {{ p.rank.name|default:"Officer" }} &bull; {{ p.station.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Leave Type -->
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-dark">Leave Type *</label>
+          <select name="leave_type_id" class="form-select" required>
+            <option value="">-- Select Leave Type --</option>
+            {% for lt in leave_types %}
+            <option value="{{ lt.id }}">{{ lt.name }} ({{ lt.get_calculation_mode_display }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Duration -->
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-dark">Duration (Days) *</label>
+          <input type="number" name="duration" min="1" max="120" class="form-control" required placeholder="e.g. 15">
+        </div>
+
+        <!-- Start Date -->
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-dark">Leave Start Date *</label>
+          <input type="date" name="start_date" class="form-control" required>
+        </div>
+
+        <!-- Prorated / Proportionate Checkbox -->
+        <div class="col-md-6 d-flex align-items-center pt-4">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_prorated" id="proratedCheck">
+            <label class="form-check-label small fw-bold text-dark" for="proratedCheck">
+              Proportionate / Prorated Annual Leave
+            </label>
+            <div class="form-text small">Check if this application is for a prorated portion of the year.</div>
+          </div>
+        </div>
+
+        <!-- Contact Phone -->
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-dark">Contact Phone during Leave</label>
+          <input type="tel" name="contact_phone" class="form-control" placeholder="e.g. 0244123456">
+        </div>
+
+        <!-- Contact Address -->
+        <div class="col-md-6">
+          <label class="form-label small fw-bold text-dark">Address during Leave</label>
+          <input type="text" name="contact_address" class="form-control" placeholder="Residential or postal address">
+        </div>
+
+        <!-- Reason -->
+        <div class="col-md-12">
+          <label class="form-label small fw-bold text-dark">Reason / Official Administrative Notes</label>
+          <textarea name="reason" class="form-control" rows="3" placeholder="Provide administrative notes or reason for this leave request..."></textarea>
+        </div>
+
+        <div class="col-12 mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+          <a href="{% url 'workspace-admin-district' district.id %}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-danger fw-bold px-4" style="background-color: #8B0000; border-color: #8B0000;">
+            <i class="fas fa-paper-plane me-1"></i> Submit Leave Request
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

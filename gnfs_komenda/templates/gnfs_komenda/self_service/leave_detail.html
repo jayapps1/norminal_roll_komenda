@@ -1,0 +1,336 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}Leave Request #{{ leave_req.id }} — GNFS Self-Service{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1200px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'my-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-user-circle me-1"></i> My Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'my-leave' %}" class="text-decoration-none text-secondary">My Leave</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Request #{{ leave_req.id }}</li>
+        </ol>
+      </nav>
+      <div class="d-flex align-items-center gap-2">
+        <h3 class="fw-bold mb-0 text-dark">
+          {{ leave_req.leave_type.name }} Application
+        </h3>
+        <span class="badge bg-light text-dark border font-monospace">LR-{{ leave_req.id }}</span>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      {% if leave_req.status == 'RETURNED_FOR_CORRECTION' %}
+      <a href="{% url 'my-leave-edit' leave_req.pk %}" class="btn btn-warning btn-sm shadow-sm fw-bold">
+        <i class="fas fa-edit me-1"></i> Correct & Resubmit
+      </a>
+      {% endif %}
+      <a href="{% url 'my-leave' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-arrow-left me-1"></i> My Leave Hub
+      </a>
+    </div>
+  </div>
+
+  <!-- Status Notification Banner -->
+  {% if leave_req.status == 'RETURNED_FOR_CORRECTION' %}
+  <div class="alert alert-warning border border-warning rounded-4 shadow-sm p-4 mb-4">
+    <div class="d-flex gap-3">
+      <div class="text-warning"><i class="fas fa-exclamation-triangle fa-2x"></i></div>
+      <div class="flex-grow-1">
+        <h5 class="fw-bold text-dark mb-1">Returned for Correction</h5>
+        <p class="mb-2 text-dark">
+          <strong>Reviewer Remarks:</strong> {{ leave_req.correction_reason|default:"Please review your application dates or supporting documents and resubmit." }}
+        </p>
+        <a href="{% url 'my-leave-edit' leave_req.pk %}" class="btn btn-dark btn-sm fw-bold">
+          <i class="fas fa-edit me-1"></i> Edit Request & Resubmit Now
+        </a>
+      </div>
+    </div>
+  </div>
+  {% elif leave_req.status == 'REJECTED' %}
+  <div class="alert alert-danger border border-danger rounded-4 shadow-sm p-4 mb-4">
+    <div class="d-flex gap-3">
+      <div class="text-danger"><i class="fas fa-times-circle fa-2x"></i></div>
+      <div>
+        <h5 class="fw-bold text-danger mb-1">Leave Application Not Approved</h5>
+        <p class="mb-0 text-dark">
+          <strong>Official Reason:</strong> {{ leave_req.approval_notes|default:"This application was rejected by the commanding authority." }}
+        </p>
+      </div>
+    </div>
+  </div>
+  {% elif leave_req.status == 'APPROVED' or leave_req.status == 'ACTIVE' %}
+  <div class="alert alert-success border border-success rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-3">
+      <div class="text-success"><i class="fas fa-check-circle fa-2x"></i></div>
+      <div>
+        <h5 class="fw-bold text-success mb-0">Leave Approved by Command Authority</h5>
+        <span class="small text-muted">Approved on {{ leave_req.approved_at|date:"d M Y H:i" }} &bull; Resume Duty: <strong>{{ leave_req.resume_date|date:"d M Y" }}</strong></span>
+      </div>
+    </div>
+    {% if leave_req.status == 'APPROVED' or leave_req.status == 'ACTIVE' %}
+    <a href="{% url 'leave-certificate' leave_req.pk %}" class="btn btn-outline-success btn-sm fw-bold">
+      <i class="fas fa-print me-1"></i> Print Certificate
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+    <!-- Left Column: Leave Details & Dates -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-info-circle text-danger me-2"></i>Application Information
+        </h6>
+
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Officer Name:</span>
+            <strong class="text-dark">{{ leave_req.personnel.fullname }}</strong>
+            <div class="small text-muted">{{ leave_req.personnel.rank.name|default:leave_req.personnel.job_grade }} &bull; {{ leave_req.personnel.staffID }}</div>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Leave Category:</span>
+            <strong class="text-dark">{{ leave_req.leave_type.name }}</strong>
+            <div class="small text-muted">{{ leave_req.leave_type.get_calculation_mode_display }}</div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3 p-3 bg-light rounded-3">
+          <div class="col-4 text-center">
+            <span class="text-muted small d-block">Start Date</span>
+            <strong class="fs-6 text-dark">{{ leave_req.start_date|date:"d M Y" }}</strong>
+          </div>
+          <div class="col-4 text-center border-start border-end">
+            <span class="text-muted small d-block">Duration</span>
+            <strong class="fs-5 text-danger">{{ leave_req.duration }}</strong>
+            <span class="small text-muted d-block">Days</span>
+          </div>
+          <div class="col-4 text-center">
+            <span class="text-muted small d-block">Resume Duty Date</span>
+            <strong class="fs-6 text-success">{{ leave_req.resume_date|date:"d M Y" }}</strong>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-2">
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Last Official Leave Day:</span>
+            <strong class="text-dark">{{ leave_req.last_leave_date|date:"d M Y" }}</strong>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Leave Year:</span>
+            <strong class="text-dark">{{ leave_req.leave_year }}</strong>
+          </div>
+        </div>
+
+        {% if leave_req.medical_reference %}
+        <div class="mt-3 p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3">
+          <span class="text-danger small fw-bold d-block"><i class="fas fa-hospital me-1"></i>Medical Reference / Clinic:</span>
+          <span class="text-dark">{{ leave_req.medical_reference }}</span>
+        </div>
+        {% endif %}
+
+        {% if leave_req.reason %}
+        <div class="mt-3">
+          <span class="text-muted small d-block fw-semibold">Reason / Remarks:</span>
+          <p class="text-dark small mb-0">{{ leave_req.reason }}</p>
+        </div>
+        {% endif %}
+
+        {% if leave_req.handover_notes %}
+        <div class="mt-3">
+          <span class="text-muted small d-block fw-semibold">Handover Notes:</span>
+          <p class="text-dark small mb-0">{{ leave_req.handover_notes }}</p>
+        </div>
+        {% endif %}
+
+        <div class="row g-2 mt-3 pt-3 border-top small text-muted">
+          <div class="col-sm-6">
+            <span>Contact Phone: <strong>{{ leave_req.contact_phone|default:"Not provided" }}</strong></span>
+          </div>
+          <div class="col-sm-6">
+            <span>Address on Leave: <strong>{{ leave_req.contact_address|default:"Not provided" }}</strong></span>
+          </div>
+        </div>
+
+        {% if leave_req.attachment %}
+        <div class="mt-3 pt-3 border-top">
+          <span class="text-muted small d-block mb-1">Supporting Document:</span>
+          <a href="{{ leave_req.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-danger">
+            <i class="fas fa-file-download me-1"></i> Download Attachment
+          </a>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!-- Right Column: Audit Timeline & Multi-Stage Workflow Tracking (Section 56, 57) -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-stream text-danger me-2"></i>Workflow Stage Tracker
+        </h6>
+
+        <!-- Multi-Stage Stepper UI (Section 57) -->
+        <div class="mb-4 p-3 bg-light rounded-3">
+          <div class="small fw-bold text-uppercase text-muted mb-2" style="font-size: 0.7rem; letter-spacing: 0.5px;">District Leave Pipeline</div>
+          
+          <div class="d-flex align-items-center mb-2">
+            <span class="badge rounded-circle p-2 bg-success text-white me-2"><i class="fas fa-check small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-dark">1. Request Submitted</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">{{ leave_req.created_at|date:"d M Y H:i" }}</div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center mb-2">
+            {% if leave_req.processed_at %}
+            <span class="badge rounded-circle p-2 bg-success text-white me-2"><i class="fas fa-check small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-dark">2. Administration Reviewed</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">{{ leave_req.processed_at|date:"d M Y H:i" }}</div>
+            </div>
+            {% elif leave_req.status == 'PENDING_ADMIN_REVIEW' or leave_req.status == 'PENDING_PROCESSING' %}
+            <span class="badge rounded-circle p-2 bg-warning text-dark me-2"><i class="fas fa-spinner fa-spin small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-warning">2. Administration Review</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">Currently in verification</div>
+            </div>
+            {% else %}
+            <span class="badge rounded-circle p-2 bg-secondary bg-opacity-25 text-muted me-2"><i class="fas fa-circle small"></i></span>
+            <div class="small flex-grow-1 text-muted">2. Administration Review</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex align-items-center mb-2">
+            {% if leave_req.operations_recommended_at %}
+            <span class="badge rounded-circle p-2 bg-success text-white me-2"><i class="fas fa-check small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-dark">3. Operations Recommended</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">
+                {{ leave_req.operations_recommended_at|date:"d M Y H:i" }} &bull; {{ leave_req.operations_recommendation }}
+              </div>
+            </div>
+            {% elif leave_req.status == 'PENDING_OPERATIONS_RECOMMENDATION' %}
+            <span class="badge rounded-circle p-2 bg-warning text-dark me-2"><i class="fas fa-spinner fa-spin small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-warning">3. Operations Recommendation</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">Evaluating operational force strength</div>
+            </div>
+            {% else %}
+            <span class="badge rounded-circle p-2 bg-secondary bg-opacity-25 text-muted me-2"><i class="fas fa-circle small"></i></span>
+            <div class="small flex-grow-1 text-muted">3. Operations Recommendation</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex align-items-center mb-2">
+            {% if leave_req.approved_at and leave_req.status != 'REJECTED' %}
+            <span class="badge rounded-circle p-2 bg-success text-white me-2"><i class="fas fa-check small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-dark">4. Command Decision (Approved)</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">{{ leave_req.approved_at|date:"d M Y H:i" }}</div>
+            </div>
+            {% elif leave_req.status == 'PENDING_APPROVAL' %}
+            <span class="badge rounded-circle p-2 bg-warning text-dark me-2"><i class="fas fa-spinner fa-spin small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-warning">4. Command Decision</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">Awaiting DFO / MFO executive decision</div>
+            </div>
+            {% elif leave_req.status == 'REJECTED' %}
+            <span class="badge rounded-circle p-2 bg-danger text-white me-2"><i class="fas fa-times small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-danger">4. Command Decision (Rejected)</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">Application rejected by command</div>
+            </div>
+            {% else %}
+            <span class="badge rounded-circle p-2 bg-secondary bg-opacity-25 text-muted me-2"><i class="fas fa-circle small"></i></span>
+            <div class="small flex-grow-1 text-muted">4. Command Decision</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex align-items-center mb-2">
+            {% if leave_req.sent_to_watch_room_at %}
+            <span class="badge rounded-circle p-2 bg-success text-white me-2"><i class="fas fa-check small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-dark">5. Sent to Watch Room</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">{{ leave_req.sent_to_watch_room_at|date:"d M Y H:i" }}</div>
+            </div>
+            {% elif leave_req.status == 'PENDING_ADMIN_FINAL_PROCESSING' %}
+            <span class="badge rounded-circle p-2 bg-warning text-dark me-2"><i class="fas fa-spinner fa-spin small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-warning">5. Administration Final Processing</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">Awaiting release to Watch Room</div>
+            </div>
+            {% else %}
+            <span class="badge rounded-circle p-2 bg-secondary bg-opacity-25 text-muted me-2"><i class="fas fa-circle small"></i></span>
+            <div class="small flex-grow-1 text-muted">5. Sent to Watch Room</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex align-items-center">
+            {% if leave_req.watch_room_booked_at %}
+            <span class="badge rounded-circle p-2 bg-success text-white me-2"><i class="fas fa-check small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-dark">6. Booked in Watch Room</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">
+                {{ leave_req.watch_room_booked_at|date:"d M Y H:i" }} &bull; {{ leave_req.watch_room_book_type }} (Ref: {{ leave_req.watch_room_book_reference }})
+              </div>
+            </div>
+            {% elif leave_req.status == 'SENT_TO_WATCH_ROOM' %}
+            <span class="badge rounded-circle p-2 bg-warning text-dark me-2"><i class="fas fa-spinner fa-spin small"></i></span>
+            <div class="small flex-grow-1">
+              <strong class="text-warning">6. Watch Room Diary Entry</strong>
+              <div class="text-muted" style="font-size: 0.7rem;">Awaiting Station Diary entry</div>
+            </div>
+            {% else %}
+            <span class="badge rounded-circle p-2 bg-secondary bg-opacity-25 text-muted me-2"><i class="fas fa-circle small"></i></span>
+            <div class="small flex-grow-1 text-muted">6. Watch Room Diary Entry</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Detailed Workflow Audit Timeline -->
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-history text-muted me-2"></i>Audit History
+        </h6>
+        <div class="audit-timeline">
+          {% for wh in workflow_history %}
+          <div class="d-flex gap-3 mb-3">
+            <div class="text-danger"><i class="fas fa-dot-circle small"></i></div>
+            <div class="flex-grow-1">
+              <strong class="text-dark small d-block">{{ wh.get_action_display|default:wh.action }}</strong>
+              <div class="small text-muted">{{ wh.timestamp|date:"d M Y H:i" }} &bull; {{ wh.actor_role|default:"User" }}</div>
+              {% if wh.comment %}
+              <div class="small text-dark mt-1 p-2 bg-light rounded">"{{ wh.comment }}"</div>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          {% for dec in decisions %}
+          <div class="d-flex gap-3 mb-3">
+            <div class="text-danger"><i class="fas fa-dot-circle small"></i></div>
+            <div class="flex-grow-1">
+              <strong class="text-dark small d-block">{{ dec.get_decision_display }}</strong>
+              <div class="small text-muted">{{ dec.timestamp|date:"d M Y H:i" }} &bull; {{ dec.approver.username }}</div>
+              {% if dec.comments %}
+              <div class="small text-dark mt-1 p-2 bg-light rounded">"{{ dec.comments }}"</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          {% endfor %}
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

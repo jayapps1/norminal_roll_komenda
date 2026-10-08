@@ -1,0 +1,220 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}RFO Executive Approvals — {{ region.name }} Region — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1400px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-regional' region.id %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-map-marked-alt me-1"></i> {{ region.name }} Region</a></li>
+          <li class="breadcrumb-item active" aria-current="page">RFO Approvals Queue</li>
+        </ol>
+      </nav>
+      <div class="d-flex align-items-center gap-2">
+        <h3 class="fw-bold mb-0 text-dark">
+          <i class="fas fa-stamp text-danger me-2"></i>Regional Fire Officer (RFO) Approvals
+        </h3>
+        <span class="badge bg-danger">Regional Command Decision</span>
+      </div>
+      <p class="text-muted small mb-0">High-level statutory leave decision authority for District Fire Officers (DFOs/MFOs) and Regional Headquarters staff.</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'dashboard-regional' region.id %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-arrow-left me-1"></i> Regional Dashboard
+      </a>
+      <a href="{% url 'regional-leave-inbox' region.id %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-tasks me-1"></i> Regional Admin Inbox
+      </a>
+    </div>
+  </div>
+
+  <!-- RFO Leadership Banner -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3 border-start border-danger border-4">
+    <div class="d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-3">
+        <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+          <i class="fas fa-medal fa-2x"></i>
+        </div>
+        <div>
+          <span class="badge bg-danger mb-1">RFO &bull; Regional Fire Officer</span>
+          <h5 class="fw-bold mb-0 text-dark">{{ current_rfo.personnel.fullname|default:"Regional Fire Officer" }}</h5>
+          <div class="text-muted small">{{ region.name }} Regional Command &bull; Statutory Approval Authority</div>
+        </div>
+      </div>
+      <div>
+        <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+          <i class="fas fa-inbox me-1"></i> {{ dfo_requests.count|add:regional_staff_requests.count }} Awaiting Decision
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table 1: DFO / MFO Requests (Section 20 Distinction) -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4 border-top border-warning border-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <div>
+        <h6 class="fw-bold mb-0 text-dark">
+          <i class="fas fa-shield-alt text-warning me-2"></i>District Commanding Officers (DFO / MFO) Leave Applications
+        </h6>
+        <span class="text-muted small">DFO/MFO personal statutory leave forwarded for your direct command approval.</span>
+      </div>
+      <span class="badge bg-warning text-dark">{{ dfo_requests.count }} Awaiting Decision</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Commanding Officer</th>
+            <th>District Command</th>
+            <th>Appointment</th>
+            <th>Leave Type</th>
+            <th>Days</th>
+            <th>Start Date</th>
+            <th>Resume Date</th>
+            <th>Status</th>
+            <th class="text-end pe-4">Command Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in dfo_requests %}
+          <tr>
+            <td class="ps-4">
+              <strong class="text-dark">{{ req.personnel.fullname }}</strong>
+              <div class="small text-muted">{{ req.personnel.staffID }} &bull; {{ req.personnel.rank.name }}</div>
+            </td>
+            <td><strong>{{ req.routing_district.name|default:req.personnel.station.district.name }}</strong></td>
+            <td><span class="badge bg-dark text-warning border border-warning">{{ req.personnel.current_command_appointment.get_appointment_type_display|default:"DFO" }}</span></td>
+            <td>{{ req.leave_type.name }}</td>
+            <td><strong class="text-danger">{{ req.duration }} days</strong></td>
+            <td>{{ req.start_date|date:"d M Y" }}</td>
+            <td><strong class="text-success small">{{ req.resume_date|date:"d M Y" }}</strong></td>
+            <td><span class="badge bg-warning text-dark">Awaiting Approval</span></td>
+            <td class="text-end pe-4">
+              <a href="{% url 'regional-leave-decision' region.id req.pk %}" class="btn btn-sm btn-danger fw-bold shadow-sm">
+                <i class="fas fa-gavel me-1"></i> Make Decision
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center py-4 text-muted">
+              No DFO/MFO personal leave applications currently awaiting decision.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Table 2: Regional Headquarters Staff Applications (Section 20 Distinction) -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <div>
+        <h6 class="fw-bold mb-0 text-dark">
+          <i class="fas fa-users text-danger me-2"></i>Regional Headquarters Staff Applications
+        </h6>
+        <span class="text-muted small">Applications from personnel under direct regional command supervision.</span>
+      </div>
+      <span class="badge bg-secondary">{{ regional_staff_requests.count }} Awaiting Decision</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Officer & Staff ID</th>
+            <th>Rank</th>
+            <th>Leave Type</th>
+            <th>Days</th>
+            <th>Start Date</th>
+            <th>Resume Date</th>
+            <th>Processed By</th>
+            <th class="text-end pe-4">Command Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in regional_staff_requests %}
+          <tr>
+            <td class="ps-4">
+              <strong class="text-dark">{{ req.personnel.fullname }}</strong>
+              <div class="small text-muted font-monospace">{{ req.personnel.staffID }}</div>
+            </td>
+            <td><span class="badge bg-light text-dark border">{{ req.personnel.rank.name|default:req.personnel.job_grade }}</span></td>
+            <td>{{ req.leave_type.name }}</td>
+            <td><strong class="text-danger">{{ req.duration }} days</strong></td>
+            <td>{{ req.start_date|date:"d M Y" }}</td>
+            <td><strong class="text-success small">{{ req.resume_date|date:"d M Y" }}</strong></td>
+            <td><span class="small text-muted">{{ req.processed_by.username|default:"Regional Admin" }}</span></td>
+            <td class="text-end pe-4">
+              <a href="{% url 'regional-leave-decision' region.id req.pk %}" class="btn btn-sm btn-danger fw-bold shadow-sm">
+                <i class="fas fa-gavel me-1"></i> Make Decision
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">
+              No regional staff leave applications awaiting your approval.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent Approved Decisions History -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+    <div class="card-header bg-white py-3 border-bottom">
+      <h6 class="fw-bold text-dark mb-0">
+        <i class="fas fa-history text-secondary me-2"></i>Recent Regional Approvals Issued
+      </h6>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Officer</th>
+            <th>Leave Type</th>
+            <th>Days</th>
+            <th>Approved On</th>
+            <th>Resume Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in recent_approved %}
+          <tr>
+            <td class="ps-4">
+              <strong>{{ req.personnel.fullname }}</strong>
+              <div class="small text-muted">{{ req.personnel.staffID }}</div>
+            </td>
+            <td>{{ req.leave_type.name }}</td>
+            <td>{{ req.duration }} days</td>
+            <td>{{ req.approved_at|date:"d M Y H:i" }}</td>
+            <td>{{ req.resume_date|date:"d M Y" }}</td>
+            <td><span class="badge bg-success">Approved</span></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-3 text-muted">
+              No recent regional approvals on file.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

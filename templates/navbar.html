@@ -23,8 +23,126 @@
       </a>
     </div>
 
-    <!-- Center: Operational Command Badge (Desktop) -->
-    {% if user.is_authenticated %}
+    <!-- Center: Operational Command & Workspace Switcher (Desktop) -->
+    <!-- Center: Operational Command & Workspace Switcher (Desktop) -->
+    {% if user.is_authenticated and available_workspaces %}
+    <div class="dropdown d-none d-md-block">
+      <button class="btn btn-sm btn-outline-light dropdown-toggle d-flex align-items-center gap-1 py-1 px-2 border-0 bg-black bg-opacity-25" type="button" id="workspaceDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.75rem;">
+        {% if active_workspace.type == 'PERSONAL' or active_workspace.type == 'SELF_SERVICE' %}
+        <i class="fas fa-user-circle text-warning"></i>
+        {% elif active_workspace.type == 'ADMINISTRATION' %}
+        <i class="fas fa-landmark text-warning"></i>
+        {% elif active_workspace.type == 'ACCOUNTS' %}
+        <i class="fas fa-file-invoice-dollar text-warning"></i>
+        {% elif active_workspace.type == 'OPERATIONS' %}
+        <i class="fas fa-fire-extinguisher text-warning"></i>
+        {% elif active_workspace.type == 'WATCH_ROOM' %}
+        <i class="fas fa-book text-warning"></i>
+        {% elif active_workspace.type == 'HR' %}
+        <i class="fas fa-users-cog text-warning"></i>
+        {% elif active_workspace.type == 'FUNCTIONAL' %}
+        <i class="fas fa-briefcase text-warning"></i>
+        {% else %}
+        <i class="fas fa-shield-alt text-warning"></i>
+        {% endif %}
+        <span class="fw-semibold text-white">{{ active_workspace.label|default:"Active Workspace" }}</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-center shadow-lg border-0" aria-labelledby="workspaceDropdown" style="min-width: 280px; font-size: 0.8rem;">
+        <li class="px-3 py-1 text-muted text-uppercase fw-bold border-bottom" style="font-size: 0.65rem; background-color: #f8f9fa;">Personnel Self-Service</li>
+        {% for ws in available_workspaces %}
+          {% if ws.type == 'PERSONAL' or ws.type == 'SELF_SERVICE' %}
+          <li>
+            <a class="dropdown-item d-flex justify-content-between align-items-center py-2 {% if active_workspace.id == ws.id %}active bg-danger text-white{% endif %}" href="{% url 'switch-workspace' ws.id %}">
+              <div>
+                <strong class="d-block">{{ ws.label }}</strong>
+                <small class="{% if active_workspace.id == ws.id %}text-white-50{% else %}text-muted{% endif %}">{{ ws.sub_label }}</small>
+              </div>
+              {% if active_workspace.id == ws.id %}<i class="fas fa-check small"></i>{% endif %}
+            </a>
+          </li>
+          {% endif %}
+        {% endfor %}
+
+        <!-- Functional Office Workspaces (Accounts, Operations, Watch Room, HR) -->
+        {% for ws in available_workspaces %}
+          {% if ws.type == 'ACCOUNTS' or ws.type == 'OPERATIONS' or ws.type == 'WATCH_ROOM' or ws.type == 'HR' %}
+            {% if forloop.first %}
+            <li class="px-3 py-1 text-muted text-uppercase fw-bold border-bottom border-top mt-1" style="font-size: 0.65rem; background-color: #f8f9fa;">Functional Offices</li>
+            {% endif %}
+            <li>
+              <a class="dropdown-item d-flex justify-content-between align-items-center py-2 {% if active_workspace.id == ws.id %}active bg-danger text-white{% endif %}" href="{% url 'switch-workspace' ws.id %}">
+                <div>
+                  <strong class="d-block">
+                    {% if ws.type == 'ACCOUNTS' %}<i class="fas fa-file-invoice-dollar text-warning me-1"></i>{% endif %}
+                    {% if ws.type == 'OPERATIONS' %}<i class="fas fa-fire-extinguisher text-danger me-1"></i>{% endif %}
+                    {% if ws.type == 'WATCH_ROOM' %}<i class="fas fa-book text-info me-1"></i>{% endif %}
+                    {% if ws.type == 'HR' %}<i class="fas fa-users-cog text-secondary me-1"></i>{% endif %}
+                    {{ ws.label }}
+                  </strong>
+                  <small class="{% if active_workspace.id == ws.id %}text-white-50{% else %}text-muted{% endif %}">{{ ws.sub_label }}</small>
+                </div>
+                {% if active_workspace.id == ws.id %}<i class="fas fa-check small"></i>{% endif %}
+              </a>
+            </li>
+          {% endif %}
+        {% endfor %}
+
+        <!-- Administration Workspaces -->
+        {% for ws in available_workspaces %}
+          {% if ws.type == 'ADMINISTRATION' %}
+            {% if forloop.first %}
+            <li class="px-3 py-1 text-muted text-uppercase fw-bold border-bottom border-top mt-1" style="font-size: 0.65rem; background-color: #f8f9fa;">Administrative Scope</li>
+            {% endif %}
+            <li>
+              <a class="dropdown-item d-flex justify-content-between align-items-center py-2 {% if active_workspace.id == ws.id %}active bg-danger text-white{% endif %}" href="{% url 'switch-workspace' ws.id %}">
+                <div>
+                  <strong class="d-block">{{ ws.label }}</strong>
+                  <small class="{% if active_workspace.id == ws.id %}text-white-50{% else %}text-muted{% endif %}">{{ ws.sub_label }}</small>
+                </div>
+                {% if active_workspace.id == ws.id %}<i class="fas fa-check small"></i>{% endif %}
+              </a>
+            </li>
+          {% endif %}
+        {% endfor %}
+
+        <!-- Command Hierarchy Workspaces -->
+        {% for ws in available_workspaces %}
+          {% if ws.type == 'COMMAND' %}
+            {% if forloop.first %}
+            <li class="px-3 py-1 text-muted text-uppercase fw-bold border-bottom border-top mt-1" style="font-size: 0.65rem; background-color: #f8f9fa;">Command Appointments</li>
+            {% endif %}
+            <li>
+              <a class="dropdown-item d-flex justify-content-between align-items-center py-2 {% if active_workspace.id == ws.id %}active bg-danger text-white{% endif %}" href="{% url 'switch-workspace' ws.id %}">
+                <div>
+                  <strong class="d-block">{{ ws.label }}</strong>
+                  <small class="{% if active_workspace.id == ws.id %}text-white-50{% else %}text-muted{% endif %}">{{ ws.sub_label }}</small>
+                </div>
+                {% if active_workspace.id == ws.id %}<i class="fas fa-check small"></i>{% endif %}
+              </a>
+            </li>
+          {% endif %}
+        {% endfor %}
+
+        <!-- Functional Workspaces -->
+        {% for ws in available_workspaces %}
+          {% if ws.type == 'FUNCTIONAL' %}
+            {% if forloop.first %}
+            <li class="px-3 py-1 text-muted text-uppercase fw-bold border-bottom border-top mt-1" style="font-size: 0.65rem; background-color: #f8f9fa;">Functional Directorates</li>
+            {% endif %}
+            <li>
+              <a class="dropdown-item d-flex justify-content-between align-items-center py-2 {% if active_workspace.id == ws.id %}active bg-danger text-white{% endif %}" href="{% url 'switch-workspace' ws.id %}">
+                <div>
+                  <strong class="d-block">{{ ws.label }}</strong>
+                  <small class="{% if active_workspace.id == ws.id %}text-white-50{% else %}text-muted{% endif %}">{{ ws.sub_label }}</small>
+                </div>
+                {% if active_workspace.id == ws.id %}<i class="fas fa-check small"></i>{% endif %}
+              </a>
+            </li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% elif user.is_authenticated %}
     <div class="d-none d-md-flex align-items-center">
       <span class="badge bg-black bg-opacity-25 text-white border border-light border-opacity-25 px-2 py-1" style="font-size: 0.75rem;">
         <i class="fas fa-shield-alt text-warning me-1"></i>
@@ -41,7 +159,7 @@
     </div>
     {% endif %}
 
-    <!-- Right: Quick Actions, Notifications & Account Dropdown -->
+    <!-- Right: Quick Actions, Notifications & Officer Identity Area (Prompt 2 Section 18) -->
     <div class="d-flex align-items-center gap-2">
       {% if user.is_authenticated %}
         <!-- Quick Approvals Indicator -->
@@ -59,7 +177,7 @@
         </a>
 
         <!-- Notifications Bell -->
-        <a class="nav-link text-white position-relative p-1" href="{% url 'notifications' %}" title="View Notifications">
+        <a class="nav-link text-white position-relative p-1 me-1" href="{% url 'notifications' %}" title="View Notifications">
           <i class="fas fa-bell fs-6"></i>
           {% if unread_notifications_count > 0 %}
           <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 0.6rem; padding: 2px 4px;">
@@ -68,34 +186,68 @@
           {% endif %}
         </a>
 
-        <!-- User Profile Dropdown -->
-        <div class="dropdown">
-          <button class="btn btn-sm btn-link text-white dropdown-toggle d-flex align-items-center gap-2 p-1 text-decoration-none border-0" 
-                  type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-            <div class="avatar-pill bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; font-size: 0.75rem;">
-              {{ user.username|slice:":1"|upper }}
-            </div>
-            <span class="d-none d-sm-inline fw-semibold text-white" style="font-size: 0.82rem;">{{ user.username }}</span>
-          </button>
+        <!-- Top-Right Officer Identity Block (Prompt 2 Section 18) -->
+        <div class="d-flex align-items-center gap-2 ps-2 border-start border-light border-opacity-25">
+          {% if gnfs_personnel and gnfs_personnel.profile_picture_url %}
+          <img src="{{ gnfs_personnel.profile_picture_url }}" alt="{{ gnfs_personnel.fullname }}"
+               class="rounded-circle border border-warning shadow-sm"
+               style="width: 32px; height: 32px; object-fit: cover;">
+          {% else %}
+          <div class="avatar-pill bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
+               style="width: 32px; height: 32px; font-size: 0.8rem; border: 1px solid #B8860B;">
+            {% if gnfs_personnel %}{{ gnfs_personnel.fullname|slice:":1"|upper }}{% else %}{{ user.username|slice:":1"|upper }}{% endif %}
+          </div>
+          {% endif %}
 
-          <ul class="dropdown-menu dropdown-menu-end shadow-lg" aria-labelledby="userMenuButton">
-            <li class="px-3 py-2 border-bottom bg-light rounded-top">
-              <span class="text-muted d-block" style="font-size: 0.7rem; text-transform: uppercase;">Authenticated Officer</span>
-              <strong class="text-dark d-block" style="font-size: 0.85rem;">{{ user.username }}</strong>
-              <span class="badge bg-warning text-dark py-0 px-1 mt-1" style="font-size: 0.65rem;">{{ gnfs_role|default:"STAFF" }}</span>
-            </li>
-            <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fas fa-user-circle text-primary"></i> My Profile & Password</a></li>
-            <li><a class="dropdown-item" href="{% url 'totp-setup' %}"><i class="fas fa-shield-alt text-success"></i> Two-Factor Auth (2FA)</a></li>
-            <li><a class="dropdown-item" href="{% url 'leave-dashboard' %}"><i class="fas fa-calendar-alt text-danger"></i> Leave Hub</a></li>
-            <li><a class="dropdown-item" href="{% url 'approval-list' %}"><i class="fas fa-clipboard-check text-warning"></i> Approvals Queue</a></li>
-            {% if user.is_superuser or user.is_staff or gnfs_role in 'NATIONAL_ADMIN,REGIONAL_ADMIN' %}
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="{% url 'structure-manage' %}"><i class="fas fa-sitemap text-warning"></i> Command Structure</a></li>
-            <li><a class="dropdown-item" href="{% url 'audit-logs' %}"><i class="fas fa-history text-info"></i> Security Audit Logs</a></li>
-            {% endif %}
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger fw-semibold" href="{% url 'logout-staff' %}"><i class="fas fa-sign-out-alt text-danger"></i> Sign Out</a></li>
-          </ul>
+          <div class="d-none d-sm-flex flex-column text-start lh-1 me-1">
+            <span class="fw-bold text-white text-truncate" style="font-size: 0.8rem; max-width: 140px;">
+              {% if gnfs_personnel %}{{ gnfs_personnel.fullname }}{% else %}{{ user.username }}{% endif %}
+            </span>
+            <span class="text-warning small" style="font-size: 0.68rem; font-weight: 600;">
+              {% if gnfs_personnel and gnfs_personnel.rank %}{{ gnfs_personnel.rank.abbreviation }}{% else %}{{ gnfs_role|default:"Personnel" }}{% endif %}
+              &bull;
+              {% if gnfs_personnel %}{{ gnfs_personnel.staffID }}{% else %}{{ user.username }}{% endif %}
+            </span>
+          </div>
+
+          <!-- Top-Right Workspace Dropdown: [ My Portal ▼ ] -->
+          {% if available_workspaces %}
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-warning dropdown-toggle fw-bold d-flex align-items-center gap-1 py-1 px-2 text-white border-warning"
+                    type="button" id="workspaceHeaderSelect" data-bs-toggle="dropdown" aria-expanded="false"
+                    style="background: rgba(0,0,0,0.3); font-size: 0.75rem; border-color: #B8860B !important;">
+              <span class="text-truncate" style="max-width: 120px;">
+                {% if active_workspace.label %}{{ active_workspace.label }}{% elif active_workspace.name %}{{ active_workspace.name }}{% else %}My Portal{% endif %}
+              </span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="workspaceHeaderSelect" style="min-width: 270px; font-size: 0.8rem;">
+              <li class="px-3 py-1 text-muted text-uppercase fw-bold border-bottom" style="font-size: 0.65rem; background-color: #f8f9fa;">Available Workspaces</li>
+              {% for ws in available_workspaces %}
+              <li>
+                <a class="dropdown-item d-flex justify-content-between align-items-center py-2 {% if active_workspace.id == ws.id %}active bg-danger text-white{% endif %}" href="{% url 'switch-workspace' ws.id %}">
+                  <div>
+                    <strong class="d-block">
+                      {% if ws.type == 'PERSONAL' or ws.type == 'SELF_SERVICE' %}<i class="fas fa-user-circle text-warning me-1"></i>{% endif %}
+                      {% if ws.type == 'ADMINISTRATION' %}<i class="fas fa-landmark text-primary me-1"></i>{% endif %}
+                      {% if ws.type == 'OPERATIONS' %}<i class="fas fa-fire-extinguisher text-danger me-1"></i>{% endif %}
+                      {% if ws.type == 'ACCOUNTS' %}<i class="fas fa-file-invoice-dollar text-warning me-1"></i>{% endif %}
+                      {% if ws.type == 'WATCH_ROOM' %}<i class="fas fa-book text-info me-1"></i>{% endif %}
+                      {% if ws.type == 'COMMAND' %}<i class="fas fa-shield-alt text-danger me-1"></i>{% endif %}
+                      {{ ws.label|default:ws.name }}
+                    </strong>
+                    <small class="{% if active_workspace.id == ws.id %}text-white-50{% else %}text-muted{% endif %}">{{ ws.sub_label }}</small>
+                  </div>
+                  {% if active_workspace.id == ws.id %}<i class="fas fa-check small ms-2"></i>{% endif %}
+                </a>
+              </li>
+              {% endfor %}
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fas fa-user-shield text-primary me-1"></i> My Profile & Security</a></li>
+              <li><a class="dropdown-item" href="{% url 'totp-setup' %}"><i class="fas fa-key text-success me-1"></i> Two-Factor Auth (2FA)</a></li>
+              <li><a class="dropdown-item text-danger fw-semibold" href="{% url 'logout-staff' %}"><i class="fas fa-sign-out-alt text-danger me-1"></i> Sign Out</a></li>
+            </ul>
+          </div>
+          {% endif %}
         </div>
       {% else %}
         <a class="btn btn-sm btn-outline-light py-1 px-3" href="{% url 'login-staff' %}" style="font-size: 0.8rem;">Login</a>

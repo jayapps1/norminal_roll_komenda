@@ -1,0 +1,208 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}{{ district.name }} Accounts — Nominal Roll{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Breadcrumbs & Header (Section 11-13, 71) -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          {% if scope.level == 'NATIONAL' %}
+          <li class="breadcrumb-item"><a href="{% url 'workspace-accounts-national' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-file-invoice-dollar me-1"></i> National Accounts</a></li>
+          {% endif %}
+          {% if scope.level == 'NATIONAL' or scope.level == 'REGIONAL' %}
+          <li class="breadcrumb-item"><a href="{% url 'workspace-accounts-regional' region.id %}" class="text-decoration-none text-secondary">{{ region.name }} Accounts</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active" aria-current="page">{{ district.name }} Nominal Roll</li>
+        </ol>
+      </nav>
+      <div class="text-uppercase text-danger fw-bold small" style="letter-spacing: 1px;">
+        {{ district.name|upper }} &bull; ACCOUNTS FUNCTIONAL WORKSPACE
+      </div>
+      <h2 class="fw-bold mb-0 text-dark" style="color: #8B0000 !important;">DISTRICT NOMINAL ROLL</h2>
+      <p class="text-muted small mb-0">Authoritative personnel roll scoped exclusively to {{ district.name }} District</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="?{% if search_query %}q={{ search_query }}&{% endif %}{% if rank_filter %}rank={{ rank_filter }}&{% endif %}export=excel" class="btn btn-success btn-sm shadow-sm fw-bold">
+        <i class="fas fa-file-excel me-1"></i> Export Scoped Roll (Excel)
+      </a>
+    </div>
+  </div>
+
+  <!-- Accounts Metrics Cards (Section 71) -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-danger border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Personnel on Nominal Roll</span>
+        <h3 class="fw-bold text-dark mb-0 mt-1">{{ total_personnel }}</h3>
+        <span class="small text-muted">Authorised District Strength</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-success border-4">
+        <span class="text-muted small fw-semibold text-uppercase">At Post</span>
+        <h3 class="fw-bold text-success mb-0 mt-1">{{ at_post }}</h3>
+        <span class="small text-muted">Active On Duty</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-warning border-4">
+        <span class="text-muted small fw-semibold text-uppercase">On Leave</span>
+        <h3 class="fw-bold text-warning mb-0 mt-1">{{ on_leave }}</h3>
+        <span class="small text-muted">Authorized Leave</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-primary border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Payroll Active</span>
+        <h3 class="fw-bold text-primary mb-0 mt-1">{{ payroll_active }}</h3>
+        <span class="small text-muted">In Active Service</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-danger border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Payroll Exceptions</span>
+        <h3 class="fw-bold text-danger mb-0 mt-1">{{ payroll_exceptions }}</h3>
+        <span class="small text-muted">Missing Bank / Account Info</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls (Section 18: Search applies scope FIRST) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white p-3 mb-4">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+          <input type="text" name="q" value="{{ search_query }}" class="form-control border-start-0" placeholder="Search by Staff ID, Name, or Phone...">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <select name="rank" class="form-select form-select-sm">
+          <option value="">All Ranks</option>
+          {% for r in ranks %}
+          <option value="{{ r.id }}" {% if rank_filter == r.id|stringformat:"s" %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          <option value="AT POST" {% if status_filter == 'AT POST' %}selected{% endif %}>At Post</option>
+          <option value="ON LEAVE" {% if status_filter == 'ON LEAVE' %}selected{% endif %}>On Leave</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold" style="background-color: #8B0000; border-color: #8B0000;">Filter</button>
+        {% if search_query or rank_filter or status_filter %}
+        <a href="{% url 'workspace-accounts-district' district.id %}" class="btn btn-outline-secondary btn-sm" title="Clear Filters"><i class="fas fa-times"></i></a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Scoped Nominal Roll Table (Section 12) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white overflow-hidden mb-4">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+        <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+          <tr>
+            <th class="ps-3" style="width: 50px;">Photo</th>
+            <th>Staff ID</th>
+            <th>Full Name</th>
+            <th>Rank</th>
+            <th>Category</th>
+            <th>Posting / Station</th>
+            <th>Functional Assignment</th>
+            <th>Payroll Status</th>
+            <th>Leave Status</th>
+            <th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in page_obj %}
+          <tr>
+            <td class="ps-3">
+              {% if p.profile_picture %}
+              <img src="{{ p.profile_picture.url }}" alt="{{ p.fullname }}" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
+              {% else %}
+              <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center text-muted" style="width: 32px; height: 32px;">
+                <i class="fas fa-user small"></i>
+              </div>
+              {% endif %}
+            </td>
+            <td><strong class="font-monospace text-dark">{{ p.staffID }}</strong></td>
+            <td>
+              <span class="fw-bold text-dark">{{ p.fullname }}</span>
+            </td>
+            <td><span class="badge bg-light text-dark border">{{ p.rank.abbreviation|default:p.rank.name|default:"-" }}</span></td>
+            <td><span class="small text-muted">{{ p.get_officer_category_display|default:p.officer_category }}</span></td>
+            <td>
+              <div>{{ p.station.name|default:"District HQ" }}</div>
+              {% if p.post %}<small class="text-muted">{{ p.post.name }}</small>{% endif %}
+            </td>
+            <td>
+              {% for fa in p.functional_assignments.all %}
+              <span class="badge bg-secondary mb-1">{{ fa.organisational_unit.name }}</span>
+              {% empty %}
+              <span class="text-muted small">General Duty</span>
+              {% endfor %}
+            </td>
+            <td>
+              {% if p.bank and p.account_number %}
+              <span class="badge bg-success bg-opacity-10 text-success border border-success"><i class="fas fa-check-circle me-1"></i>Active</span>
+              {% else %}
+              <span class="badge bg-danger bg-opacity-10 text-danger border border-danger"><i class="fas fa-exclamation-circle me-1"></i>Incomplete</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if p.leave_status == 'ON LEAVE' %}
+              <span class="badge bg-warning text-dark"><i class="fas fa-calendar-times me-1"></i>On Leave</span>
+              {% else %}
+              <span class="badge bg-success"><i class="fas fa-check me-1"></i>At Post</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-3">
+              <a href="{% url 'staff-detail' p.staffID %}" class="btn btn-outline-danger btn-sm py-0 px-2" title="View Full Details">
+                <i class="fas fa-eye small"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10" class="text-center py-4 text-muted">
+              <i class="fas fa-users-slash fa-2x mb-2 d-block"></i>
+              No personnel found under {{ district.name }} District for this search query.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
+      <small class="text-muted">Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} officers</small>
+      <nav aria-label="Page navigation">
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">Previous</a></li>
+          {% endif %}
+          <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+          {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">Next</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

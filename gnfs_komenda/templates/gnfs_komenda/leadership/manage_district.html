@@ -1,0 +1,303 @@
+{% extends 'main.html' %}
+
+{% block title %}{{ district.name }} Command Leadership — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-national' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> National</a></li>
+          {% if district.region %}
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-regional' district.region.id %}" class="text-decoration-none text-danger">{{ district.region.name }}</a></li>
+          {% endif %}
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-district' district.id %}" class="text-decoration-none text-danger">{{ district.name }}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Command Leadership</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-fire text-danger me-2"></i>{{ district.name }} {{ district.get_command_type_display }} Fire Command
+      </h3>
+      <p class="text-muted small mb-0">Command Leadership Architecture & Official Postings</p>
+    </div>
+
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+      <a href="{% url 'dashboard-district' district.id %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-chart-line me-1"></i> District Dashboard
+      </a>
+      {% if district.region %}
+      <a href="{% url 'region-management' district.region.id %}" class="btn btn-outline-danger btn-sm shadow-sm">
+        <i class="fas fa-shield-alt me-1"></i> {{ district.region.name }} Region
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Leadership Cards -->
+  <div class="row g-3 mb-4">
+    <!-- Commanding Officer Card -->
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 border-start border-danger border-4 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <span class="badge bg-danger mb-2">
+                {{ district.co_designation|default:"DFO" }} &bull; Commanding Officer
+              </span>
+              {% if current_co %}
+                <h4 class="fw-bold mb-1 text-dark">
+                  <a href="{% url 'staff-detail' current_co.personnel.id %}" class="text-decoration-none text-dark hover-danger">
+                    {{ current_co.personnel.fullname }}
+                  </a>
+                  {% if current_co.is_acting %}
+                    <span class="badge bg-warning text-dark ms-1">Acting</span>
+                  {% endif %}
+                </h4>
+                <div class="text-muted small mb-2">
+                  <span class="fw-semibold">Staff ID:</span> {{ current_co.personnel.staffID }} &bull;
+                  <span class="fw-semibold">Rank:</span> {{ current_co.personnel.rank.name|default:current_co.personnel.job_grade|default:"N/A" }}
+                </div>
+                <div class="small text-secondary">
+                  <i class="fas fa-calendar-alt me-1 text-danger"></i> Appointed: <strong>{{ current_co.effective_from|date:"d M Y" }}</strong>
+                  {% if current_co.appointment_reference %}
+                    &bull; Ref: <code>{{ current_co.appointment_reference }}</code>
+                  {% endif %}
+                </div>
+              {% else %}
+                <h5 class="text-secondary fw-semibold mt-2 mb-1">No Active Commanding Officer Appointed</h5>
+                <p class="text-muted small mb-0">Select an officer in the form below to appoint substantive or acting {{ district.co_designation|default:"DFO" }}.</p>
+              {% endif %}
+            </div>
+            <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+              <i class="fas fa-user-shield fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- District 2IC Card -->
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 border-start border-primary border-4 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <span class="badge bg-primary mb-2">Second-in-Command (2IC)</span>
+              {% if current_2ic %}
+                <h4 class="fw-bold mb-1 text-dark">
+                  <a href="{% url 'staff-detail' current_2ic.personnel.id %}" class="text-decoration-none text-dark hover-primary">
+                    {{ current_2ic.personnel.fullname }}
+                  </a>
+                  {% if current_2ic.is_acting %}
+                    <span class="badge bg-warning text-dark ms-1">Acting</span>
+                  {% endif %}
+                </h4>
+                <div class="text-muted small mb-2">
+                  <span class="fw-semibold">Staff ID:</span> {{ current_2ic.personnel.staffID }} &bull;
+                  <span class="fw-semibold">Rank:</span> {{ current_2ic.personnel.rank.name|default:current_2ic.personnel.job_grade|default:"N/A" }}
+                </div>
+                <div class="small text-secondary">
+                  <i class="fas fa-calendar-alt me-1 text-primary"></i> Appointed: <strong>{{ current_2ic.effective_from|date:"d M Y" }}</strong>
+                  {% if current_2ic.appointment_reference %}
+                    &bull; Ref: <code>{{ current_2ic.appointment_reference }}</code>
+                  {% endif %}
+                </div>
+              {% else %}
+                <h5 class="text-secondary fw-semibold mt-2 mb-1">No Active 2IC Appointed</h5>
+                <p class="text-muted small mb-0">2IC appointment does not require department membership.</p>
+              {% endif %}
+            </div>
+            <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+              <i class="fas fa-user-check fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configure Leadership Appointments Form -->
+  <div class="card shadow-sm border-0 mb-4 bg-white border-top border-danger border-3">
+    <div class="card-header bg-white py-3">
+      <h5 class="mb-0 fw-bold text-dark">
+        <i class="fas fa-sliders-h text-danger me-2"></i>Configure Command Designation & Appointments
+      </h5>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <!-- Command Type & Designation Configuration -->
+        <div class="row g-3 p-3 mb-4 bg-light rounded border">
+          <div class="col-12">
+            <h6 class="fw-bold text-secondary mb-1">
+              <i class="fas fa-building me-1"></i> Command Level & Title Configuration (Section 17.20)
+            </h6>
+            <p class="text-muted small mb-3">Customise whether this command is a District, Municipal, or Metropolitan Fire Command and its officer designation (DFO/MFO).</p>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">{{ form.command_type.label }}</label>
+            {{ form.command_type }}
+            {% if form.command_type.errors %}<div class="text-danger small">{{ form.command_type.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">{{ form.co_designation.label }}</label>
+            {{ form.co_designation }}
+            {% if form.co_designation.errors %}<div class="text-danger small">{{ form.co_designation.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <!-- Leadership Selection -->
+        <div class="row g-3">
+          <!-- Commanding Officer -->
+          <div class="col-md-6 border-end pe-md-4">
+            <h6 class="fw-bold text-danger mb-3"><i class="fas fa-user-shield me-1"></i> Commanding Officer ({{ district.co_designation|default:"DFO" }})</h6>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">{{ form.commanding_officer.label }}</label>
+              {{ form.commanding_officer }}
+              {% if form.commanding_officer.errors %}<div class="text-danger small">{{ form.commanding_officer.errors }}</div>{% endif %}
+              <div class="form-text small">Select officer from database records. Never manual text.</div>
+            </div>
+            <div class="form-check form-switch mb-3">
+              {{ form.co_is_acting }}
+              <label class="form-check-label fw-semibold" for="{{ form.co_is_acting.id_for_label }}">
+                Acting Appointment (e.g. Acting {{ district.co_designation|default:"DFO" }})
+              </label>
+            </div>
+          </div>
+
+          <!-- District 2IC -->
+          <div class="col-md-6 ps-md-4">
+            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user-check me-1"></i> Second-in-Command (2IC)</h6>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">{{ form.district_2ic.label }}</label>
+              {{ form.district_2ic }}
+              {% if form.district_2ic.errors %}<div class="text-danger small">{{ form.district_2ic.errors }}</div>{% endif %}
+              <div class="form-text small">May belong to zero, one, or multiple functional departments.</div>
+            </div>
+            <div class="form-check form-switch mb-3">
+              {{ form.district_2ic_is_acting }}
+              <label class="form-check-label fw-semibold" for="{{ form.district_2ic_is_acting.id_for_label }}">
+                Acting 2IC Appointment
+              </label>
+            </div>
+          </div>
+
+          <div class="col-12"><hr class="my-2"></div>
+
+          <!-- Appointment Metadata -->
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.effective_date.label }}</label>
+            {{ form.effective_date }}
+            {% if form.effective_date.errors %}<div class="text-danger small">{{ form.effective_date.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-8">
+            <label class="form-label fw-semibold">{{ form.appointment_reference.label }}</label>
+            {{ form.appointment_reference }}
+            {% if form.appointment_reference.errors %}<div class="text-danger small">{{ form.appointment_reference.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">{{ form.remarks.label }}</label>
+            {{ form.remarks }}
+            {% if form.remarks.errors %}<div class="text-danger small">{{ form.remarks.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 text-end mt-3">
+            <button type="submit" class="btn btn-danger px-4 fw-bold">
+              <i class="fas fa-save me-1"></i> Save Leadership Appointments
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Command Leadership History Table -->
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3">
+      <h5 class="mb-0 fw-bold text-dark">
+        <i class="fas fa-history text-secondary me-2"></i>{{ district.name }} Command Leadership History (Section 17.8)
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Appointment Type</th>
+              <th>Appointed Officer</th>
+              <th>Rank</th>
+              <th>Tenure Period</th>
+              <th>Status</th>
+              <th>Reference</th>
+              <th>Appointed By</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for apt in leadership_history %}
+            <tr>
+              <td>
+                <span class="badge {% if '2IC' in apt.appointment_type %}bg-primary{% else %}bg-danger{% endif %}">
+                  {{ apt.get_appointment_type_display }}
+                </span>
+                {% if apt.is_acting %}
+                  <span class="badge bg-warning text-dark">Acting</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'staff-detail' apt.personnel.id %}" class="fw-bold text-decoration-none text-dark">
+                  {{ apt.personnel.fullname }}
+                </a>
+                <div class="text-muted small">{{ apt.personnel.staffID }}</div>
+              </td>
+              <td>{{ apt.personnel.rank.name|default:apt.personnel.job_grade|default:"—" }}</td>
+              <td>
+                <strong>{{ apt.effective_from|date:"d M Y" }}</strong> &rarr;
+                {% if apt.is_active %}
+                  <span class="badge bg-success">Present</span>
+                {% else %}
+                  {{ apt.effective_to|date:"d M Y" }}
+                {% endif %}
+              </td>
+              <td>
+                {% if apt.is_active %}
+                  <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Active</span>
+                {% else %}
+                  <span class="badge bg-secondary">Concluded</span>
+                {% endif %}
+              </td>
+              <td><code>{{ apt.appointment_reference|default:"—" }}</code></td>
+              <td class="text-muted small">{{ apt.appointed_by.username|default:"System" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">
+                No leadership records found for {{ district.name }}.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

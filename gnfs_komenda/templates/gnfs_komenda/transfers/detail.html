@@ -1,0 +1,338 @@
+{% extends 'main.html' %}
+
+{% block title %}Transfer Order {{ transfer.reference_number }} — GNFS{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 1050px;">
+
+  <!-- Breadcrumbs -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'personnel' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> Personnel Roll</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'transfer-list' %}" class="text-decoration-none text-secondary">Transfers</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ transfer.reference_number }}</li>
+    </ol>
+  </nav>
+
+  <!-- Top Action & Status Banner -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
+    <div class="card-header py-3 text-white d-flex justify-content-between align-items-center" style="background-color: #8B0000;">
+      <div>
+        <div class="small text-white-50 text-uppercase fw-bold">{{ transfer.get_transfer_type_display }} Transfer Order</div>
+        <h4 class="mb-0 fw-bold font-monospace">{{ transfer.reference_number }}</h4>
+      </div>
+      <div class="text-end">
+        <span class="badge fs-6 px-3 py-2
+          {% if transfer.status == 'CONFIRMED' %}bg-success
+          {% elif transfer.status == 'RELEASED' %}bg-primary
+          {% elif transfer.status == 'REPORTED' %}bg-warning text-dark
+          {% elif transfer.status == 'PENDING_APPROVAL' %}bg-warning text-dark
+          {% elif transfer.status == 'APPROVED' %}bg-info text-dark
+          {% elif transfer.status == 'CANCELLED' or transfer.status == 'REJECTED' %}bg-danger
+          {% else %}bg-secondary{% endif %}">
+          {{ transfer.get_status_display }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Workflow Progress Bar -->
+    <div class="card-body bg-light border-bottom p-3">
+      <div class="row text-center g-2 small">
+        <div class="col">
+          <div class="p-2 rounded {% if transfer.status != 'DRAFT' %}bg-success text-white fw-bold{% else %}bg-secondary text-white{% endif %}">
+            <i class="fas fa-file-alt me-1"></i> 1. Initiated
+          </div>
+        </div>
+        <div class="col">
+          <div class="p-2 rounded {% if transfer.status in 'APPROVED,RELEASED,REPORTED,CONFIRMED' %}bg-success text-white fw-bold{% elif transfer.status == 'PENDING_APPROVAL' %}bg-warning text-dark fw-bold{% else %}bg-white border text-muted{% endif %}">
+            <i class="fas fa-check-circle me-1"></i> 2. Approved
+          </div>
+        </div>
+        <div class="col">
+          <div class="p-2 rounded {% if transfer.status in 'RELEASED,REPORTED,CONFIRMED' %}bg-primary text-white fw-bold{% else %}bg-white border text-muted{% endif %}">
+            <i class="fas fa-shipping-fast me-1"></i> 3. Released
+          </div>
+        </div>
+        <div class="col">
+          <div class="p-2 rounded {% if transfer.status in 'REPORTED,CONFIRMED' %}bg-info text-dark fw-bold{% else %}bg-white border text-muted{% endif %}">
+            <i class="fas fa-user-check me-1"></i> 4. Reported
+          </div>
+        </div>
+        <div class="col">
+          <div class="p-2 rounded {% if transfer.status == 'CONFIRMED' %}bg-success text-white fw-bold{% else %}bg-white border text-muted{% endif %}">
+            <i class="fas fa-flag-checkered me-1"></i> 5. Confirmed
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Toolbars -->
+    <div class="card-footer bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div>
+        <a href="{% url 'staff-detail' transfer.personnel.staffID %}" class="btn btn-outline-secondary btn-sm">
+          <i class="fas fa-user me-1"></i> View Officer Dossier
+        </a>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2">
+        {% if transfer.status == 'PENDING_APPROVAL' %}
+        <form method="post" action="{% url 'transfer-approve' transfer.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-info btn-sm text-dark fw-bold shadow-sm" onclick="return confirm('Approve this transfer order?');">
+            <i class="fas fa-stamp me-1"></i> Approve Transfer
+          </button>
+        </form>
+        {% endif %}
+
+        {% if can_release and transfer.status in 'PENDING_APPROVAL,APPROVED' %}
+        <form method="post" action="{% url 'transfer-release' transfer.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-sm fw-bold shadow-sm" onclick="return confirm('Officially release officer from current command? This marks the officer in-transit.');">
+            <i class="fas fa-sign-out-alt me-1"></i> Release Officer
+          </button>
+        </form>
+        {% endif %}
+
+        {% if transfer.status == 'RELEASED' %}
+        <form method="post" action="{% url 'transfer-report' transfer.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-warning btn-sm text-dark fw-bold shadow-sm" onclick="return confirm('Confirm officer has reported in person to receiving command?');">
+            <i class="fas fa-user-check me-1"></i> Mark Officer Reported
+          </button>
+        </form>
+        {% endif %}
+
+        {% if not transfer.destination_station and transfer.status != 'CONFIRMED' and transfer.status != 'CANCELLED' %}
+        <a href="{% url 'transfer-placement' transfer.id %}" class="btn btn-outline-warning text-dark btn-sm fw-bold shadow-sm">
+          <i class="fas fa-map-pin me-1"></i> Assign District & Station Placement
+        </a>
+        {% endif %}
+
+        {% if can_confirm and transfer.destination_station %}
+        <a href="{% url 'transfer-confirm' transfer.id %}" class="btn btn-success btn-sm fw-bold shadow-sm">
+          <i class="fas fa-check-double me-1"></i> Confirm Arrival & Activate Posting
+        </a>
+        {% endif %}
+
+        {% if can_cancel %}
+        <a href="{% url 'transfer-cancel' transfer.id %}" class="btn btn-outline-danger btn-sm">
+          <i class="fas fa-times-circle me-1"></i> Cancel Transfer
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Main Dossier Info -->
+    <div class="col-lg-8">
+
+      <!-- Transfer Origin & Destination Comparison -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white py-3 border-0">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-arrows-alt-h text-danger me-2"></i>Movement Route & Command Assignment
+          </h6>
+        </div>
+        <div class="card-body pt-0">
+          <div class="row g-3">
+            <!-- Source Command -->
+            <div class="col-md-6 border-end">
+              <div class="badge bg-secondary mb-2">SOURCE / ORIGIN COMMAND</div>
+              <div class="mb-2">
+                <span class="text-muted small d-block">Region:</span>
+                <strong>{{ transfer.source_region.name }}</strong>
+              </div>
+              <div class="mb-2">
+                <span class="text-muted small d-block">District:</span>
+                <strong>{{ transfer.source_district.name|default:"Regional Direct" }}</strong>
+              </div>
+              <div class="mb-2">
+                <span class="text-muted small d-block">Station:</span>
+                <strong class="text-dark">{{ transfer.source_station.name|default:"Headquarters" }}</strong>
+              </div>
+              <div class="mb-2">
+                <span class="text-muted small d-block">Sub-Post:</span>
+                <span>{{ transfer.source_post.name|default:"Station Direct" }}</span>
+              </div>
+            </div>
+
+            <!-- Destination Command -->
+            <div class="col-md-6 ps-md-4">
+              <div class="badge bg-danger mb-2">DESTINATION COMMAND</div>
+              <div class="mb-2">
+                <span class="text-muted small d-block">Destination Region:</span>
+                <strong>{{ transfer.destination_region.name }}</strong>
+              </div>
+              <div class="mb-2">
+                <span class="text-muted small d-block">Destination District:</span>
+                {% if transfer.destination_district %}
+                <strong>{{ transfer.destination_district.name }}</strong>
+                {% else %}
+                <span class="badge bg-light text-muted border">Pending Regional Placement</span>
+                {% endif %}
+              </div>
+              <div class="mb-2">
+                <span class="text-muted small d-block">Destination Station:</span>
+                {% if transfer.destination_station %}
+                <strong class="text-success">{{ transfer.destination_station.name }}</strong>
+                {% else %}
+                <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>To Be Assigned</span>
+                {% endif %}
+              </div>
+              <div class="mb-2">
+                <span class="text-muted small d-block">Functional Assignment:</span>
+                {% if transfer.destination_functional_unit %}
+                <strong>{{ transfer.destination_functional_unit.name }}</strong>
+                <span class="badge bg-light text-dark border ms-1">{{ transfer.destination_functional_unit.get_unit_type_display }}</span>
+                {% else %}
+                <span class="text-muted">General Firefighting / Operations</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Official Directives & Dates -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white py-3 border-0">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-calendar-check text-danger me-2"></i>Official Directives & Dates
+          </h6>
+        </div>
+        <div class="card-body pt-0">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <span class="text-muted small d-block">Letter Number:</span>
+              <strong class="font-monospace text-dark">{{ transfer.transfer_letter_number|default:"Not specified" }}</strong>
+            </div>
+            <div class="col-md-4">
+              <span class="text-muted small d-block">Letter Date:</span>
+              <strong>{{ transfer.transfer_letter_date|date:"F d, Y"|default:"-" }}</strong>
+            </div>
+            <div class="col-md-4">
+              <span class="text-muted small d-block">Effective Date:</span>
+              <strong class="text-dark">{{ transfer.effective_date|date:"F d, Y" }}</strong>
+            </div>
+            <div class="col-md-4">
+              <span class="text-muted small d-block">Expected Reporting Date:</span>
+              <strong class="text-primary">{{ transfer.expected_reporting_date|date:"F d, Y" }}</strong>
+            </div>
+            <div class="col-md-4">
+              <span class="text-muted small d-block">Actual Reporting Date:</span>
+              {% if transfer.actual_reporting_date %}
+              <strong class="text-success">{{ transfer.actual_reporting_date|date:"F d, Y" }}</strong>
+              {% else %}
+              <span class="text-muted">Awaiting confirmation</span>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <span class="text-muted small d-block">Official Order Document:</span>
+              {% if transfer.attachment %}
+              <a href="{{ transfer.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-danger py-0 px-2 mt-1">
+                <i class="fas fa-file-pdf me-1"></i> View Attachment
+              </a>
+              {% else %}
+              <span class="text-muted small">No file attached</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if transfer.reason %}
+          <div class="mt-3 pt-3 border-top">
+            <span class="text-muted small d-block fw-semibold">Transfer Reason / Operational Justification:</span>
+            <p class="text-dark mb-0">{{ transfer.reason }}</p>
+          </div>
+          {% endif %}
+
+          {% if transfer.remarks %}
+          <div class="mt-3 pt-3 border-top">
+            <span class="text-muted small d-block fw-semibold">Administrative Remarks:</span>
+            <p class="text-dark mb-0">{{ transfer.remarks }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Action & Audit History Timeline -->
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-history text-danger me-2"></i>Transfer Audit Trail & Timeline
+          </h6>
+          <span class="badge bg-light text-dark border">{{ history.count }} Actions</span>
+        </div>
+        <div class="card-body pt-0">
+          <div class="timeline">
+            {% for item in history %}
+            <div class="border-start border-2 border-danger ps-3 pb-3 position-relative">
+              <div class="position-absolute bg-danger rounded-circle" style="width: 10px; height: 10px; left: -6px; top: 5px;"></div>
+              <div class="d-flex justify-content-between align-items-center">
+                <strong class="text-dark">{{ item.get_action_display }}</strong>
+                <span class="text-muted small">{{ item.timestamp|date:"M d, Y H:i" }}</span>
+              </div>
+              <div class="text-muted small">
+                By: <strong>{{ item.performed_by.username|default:"System" }}</strong>
+              </div>
+              {% if item.comments %}
+              <div class="small bg-light p-2 rounded mt-1 text-dark border">
+                <em>"{{ item.comments }}"</em>
+              </div>
+              {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-muted small">No audit records logged yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Officer Side Profile -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white py-3 border-0">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-id-badge text-danger me-2"></i>Officer Profile
+          </h6>
+        </div>
+        <div class="card-body pt-0 small">
+          <div class="mb-3 text-center">
+            <h5 class="fw-bold mb-0 text-dark">{{ transfer.personnel.fullname }}</h5>
+            <div class="text-muted font-monospace">{{ transfer.personnel.staffID }}</div>
+            <span class="badge bg-light text-dark border mt-1">{{ transfer.personnel.rank_short }} &bull; {{ transfer.personnel.get_officer_category_display }}</span>
+          </div>
+          <div class="mb-2 pb-2 border-bottom">
+            <span class="text-muted d-block">Current Posting Status:</span>
+            {% if transfer.personnel.is_active %}
+            <span class="badge bg-success">ACTIVE PERSONNEL</span>
+            {% else %}
+            <span class="badge bg-secondary">INACTIVE</span>
+            {% endif %}
+          </div>
+          <div class="mb-2 pb-2 border-bottom">
+            <span class="text-muted d-block">Ghana Card Number:</span>
+            <span class="font-monospace">{{ transfer.personnel.ghana_card }}</span>
+          </div>
+          <div class="mb-2 pb-2 border-bottom">
+            <span class="text-muted d-block">Leave Status:</span>
+            {% if transfer.personnel.leave_status == 'ON LEAVE' %}
+            <span class="badge bg-danger">ON LEAVE</span>
+            {% else %}
+            <span class="badge bg-success">AT POST</span>
+            {% endif %}
+          </div>
+          <div>
+            <span class="text-muted d-block">Order Initiated By:</span>
+            <strong>{{ transfer.initiated_by.username|default:"System" }}</strong>
+            <span class="text-muted d-block small">{{ transfer.created_at|date:"F d, Y H:i" }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

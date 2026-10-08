@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, SetPasswordForm
 from django import forms
 
 
@@ -89,5 +89,25 @@ class ProfileUpdateForm(forms.ModelForm):
             if exists:
                 raise forms.ValidationError("This email is already associated with another account.")
         return email
+
+
+class MandatoryPasswordChangeForm(SetPasswordForm):
+    """
+    Form presented on first login or after account reset when must_change_password=True.
+    Validates password strength according to configured Django validators.
+    """
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(user, *args, **kwargs)
+        self.fields['new_password1'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Enter new secure password',
+            'autocomplete': 'new-password',
+            'autofocus': 'autofocus'
+        })
+        self.fields['new_password2'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Confirm new secure password',
+            'autocomplete': 'new-password'
+        })
 
 

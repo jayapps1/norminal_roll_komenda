@@ -1,0 +1,204 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}RFO Command Decision: Request #{{ leave_req.id }} — {{ region.name }} Region{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1200px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'regional-leave-approvals' region.id %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-stamp me-1"></i> RFO Approvals Queue</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Command Decision #{{ leave_req.id }}</li>
+        </ol>
+      </nav>
+      <div class="d-flex align-items-center gap-2">
+        <h3 class="fw-bold mb-0 text-dark">RFO Decision: {{ leave_req.personnel.fullname }}</h3>
+        <span class="badge bg-danger">Regional Command Authority</span>
+      </div>
+      <p class="text-muted small mb-0">High-level statutory leave decision authority for {{ region.name }} Region.</p>
+    </div>
+
+    <a href="{% url 'regional-leave-approvals' region.id %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+      <i class="fas fa-arrow-left me-1"></i> Back to Queue
+    </a>
+  </div>
+
+  <!-- Anti-Self-Approval Alert (Section 21 & 43) -->
+  {% if not can_approve %}
+  <div class="alert alert-danger border border-danger rounded-4 shadow-sm p-4 mb-4">
+    <div class="d-flex gap-3">
+      <div class="text-danger"><i class="fas fa-ban fa-2x"></i></div>
+      <div>
+        <h5 class="fw-bold text-danger mb-1">Universal Anti-Self-Approval Protection Active</h5>
+        <p class="mb-0 text-dark">
+          GNFS regulations strictly prohibit commanding officers from approving their own leave applications (<strong>Applicant == Approver</strong>).
+          As the Regional Fire Officer, your personal leave is subject to approval by the configured Higher Headquarters Authority (National HQ / CFO).
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+    <!-- Left Column: Details & Verification -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-user-shield text-danger me-2"></i>Officer Application Details
+        </h6>
+
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Officer Name:</span>
+            <strong class="text-dark">{{ leave_req.personnel.fullname }}</strong>
+            <div class="small text-muted">{{ leave_req.personnel.rank.name|default:leave_req.personnel.job_grade }} &bull; {{ leave_req.personnel.staffID }}</div>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Command / Post:</span>
+            {% if leave_req.personnel.current_command_appointment %}
+            <span class="badge bg-dark text-warning border border-warning">
+              {{ leave_req.personnel.current_command_appointment.get_appointment_type_display }}
+            </span>
+            <div class="small text-muted mt-1">{{ leave_req.routing_district.name }} District Command</div>
+            {% else %}
+            <strong class="text-dark">Regional Headquarters</strong>
+            <div class="small text-muted">{{ region.name }} Regional Command</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="p-3 bg-light rounded-3 mb-3">
+          <div class="row g-3 text-center">
+            <div class="col-4">
+              <span class="text-muted small d-block">Start Date</span>
+              <strong class="text-dark">{{ leave_req.start_date|date:"d M Y" }}</strong>
+            </div>
+            <div class="col-4 border-start border-end">
+              <span class="text-muted small d-block">Duration</span>
+              <strong class="text-danger fs-5">{{ leave_req.duration }}</strong>
+              <span class="small text-muted d-block">{{ leave_req.leave_type.get_calculation_mode_display }}</span>
+            </div>
+            <div class="col-4">
+              <span class="text-muted small d-block">Calculated Resume Date</span>
+              <strong class="text-success">{{ leave_req.resume_date|date:"d M Y" }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Revalidation Panel (Section 27) -->
+        <div class="card border border-success border-opacity-25 rounded-3 p-3 mb-3 bg-success bg-opacity-10">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong class="text-success small text-uppercase">
+              <i class="fas fa-check-circle me-1"></i>Server Revalidation Check
+            </strong>
+            <span class="badge bg-success">Pre-Check Passed</span>
+          </div>
+          <div class="row g-2 text-center small text-dark">
+            <div class="col-4">
+              <span class="text-muted d-block">Available Balance</span>
+              <strong>{{ entitlement.remaining_balance|default:"0" }} days</strong>
+            </div>
+            <div class="col-4">
+              <span class="text-muted d-block">Last Leave Day</span>
+              <strong>{{ leave_req.last_leave_date|date:"d M Y" }}</strong>
+            </div>
+            <div class="col-4">
+              <span class="text-muted d-block">Working Days</span>
+              <strong>{{ leave_req.duration }} days</strong>
+            </div>
+          </div>
+        </div>
+
+        {% if leave_req.processing_notes %}
+        <div class="p-3 bg-light rounded-3 mb-3">
+          <strong class="text-secondary small d-block"><i class="fas fa-clipboard-check me-1"></i>Regional Admin Verification Notes:</strong>
+          <p class="mb-0 text-dark small">"{{ leave_req.processing_notes }}"</p>
+          <span class="small text-muted d-block mt-1">Processed by: {{ leave_req.processed_by.username|default:"Regional Admin" }} on {{ leave_req.processed_at|date:"d M Y H:i" }}</span>
+        </div>
+        {% endif %}
+
+        {% if leave_req.medical_reference %}
+        <div class="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3 mb-3">
+          <strong class="text-danger small d-block"><i class="fas fa-hospital me-1"></i>Medical Reference:</strong>
+          <span class="text-dark">{{ leave_req.medical_reference }}</span>
+        </div>
+        {% endif %}
+
+        {% if leave_req.reason %}
+        <div class="mb-3">
+          <span class="text-muted small d-block fw-semibold">Reason / Remarks:</span>
+          <p class="text-dark small mb-0">{{ leave_req.reason }}</p>
+        </div>
+        {% endif %}
+
+        {% if leave_req.attachment %}
+        <div class="p-3 bg-light rounded-3 d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <i class="fas fa-file-pdf text-danger me-2 fa-lg"></i>
+            <span class="small fw-semibold text-dark">Supporting Document Attached</span>
+          </div>
+          <a href="{{ leave_req.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-danger">
+            <i class="fas fa-external-link-alt me-1"></i> View Document
+          </a>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!-- Right Column: Command Decision Form (Section 20 & 27) -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4 border-top border-danger border-4">
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-gavel text-danger me-2"></i>RFO Command Decision
+        </h6>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-uppercase text-secondary" for="commentsInput">
+              Decision Remarks / Command Directive
+            </label>
+            <textarea name="comments" id="commentsInput" rows="4" class="form-control" placeholder="Enter formal approval remarks, or required justification if rejecting/returning..."></textarea>
+            <span class="small text-muted">A justification is strictly required when rejecting.</span>
+          </div>
+
+          {% if can_approve %}
+          <div class="d-grid gap-2">
+            <!-- Approve Button -->
+            <button type="submit" name="action" value="APPROVE" class="btn btn-success py-2 fw-bold shadow-sm" onclick="return confirm('Confirm statutory approval of this leave application as Regional Fire Officer? Balance will be deducted immediately.');">
+              <i class="fas fa-check-circle me-1"></i> Officially Approve Leave
+            </button>
+
+            <!-- Return for Correction -->
+            <button type="submit" name="action" value="RETURN_FOR_CORRECTION" class="btn btn-warning text-dark py-2 fw-bold shadow-sm">
+              <i class="fas fa-undo me-1"></i> Return for Correction
+            </button>
+
+            <!-- Reject Button -->
+            <button type="submit" name="action" value="REJECT" class="btn btn-outline-danger py-2 fw-bold" onclick="return confirm('Are you sure you want to reject this leave request? A reason must be recorded.');">
+              <i class="fas fa-times-circle me-1"></i> Reject Leave Request
+            </button>
+          </div>
+          {% else %}
+          <div class="alert alert-secondary p-3 mb-0 small text-center">
+            <i class="fas fa-lock me-1"></i>
+            Action buttons disabled due to Universal Anti-Self-Approval regulations.
+          </div>
+          {% endif %}
+        </form>
+
+        <div class="alert alert-light border rounded-3 p-3 mt-4 mb-0 small text-muted">
+          <i class="fas fa-shield-alt text-primary me-1"></i>
+          <strong>Audit Compliance:</strong> RFO decisions are permanently recorded in the central Nominal Roll audit trail and notifications are instantly dispatched to the applicant and administrative desks.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

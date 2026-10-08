@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -50,6 +51,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'staff.middleware.EnforcePasswordChangeMiddleware',
 ]
 
 ROOT_URLCONF = 'base.urls'
@@ -124,6 +126,9 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]   # where your app-level static files live
 STATIC_ROOT = BASE_DIR / "staticfiles"    
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -132,3 +137,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = 'personnel'   # after login → personnel page
 LOGOUT_REDIRECT_URL = 'login-staff'      # after logout → login page
 LOGIN_URL = 'login-staff'
+
+AUTHENTICATION_BACKENDS = [
+    'staff.backends.GNFSAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# Initial temporary password for newly provisioned personnel accounts
+GNFS_INITIAL_PASSWORD = os.getenv("GNFS_INITIAL_PASSWORD", "@Jay0697")

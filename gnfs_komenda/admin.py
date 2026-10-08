@@ -3,8 +3,73 @@ from gnfs_komenda.models import (
     Region, District, Station, Post, Rank, NorminalRoll,
     PersonnelActionRequest, ApprovalHistory, AuditLog, Notification,
     LeaveType, PublicHoliday, LeaveEntitlement, LeaveRequest,
-    LeaveApprovalDecision, LeaveDefermentRequest, LeaveAdjustmentAudit
+    LeaveApprovalDecision, LeaveDefermentRequest, LeaveAdjustmentAudit,
+    FunctionalUnit, FunctionalRoleAssignment, PersonnelPosting,
+    PersonnelFunctionalAssignment, PersonnelTransfer, TransferApprovalHistory,
+    CommandAppointment
 )
+
+
+@admin.register(CommandAppointment)
+class CommandAppointmentAdmin(admin.ModelAdmin):
+    list_display = [
+        'personnel', 'appointment_type', 'region', 'district',
+        'station', 'is_acting', 'is_active', 'effective_from', 'effective_to'
+    ]
+    list_filter = ['appointment_type', 'is_active', 'is_acting', 'region']
+    search_fields = [
+        'personnel__staffID', 'personnel__fullname', 'appointment_reference',
+        'region__name', 'district__name'
+    ]
+    ordering = ['-is_active', '-effective_from', '-created_at']
+
+
+@admin.register(FunctionalUnit)
+class FunctionalUnitAdmin(admin.ModelAdmin):
+    list_display = ['name', 'unit_type', 'parent', 'code', 'active', 'display_order']
+    list_filter = ['unit_type', 'active']
+    search_fields = ['name', 'code', 'description']
+    ordering = ['display_order', 'name']
+
+
+@admin.register(FunctionalRoleAssignment)
+class FunctionalRoleAssignmentAdmin(admin.ModelAdmin):
+    list_display = ['user', 'organisational_unit', 'role', 'active', 'assigned_by', 'effective_from', 'effective_to']
+    list_filter = ['role', 'active', 'organisational_unit__unit_type']
+    search_fields = ['user__username', 'organisational_unit__name']
+    ordering = ['organisational_unit__name', 'role']
+
+
+@admin.register(PersonnelPosting)
+class PersonnelPostingAdmin(admin.ModelAdmin):
+    list_display = ['personnel', 'region', 'district', 'station', 'post', 'start_date', 'end_date', 'is_current']
+    list_filter = ['is_current', 'region']
+    search_fields = ['personnel__staffID', 'personnel__fullname', 'station__name', 'region__name']
+    ordering = ['-start_date']
+
+
+@admin.register(PersonnelFunctionalAssignment)
+class PersonnelFunctionalAssignmentAdmin(admin.ModelAdmin):
+    list_display = ['personnel', 'functional_unit', 'assignment_role', 'is_primary', 'is_active', 'start_date', 'end_date']
+    list_filter = ['is_active', 'is_primary', 'functional_unit__unit_type']
+    search_fields = ['personnel__staffID', 'personnel__fullname', 'functional_unit__name', 'assignment_role']
+    ordering = ['-is_primary', '-start_date']
+
+
+@admin.register(PersonnelTransfer)
+class PersonnelTransferAdmin(admin.ModelAdmin):
+    list_display = ['reference_number', 'personnel', 'transfer_type', 'source_station', 'destination_station', 'effective_date', 'expected_reporting_date', 'status']
+    list_filter = ['transfer_type', 'status', 'source_region', 'destination_region']
+    search_fields = ['reference_number', 'personnel__staffID', 'personnel__fullname', 'transfer_letter_number']
+    ordering = ['-created_at']
+
+
+@admin.register(TransferApprovalHistory)
+class TransferApprovalHistoryAdmin(admin.ModelAdmin):
+    list_display = ['transfer', 'actor', 'action', 'from_status', 'to_status', 'timestamp']
+    list_filter = ['action', 'to_status']
+    search_fields = ['transfer__reference_number', 'actor__username', 'comments']
+    ordering = ['-timestamp']
 
 
 @admin.register(Rank)
@@ -25,8 +90,8 @@ class RegionAdmin(admin.ModelAdmin):
 
 @admin.register(District)
 class DistrictAdmin(admin.ModelAdmin):
-    list_display = ['name', 'region', 'code', 'active']
-    list_filter = ['active', 'region']
+    list_display = ['name', 'region', 'command_type', 'co_designation', 'code', 'active']
+    list_filter = ['active', 'command_type', 'co_designation', 'region']
     search_fields = ['name', 'code', 'region__name']
     ordering = ['region__name', 'name']
 
@@ -49,9 +114,9 @@ class PostAdmin(admin.ModelAdmin):
 
 @admin.register(NorminalRoll)
 class NorminalRollAdmin(admin.ModelAdmin):
-    list_display = ['staffID', 'fullname', 'station', 'post', 'rank', 'officer_category', 'leave_status', 'payroll_status', 'is_active']
-    list_filter = ['is_active', 'officer_category', 'rank', 'leave_status', 'payroll_status', 'station__district__region', 'station']
-    search_fields = ['staffID', 'fullname', 'ghana_card', 'station__name']
+    list_display = ['staffID', 'fullname', 'station', 'functional_unit', 'rank', 'officer_category', 'leave_status', 'payroll_status', 'is_active']
+    list_filter = ['is_active', 'officer_category', 'rank', 'leave_status', 'payroll_status', 'station__district__region', 'station', 'functional_unit']
+    search_fields = ['staffID', 'fullname', 'ghana_card', 'station__name', 'functional_unit__name']
     ordering = ['fullname']
 
 

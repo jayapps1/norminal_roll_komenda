@@ -21,17 +21,53 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from gnfs_komenda.forms import (
     ApprovalDecisionForm, ArchiveRequestForm, NorminalRollForm,
-    RegionForm, DistrictForm, StationForm, PostForm
+    RegionForm, DistrictForm, StationForm, PostForm,
+    PersonnelTransferForm, TransferDestinationPlacementForm,
+    TransferConfirmArrivalForm, TransferCancelForm, FunctionalRoleAssignmentForm,
+    RegionLeadershipForm, DistrictLeadershipForm, DirectorateForm,
+    DepartmentForm, UnitForm, PersonnelFunctionalAssignmentCreateForm
 )
 from gnfs_komenda.models import (
     ApprovalHistory, AuditLog, District, Notification, NorminalRoll,
-    PersonnelActionRequest, Post, Rank, Region, Station
+    PersonnelActionRequest, Post, Rank, Region, Station,
+    FunctionalUnit, FunctionalRoleAssignment, FunctionalRoleType,
+    PersonnelPosting, PersonnelFunctionalAssignment, PersonnelTransfer,
+    TransferType, TransferStatus, TransferApprovalHistory, CommandAppointment,
+    AdministrativeAssignment, ApplicationRole, LeaveRequest, LeaveEntitlement
 )
 from gnfs_komenda.security import (
     can_user_approve_request, can_user_manage_personnel,
     get_districts_queryset_for_user, get_personnel_queryset_for_user,
     get_posts_queryset_for_user, get_regions_queryset_for_user,
     get_stations_queryset_for_user, get_user_assignment, get_user_role
+)
+from gnfs_komenda.services.transfer_service import (
+    create_transfer, submit_transfer, approve_transfer, release_officer,
+    mark_reported, complete_destination_placement, confirm_arrival, cancel_transfer
+)
+from gnfs_komenda.services.permission_resolver import (
+    get_command_scope, get_functional_scopes, get_managed_functional_unit_ids,
+    get_available_workspaces, get_active_workspace, can_view_personnel as can_view_personnel_resolver,
+    can_manage_personnel as can_manage_personnel_resolver, can_manage_functional_unit,
+    get_scoped_personnel_queryset, can_manage_regional_leadership,
+    can_manage_district_leadership, can_manage_functional_structure
+)
+from gnfs_komenda.services.posting_service import get_officer_posting_history, create_new_posting
+from gnfs_komenda.services.functional_assignment_service import (
+    get_officer_functional_history, assign_functional_unit,
+    remove_functional_assignment, set_primary_functional_assignment,
+    get_active_functional_assignments
+)
+from gnfs_komenda.services.command_appointment_service import (
+    appoint_rfo, appoint_regional_2ic, appoint_commanding_officer,
+    appoint_district_2ic, end_command_appointment,
+    get_region_leadership_history, get_district_leadership_history,
+    get_officer_command_history
+)
+from gnfs_komenda.services.organisational_structure_service import (
+    create_functional_unit, update_functional_unit,
+    deactivate_functional_unit, reactivate_functional_unit,
+    delete_functional_unit, get_organisation_tree
 )
 from gnfs_komenda.workflow import (
     create_archive_request, process_approval_decision, record_audit_log
@@ -124,7 +160,7 @@ class AllPersonnel(LoginRequiredMixin, ListView):
         if rank_id and rank_id.isdigit():
             queryset = queryset.filter(rank_id=int(rank_id))
 
-        return queryset
+        return queryset.order_by('fullname', 'id')
 
     def get_context_data(self, **kwargs):
         NorminalRoll.sync_leaves()
@@ -178,6 +214,34 @@ class AddStaff(LoginRequiredMixin, CreateView):
         staff.is_active = True
         staff.save()
 
+        # Initialize career command posting history
+        if staff.station:
+            district = staff.station.district if staff.station else None
+            region = district.region if district else None
+            create_new_posting(
+                personnel=staff,
+                region=region,
+                district=district,
+                station=staff.station,
+                post=staff.post,
+                assigned_by=self.request.user,
+                remarks="Initial personnel registration command posting."
+            )
+
+        # Initialize functional assignment if selected
+        if staff.functional_unit:
+            try:
+                assign_functional_unit(
+                    personnel=staff,
+                    functional_unit=staff.functional_unit,
+                    assignment_role="Primary Unit",
+                    is_primary=True,
+                    assigned_by=self.request.user,
+                    reason="Initial registration functional assignment."
+                )
+            except Exception:
+                pass
+
         record_audit_log(
             user=self.request.user,
             action="PERSONNEL_CREATED",
@@ -190,6 +254,14 @@ class AddStaff(LoginRequiredMixin, CreateView):
             post=staff.post,
             ip_address=self.request.META.get('REMOTE_ADDR')
         )
+
+        # Provision user account if requested
+        if form.cleaned_data.get('create_user_account', True):
+            try:
+                from staff.services.account_provisioning_service import provision_personnel_account
+                provision_personnel_account(staff, created_by=self.request.user)
+            except Exception as e:
+                messages.warning(self.request, f"Personnel saved, but login account could not be provisioned: {str(e)}")
 
         messages.success(self.request, f"Personnel {staff.fullname} added successfully.")
         return redirect('personnel')
@@ -265,6 +337,13 @@ class StaffView(LoginRequiredMixin, DetailView):
         context['leave_entitlements'] = staff.leave_entitlements.filter(leave_year=today.year).select_related('leave_type')
         context['leave_history'] = staff.leave_requests.all().select_related('leave_type', 'approved_by').order_by('-start_date')[:15]
         context['deferments'] = staff.deferment_requests.all().order_by('-created_at')[:10]
+        context['postings'] = staff.postings.all().select_related('region', 'district', 'station', 'post').order_by('-start_date')
+        context['current_command_appointment'] = staff.current_command_appointment
+        context['command_appointments'] = get_officer_command_history(staff)
+        context['active_functional_assignments'] = get_active_functional_assignments(staff)
+        context['functional_history'] = get_officer_functional_history(staff)
+        context['transfers'] = staff.transfers.all().select_related('source_station', 'destination_station', 'initiated_by').order_by('-created_at')
+        context['can_manage_personnel'] = can_user_manage_personnel(self.request.user, staff)
         return context
 
 
@@ -463,18 +542,22 @@ class ImportPersonnelExcel(LoginRequiredMixin, View):
 # ==============================================================================
 
 class NationalDashboardView(LoginRequiredMixin, View):
-    """National Headquarters Dashboard with nationwide visibility."""
+    """National Headquarters Dashboard with nationwide visibility (Section 5, 6)."""
     login_url = 'login-staff'
 
     def get(self, request, *args, **kwargs):
         role = get_user_role(request.user)
-        if not (request.user.is_superuser or role == "NATIONAL_ADMIN"):
-            messages.error(request, "Access restricted to National Administrators.")
-            return redirect('personnel')
+        is_national = request.user.is_superuser or role == "NATIONAL_ADMIN"
+        if not is_national:
+            from gnfs_komenda.services.role_service import get_actor_administrative_scope
+            admin_scope = get_actor_administrative_scope(request.user)
+            if admin_scope["level"] != "NATIONAL":
+                messages.error(request, "Access restricted to National Administrators.")
+                return redirect('my-dashboard')
 
         NorminalRoll.sync_leaves()
 
-        # Database Aggregate Metrics
+        # Database Aggregate Metrics (12 Summary Cards)
         total_personnel = NorminalRoll.active_objects.count()
         senior_officers = NorminalRoll.active_objects.filter(officer_category=Rank.OfficerCategory.SENIOR).count()
         junior_officers = NorminalRoll.active_objects.filter(officer_category=Rank.OfficerCategory.JUNIOR).count()
@@ -484,14 +567,99 @@ class NationalDashboardView(LoginRequiredMixin, View):
         total_posts = Post.objects.filter(active=True).count()
         personnel_at_post = NorminalRoll.active_objects.filter(leave_status="AT POST").count()
         personnel_on_leave = NorminalRoll.active_objects.filter(leave_status="ON LEAVE").count()
+
+        pending_leave = LeaveRequest.objects.filter(
+            status__in=[
+                LeaveRequest.Status.PENDING_PROCESSING,
+                LeaveRequest.Status.PENDING_APPROVAL,
+            ]
+        ).count()
+
+        pending_transfers = PersonnelTransfer.objects.filter(
+            status__in=[
+                TransferStatus.PENDING_APPROVAL,
+                TransferStatus.APPROVED
+            ]
+        ).count()
+
+        awaiting_reporting = PersonnelTransfer.objects.filter(
+            status=TransferStatus.AWAITING_REPORTING
+        ).count()
+
         pending_approvals = PersonnelActionRequest.objects.filter(status="PENDING_NATIONAL").count()
 
-        # Query all regions with real-time aggregate counts
+        # 8 National Overview Sections
+        # 1. Regional Strength
         regions = Region.objects.filter(active=True).annotate(
             district_count=Count('districts', distinct=True),
             station_count=Count('districts__stations', distinct=True),
+            post_count=Count('districts__stations__posts', distinct=True),
             personnel_count=Count('districts__stations__personnel', filter=Q(districts__stations__personnel__is_active=True), distinct=True)
         ).order_by('name')
+
+        # 2. Personnel Distribution
+        male_count = NorminalRoll.active_objects.filter(gender="MALE").count()
+        female_count = NorminalRoll.active_objects.filter(gender="FEMALE").count()
+        top_ranks = Rank.objects.annotate(
+            officer_count=Count('personnel', filter=Q(personnel__is_active=True))
+        ).filter(officer_count__gt=0).order_by('-hierarchy_order')[:8]
+
+        # 3. Leave Overview
+        leave_stats = {
+            'pending_processing': LeaveRequest.objects.filter(status=LeaveRequest.Status.PENDING_PROCESSING).count(),
+            'pending_approval': LeaveRequest.objects.filter(status=LeaveRequest.Status.PENDING_APPROVAL).count(),
+            'approved_active': LeaveRequest.objects.filter(status=LeaveRequest.Status.APPROVED).count(),
+            'recent_leaves': LeaveRequest.objects.select_related('personnel', 'leave_type').order_by('-created_at')[:8],
+        }
+
+        # 4. Transfer Overview
+        transfer_stats = {
+            'pending': pending_transfers,
+            'released': PersonnelTransfer.objects.filter(status=TransferStatus.RELEASED).count(),
+            'awaiting_reporting': awaiting_reporting,
+            'confirmed': PersonnelTransfer.objects.filter(status=TransferStatus.CONFIRMED).count(),
+            'recent_transfers': PersonnelTransfer.objects.select_related('personnel', 'source_station', 'destination_station', 'destination_region').order_by('-created_at')[:8],
+        }
+
+        # 5. Administrative Assignments
+        admin_assignments = AdministrativeAssignment.objects.filter(is_active=True).select_related(
+            'personnel', 'role', 'region', 'district', 'assigned_by'
+        ).order_by('-assigned_at')[:10]
+
+        # 6. Command Leadership
+        command_leadership = CommandAppointment.objects.filter(is_active=True).select_related(
+            'personnel', 'region', 'district'
+        ).order_by('appointment_type', 'region__name', 'district__name')[:12]
+
+        # 7. Recent System Activity
+        recent_activity = AuditLog.objects.select_related('user').order_by('-timestamp')[:10]
+
+        # 8. Alerts
+        alerts = []
+        if awaiting_reporting > 0:
+            alerts.append({
+                'type': 'warning',
+                'icon': 'fas fa-plane-arrival',
+                'title': 'Officers Awaiting Reporting',
+                'message': f"{awaiting_reporting} transferred personnel released and awaiting arrival confirmation at destination.",
+                'url': reverse('transfer-list')
+            })
+        if pending_leave > 0:
+            alerts.append({
+                'type': 'info',
+                'icon': 'fas fa-calendar-check',
+                'title': 'Pending Leave Workflow',
+                'message': f"{pending_leave} leave requests awaiting administrative processing or command decision.",
+                'url': reverse('leave-dashboard')
+            })
+        if pending_transfers > 0:
+            alerts.append({
+                'type': 'primary',
+                'icon': 'fas fa-exchange-alt',
+                'title': 'Pending Transfer Authorisations',
+                'message': f"{pending_transfers} transfer applications requiring review.",
+                'url': reverse('transfer-list')
+            })
 
         return render(request, "gnfs_komenda/dashboard_national.html", {
             "total_personnel": total_personnel,
@@ -503,13 +671,25 @@ class NationalDashboardView(LoginRequiredMixin, View):
             "total_posts": total_posts,
             "personnel_at_post": personnel_at_post,
             "personnel_on_leave": personnel_on_leave,
+            "pending_leave": pending_leave,
+            "pending_transfers": pending_transfers,
+            "awaiting_reporting": awaiting_reporting,
             "pending_approvals": pending_approvals,
             "regions": regions,
+            "male_count": male_count,
+            "female_count": female_count,
+            "top_ranks": top_ranks,
+            "leave_stats": leave_stats,
+            "transfer_stats": transfer_stats,
+            "admin_assignments": admin_assignments,
+            "command_leadership": command_leadership,
+            "recent_activity": recent_activity,
+            "alerts": alerts,
         })
 
 
 class RegionalDashboardView(LoginRequiredMixin, View):
-    """Regional Command Dashboard scoped to the specified region."""
+    """Regional Administration Dashboard scoped to the specified region (Section 13-15)."""
     login_url = 'login-staff'
 
     def get(self, request, region_id, *args, **kwargs):
@@ -517,8 +697,22 @@ class RegionalDashboardView(LoginRequiredMixin, View):
         role = get_user_role(request.user)
         assignment = get_user_assignment(request.user)
 
-        # Access Control: National Admin or Regional Admin for THIS region
-        if not request.user.is_superuser and role != "NATIONAL_ADMIN":
+        user_personnel = NorminalRoll.objects.filter(
+            staffID__iexact=request.user.username
+        ).first()
+
+        is_regional_leader = False
+        if user_personnel:
+            if (region.current_rfo and region.current_rfo.personnel_id == user_personnel.id) or \
+               (region.current_2ic and region.current_2ic.personnel_id == user_personnel.id):
+                is_regional_leader = True
+
+        from gnfs_komenda.services.role_service import get_actor_administrative_scope
+        admin_scope = get_actor_administrative_scope(request.user)
+        is_regional_admin = (admin_scope["level"] == "REGIONAL" and admin_scope["region"] and admin_scope["region"].id == region.id)
+        is_super = request.user.is_superuser or role == "NATIONAL_ADMIN" or admin_scope["level"] == "NATIONAL"
+
+        if not (is_super or is_regional_admin or is_regional_leader):
             if role == "REGIONAL_ADMIN" and assignment and assignment.region_id != region.id:
                 raise PermissionDenied("You are not authorized to access another Regional Command.")
             elif role not in ("REGIONAL_ADMIN", "NATIONAL_ADMIN"):
@@ -539,6 +733,34 @@ class RegionalDashboardView(LoginRequiredMixin, View):
             personnel_count=Count('stations__personnel', filter=Q(stations__personnel__is_active=True), distinct=True)
         ).order_by('name')
 
+        leave_awaiting_processing = LeaveRequest.objects.filter(
+            routing_region=region,
+            status=LeaveRequest.Status.PENDING_PROCESSING,
+            processing_stage=LeaveRequest.ProcessingStage.REGIONAL_ADMIN
+        ).count()
+
+        leave_awaiting_approval = LeaveRequest.objects.filter(
+            routing_region=region,
+            status=LeaveRequest.Status.PENDING_APPROVAL,
+            processing_stage=LeaveRequest.ProcessingStage.COMMAND_APPROVAL
+        ).count()
+
+        incoming_transfers = PersonnelTransfer.objects.filter(
+            destination_region=region,
+            status__in=[TransferStatus.APPROVED, TransferStatus.RELEASED]
+        ).count()
+
+        outgoing_transfers = PersonnelTransfer.objects.filter(
+            source_region=region,
+            status__in=[TransferStatus.PENDING_APPROVAL, TransferStatus.APPROVED, TransferStatus.RELEASED]
+        ).count()
+
+        district_administrators = AdministrativeAssignment.objects.filter(
+            region=region,
+            role__code="DISTRICT_ADMIN",
+            is_active=True
+        ).select_related('personnel', 'district', 'assigned_by')
+
         pending_regional_approvals = PersonnelActionRequest.objects.filter(
             status="PENDING_REGIONAL",
             personnel__station__district__region=region
@@ -546,6 +768,10 @@ class RegionalDashboardView(LoginRequiredMixin, View):
 
         return render(request, "gnfs_komenda/dashboard_regional.html", {
             "region": region,
+            "current_rfo": region.current_rfo,
+            "current_2ic": region.current_2ic,
+            "can_manage": can_manage_regional_leadership(request.user, region),
+            "is_regional_admin": is_regional_admin or is_super,
             "total_personnel": total_personnel,
             "senior_officers": senior_officers,
             "junior_officers": junior_officers,
@@ -554,13 +780,90 @@ class RegionalDashboardView(LoginRequiredMixin, View):
             "district_count": districts.count(),
             "station_count": Station.objects.filter(district__region=region, active=True).count(),
             "post_count": Post.objects.filter(station__district__region=region, active=True).count(),
+            "leave_awaiting_processing": leave_awaiting_processing,
+            "leave_awaiting_approval": leave_awaiting_approval,
+            "incoming_transfers": incoming_transfers,
+            "outgoing_transfers": outgoing_transfers,
+            "district_administrators": district_administrators,
             "pending_approvals": pending_regional_approvals,
             "districts": districts,
         })
 
 
+class RegionalCommandDashboardView(LoginRequiredMixin, View):
+    """RFO & Regional 2IC Command Dashboard (Section 26-28, 35)."""
+    login_url = 'login-staff'
+
+    def get(self, request, region_id, *args, **kwargs):
+        region = get_object_or_404(Region, id=region_id, active=True)
+        role = get_user_role(request.user)
+        user_personnel = NorminalRoll.objects.filter(staffID__iexact=request.user.username).first()
+
+        is_rfo = user_personnel and region.current_rfo and region.current_rfo.personnel_id == user_personnel.id
+        is_2ic = user_personnel and region.current_2ic and region.current_2ic.personnel_id == user_personnel.id
+        is_super = request.user.is_superuser or role == "NATIONAL_ADMIN"
+
+        if not (is_super or is_rfo or is_2ic):
+            raise PermissionDenied("Access restricted to Regional Command Officers.")
+
+        NorminalRoll.sync_leaves()
+
+        scoped_personnel = NorminalRoll.active_objects.filter(station__district__region=region)
+        total_personnel = scoped_personnel.count()
+        senior_officers = scoped_personnel.filter(officer_category=Rank.OfficerCategory.SENIOR).count()
+        junior_officers = scoped_personnel.filter(officer_category=Rank.OfficerCategory.JUNIOR).count()
+        at_post = scoped_personnel.filter(leave_status="AT POST").count()
+        on_leave = scoped_personnel.filter(leave_status="ON LEAVE").count()
+
+        leave_awaiting_approval = LeaveRequest.objects.filter(
+            routing_region=region,
+            status=LeaveRequest.Status.PENDING_APPROVAL,
+            processing_stage=LeaveRequest.ProcessingStage.COMMAND_APPROVAL
+        ).count()
+
+        dfo_leave_requests = LeaveRequest.objects.filter(
+            routing_region=region,
+            status=LeaveRequest.Status.PENDING_APPROVAL,
+            processing_stage=LeaveRequest.ProcessingStage.COMMAND_APPROVAL
+        ).select_related('personnel', 'leave_type')[:8]
+
+        incoming_transfers = PersonnelTransfer.objects.filter(
+            destination_region=region,
+            status__in=[TransferStatus.APPROVED, TransferStatus.RELEASED, TransferStatus.AWAITING_REPORTING]
+        ).count()
+
+        reporting_overdue = PersonnelTransfer.objects.filter(
+            destination_region=region,
+            status=TransferStatus.AWAITING_REPORTING,
+            expected_reporting_date__lt=timezone.localdate()
+        ).count()
+
+        districts = District.objects.filter(region=region, active=True).annotate(
+            personnel_count=Count('stations__personnel', filter=Q(stations__personnel__is_active=True), distinct=True)
+        ).order_by('name')
+
+        return render(request, "gnfs_komenda/dashboard_rfo.html", {
+            "region": region,
+            "current_rfo": region.current_rfo,
+            "current_2ic": region.current_2ic,
+            "is_rfo": is_rfo or is_super,
+            "is_2ic": is_2ic,
+            "total_personnel": total_personnel,
+            "senior_officers": senior_officers,
+            "junior_officers": junior_officers,
+            "at_post": at_post,
+            "on_leave": on_leave,
+            "district_count": districts.count(),
+            "leave_awaiting_approval": leave_awaiting_approval,
+            "dfo_leave_requests": dfo_leave_requests,
+            "incoming_transfers": incoming_transfers,
+            "reporting_overdue": reporting_overdue,
+            "districts": districts,
+        })
+
+
 class DistrictDashboardView(LoginRequiredMixin, View):
-    """District Administration / DFO Dashboard scoped to the specified district."""
+    """District Administration Dashboard scoped to the specified district (Section 19-22)."""
     login_url = 'login-staff'
 
     def get(self, request, district_id, *args, **kwargs):
@@ -568,12 +871,30 @@ class DistrictDashboardView(LoginRequiredMixin, View):
         role = get_user_role(request.user)
         assignment = get_user_assignment(request.user)
 
-        # Access check
-        if not request.user.is_superuser and role != "NATIONAL_ADMIN":
+        user_personnel = NorminalRoll.objects.filter(
+            staffID__iexact=request.user.username
+        ).first()
+
+        is_district_leader = False
+        if user_personnel:
+            if (district.current_commanding_officer and district.current_commanding_officer.personnel_id == user_personnel.id) or \
+               (district.current_2ic and district.current_2ic.personnel_id == user_personnel.id) or \
+               (district.region and district.region.current_rfo and district.region.current_rfo.personnel_id == user_personnel.id):
+                is_district_leader = True
+
+        from gnfs_komenda.services.role_service import get_actor_administrative_scope
+        admin_scope = get_actor_administrative_scope(request.user)
+        is_district_admin = (admin_scope["level"] == "DISTRICT" and admin_scope["district"] and admin_scope["district"].id == district.id)
+        is_regional_admin = (admin_scope["level"] == "REGIONAL" and admin_scope["region"] and admin_scope["region"].id == district.region_id)
+        is_super = request.user.is_superuser or role == "NATIONAL_ADMIN" or admin_scope["level"] == "NATIONAL"
+
+        if not (is_super or is_regional_admin or is_district_admin or is_district_leader):
             if role == "REGIONAL_ADMIN" and assignment and assignment.region_id != district.region_id:
                 raise PermissionDenied("You are not authorized to access districts outside your region.")
             elif role in ("DFO", "DISTRICT_ADMIN") and assignment and assignment.district_id != district.id:
                 raise PermissionDenied("You are not authorized to access another District.")
+            else:
+                raise PermissionDenied("You are not authorized to access this District console.")
 
         NorminalRoll.sync_leaves()
 
@@ -589,6 +910,26 @@ class DistrictDashboardView(LoginRequiredMixin, View):
             personnel_count=Count('personnel', filter=Q(personnel__is_active=True), distinct=True)
         ).order_by('name')
 
+        leave_awaiting_processing = LeaveRequest.objects.filter(
+            routing_district=district,
+            status=LeaveRequest.Status.PENDING_PROCESSING,
+            processing_stage=LeaveRequest.ProcessingStage.DISTRICT_ADMIN
+        ).count()
+
+        incoming_transfers = PersonnelTransfer.objects.filter(
+            destination_district=district,
+            status__in=[TransferStatus.APPROVED, TransferStatus.RELEASED]
+        ).count()
+
+        outgoing_transfers = PersonnelTransfer.objects.filter(
+            source_district=district,
+            status__in=[TransferStatus.PENDING_APPROVAL, TransferStatus.APPROVED, TransferStatus.RELEASED]
+        ).count()
+
+        recent_activity = AuditLog.objects.filter(
+            Q(district=district) | Q(description__icontains=district.name)
+        ).order_by('-timestamp')[:8]
+
         pending_dfo_approvals = PersonnelActionRequest.objects.filter(
             status="PENDING_DFO",
             personnel__station__district=district
@@ -597,6 +938,10 @@ class DistrictDashboardView(LoginRequiredMixin, View):
         return render(request, "gnfs_komenda/dashboard_district.html", {
             "district": district,
             "region": district.region,
+            "current_co": district.current_commanding_officer,
+            "current_2ic": district.current_2ic,
+            "can_manage": can_manage_district_leadership(request.user, district),
+            "is_district_admin": is_district_admin or is_super,
             "total_personnel": total_personnel,
             "senior_officers": senior_officers,
             "junior_officers": junior_officers,
@@ -604,8 +949,192 @@ class DistrictDashboardView(LoginRequiredMixin, View):
             "on_leave": on_leave,
             "station_count": stations.count(),
             "post_count": Post.objects.filter(station__district=district, active=True).count(),
+            "leave_awaiting_processing": leave_awaiting_processing,
+            "incoming_transfers": incoming_transfers,
+            "outgoing_transfers": outgoing_transfers,
+            "recent_activity": recent_activity,
             "pending_approvals": pending_dfo_approvals,
             "stations": stations,
+        })
+
+
+class DistrictCommandDashboardView(LoginRequiredMixin, View):
+    """
+    DFO / MFO & District 2IC Command Dashboard (Prompt 2 Section 13, 14).
+    DFO/MFO receives command decision authority.
+    2IC receives command overview and visibility into approved leave for command awareness,
+    without automatic DFO/MFO final approval authority.
+    """
+    login_url = 'login-staff'
+
+    def get(self, request, district_id, *args, **kwargs):
+        district = get_object_or_404(District, id=district_id, active=True)
+        role = get_user_role(request.user)
+        user_personnel = NorminalRoll.objects.filter(staffID__iexact=request.user.username).first()
+
+        is_co = user_personnel and district.current_commanding_officer and district.current_commanding_officer.personnel_id == user_personnel.id and district.current_commanding_officer.is_active
+        is_2ic = user_personnel and district.current_2ic and district.current_2ic.personnel_id == user_personnel.id and district.current_2ic.is_active
+        is_super = request.user.is_superuser or role == "NATIONAL_ADMIN"
+
+        # Also check CommandAppointment records
+        if user_personnel and not (is_co or is_2ic):
+            active_cmd = user_personnel.command_appointments.filter(district=district, is_active=True).first()
+            if active_cmd:
+                if active_cmd.appointment_type in ('DFO', 'MFO', 'METRO_FO', 'ACTING_DFO', 'ACTING_MFO', 'ACTING_METRO_FO'):
+                    is_co = True
+                elif active_cmd.appointment_type in ('DISTRICT_2IC', 'ACTING_DISTRICT_2IC'):
+                    is_2ic = True
+
+        # Also check AdministrativeAssignment records
+        if user_personnel and not (is_co or is_2ic):
+            from gnfs_komenda.models import AdministrativeAssignment
+            admin_assigns = AdministrativeAssignment.objects.filter(
+                personnel=user_personnel,
+                district=district,
+                is_active=True
+            ).select_related('role')
+            for a in admin_assigns:
+                rcode = a.role.code if a.role else ''
+                rtitle = (a.responsibility_title or '').upper()
+                if rcode in ('DFO', 'MFO', 'COMMANDING_OFFICER') or 'COMMANDING' in rtitle or 'DFO' in rtitle or 'MFO' in rtitle:
+                    is_co = True
+                    break
+                elif rcode in ('DISTRICT_2IC', '2IC') or '2IC' in rtitle or 'SECOND IN COMMAND' in rtitle:
+                    is_2ic = True
+
+        if not (is_super or is_co or is_2ic):
+            raise PermissionDenied("Access restricted to District Command Officers.")
+
+        NorminalRoll.sync_leaves()
+
+        scoped_personnel = NorminalRoll.active_objects.filter(station__district=district)
+        total_personnel = scoped_personnel.count()
+
+        # Operational Strength (Section 13)
+        ops_qs = scoped_personnel.filter(
+            Q(functional_assignments__functional_unit__name__icontains="Operations") |
+            Q(functional_assignments__functional_office__function_type="OPERATIONS")
+        ).distinct()
+        if not ops_qs.exists():
+            non_ops = scoped_personnel.filter(
+                Q(functional_assignments__functional_unit__name__iregex=r'(Accounts|Finance|Audit|Human Resource|HR|Legal|Welfare)') |
+                Q(functional_assignments__functional_office__function_type__in=["ACCOUNTS", "HR"])
+            ).distinct()
+            ops_qs = scoped_personnel.exclude(id__in=non_ops.values_list('id', flat=True))
+        operational_strength = ops_qs.count()
+
+        senior_officers = scoped_personnel.filter(officer_category=Rank.OfficerCategory.SENIOR).count()
+        junior_officers = scoped_personnel.filter(officer_category=Rank.OfficerCategory.JUNIOR).count()
+        at_post = scoped_personnel.filter(leave_status="AT POST").count()
+        on_leave = scoped_personnel.filter(leave_status="ON LEAVE").count()
+
+        # Decision metrics (Section 13 & 21)
+        district_leaves = LeaveRequest.objects.filter(routing_district=district)
+        leave_awaiting_approval = district_leaves.filter(
+            status__in=[LeaveRequest.Status.PENDING_DFO_MFO_DECISION, LeaveRequest.Status.PENDING_APPROVAL]
+        ).count()
+        approved_leave = district_leaves.filter(
+            status__in=[
+                LeaveRequest.Status.APPROVED,
+                LeaveRequest.Status.APPROVED_PENDING_ADMIN_PROCESSING,
+                LeaveRequest.Status.PENDING_ADMIN_FINAL_PROCESSING,
+                LeaveRequest.Status.SENT_TO_WATCH_ROOM,
+                LeaveRequest.Status.BOOKED,
+                LeaveRequest.Status.ACTIVE,
+            ]
+        ).count()
+        rejected_leave = district_leaves.filter(status=LeaveRequest.Status.REJECTED).count()
+
+        today = timezone.localdate()
+        approved_today = district_leaves.filter(
+            status__in=[
+                LeaveRequest.Status.APPROVED,
+                LeaveRequest.Status.APPROVED_PENDING_ADMIN_PROCESSING,
+                LeaveRequest.Status.PENDING_ADMIN_FINAL_PROCESSING,
+                LeaveRequest.Status.SENT_TO_WATCH_ROOM,
+                LeaveRequest.Status.BOOKED,
+                LeaveRequest.Status.ACTIVE,
+            ],
+            approved_at__date=today
+        ).count()
+        rejected_today = district_leaves.filter(
+            status=LeaveRequest.Status.REJECTED,
+            updated_at__date=today
+        ).count()
+        ops_on_leave = ops_qs.filter(leave_status="ON LEAVE").count()
+
+        incoming_transfers = PersonnelTransfer.objects.filter(
+            destination_district=district,
+            status__in=[TransferStatus.APPROVED, TransferStatus.RELEASED]
+        ).count()
+
+        outgoing_transfers = PersonnelTransfer.objects.filter(
+            source_district=district,
+            status__in=[TransferStatus.PENDING_APPROVAL, TransferStatus.APPROVED, TransferStatus.RELEASED]
+        ).count()
+        total_transfers = incoming_transfers + outgoing_transfers
+
+        from datetime import timedelta
+        resuming_soon = NorminalRoll.active_objects.filter(
+            station__district=district,
+            leave_status="ON LEAVE",
+            end_leave__gte=today,
+            end_leave__lte=today + timedelta(days=7)
+        ).count()
+
+        notifications_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+
+        stations = Station.objects.filter(district=district, active=True).annotate(
+            personnel_count=Count('personnel', filter=Q(personnel__is_active=True), distinct=True)
+        ).order_by('name')
+
+        # Detailed leave queues: decision inbox for DFO/MFO, approved leaves for 2IC command awareness
+        decision_leaves = district_leaves.filter(
+            status__in=[LeaveRequest.Status.PENDING_DFO_MFO_DECISION, LeaveRequest.Status.PENDING_APPROVAL]
+        ).select_related('personnel', 'personnel__rank', 'personnel__station', 'leave_type').order_by('-updated_at')[:15]
+
+        approved_leaves = district_leaves.filter(
+            status__in=[
+                LeaveRequest.Status.APPROVED,
+                LeaveRequest.Status.APPROVED_PENDING_ADMIN_PROCESSING,
+                LeaveRequest.Status.PENDING_ADMIN_FINAL_PROCESSING,
+                LeaveRequest.Status.SENT_TO_WATCH_ROOM,
+                LeaveRequest.Status.BOOKED,
+                LeaveRequest.Status.ACTIVE,
+            ]
+        ).select_related('personnel', 'personnel__rank', 'personnel__station', 'leave_type', 'approved_by').order_by('-approved_at')[:15]
+
+        # 2IC does NOT automatically receive DFO/MFO approval permission
+        can_approve = is_co or is_super
+
+        return render(request, "gnfs_komenda/dashboard_dfo.html", {
+            "district": district,
+            "region": district.region,
+            "current_co": district.current_commanding_officer,
+            "current_2ic": district.current_2ic,
+            "is_co": is_co or is_super,
+            "is_2ic": is_2ic,
+            "can_approve": can_approve,
+            "total_personnel": total_personnel,
+            "operational_strength": operational_strength,
+            "senior_officers": senior_officers,
+            "junior_officers": junior_officers,
+            "at_post": at_post,
+            "on_leave": on_leave,
+            "leave_awaiting_approval": leave_awaiting_approval,
+            "approved_leave": approved_leave,
+            "rejected_leave": rejected_leave,
+            "approved_today": approved_today,
+            "rejected_today": rejected_today,
+            "ops_on_leave": ops_on_leave,
+            "incoming_transfers": incoming_transfers,
+            "outgoing_transfers": outgoing_transfers,
+            "total_transfers": total_transfers,
+            "resuming_soon": resuming_soon,
+            "notifications_count": notifications_count,
+            "stations": stations,
+            "decision_leaves": decision_leaves,
+            "approved_leaves": approved_leaves,
         })
 
 
@@ -780,6 +1309,7 @@ def api_personnel_search(request):
         results.append({
             "staffID": staff.staffID,
             "fullname": staff.fullname,
+            "profile_picture_url": staff.profile_picture_url,
             "job_grade": staff.job_grade,
             "rank": staff.rank_short,
             "rank_display": staff.rank_display,
@@ -1758,6 +2288,66 @@ def leave_adjust_balance_view(request, entitlement_id):
 
 
 @login_required(login_url='login-staff')
+def leave_set_proportionate_entitlement_view(request, entitlement_id):
+    """
+    Authorised administrator view to configure Proportionate / Prorated Annual Leave Entitlement (Section 23).
+    Separates proportionate entitlement from partial leave requests.
+    Enforces strict backend validation and audited record keeping.
+    """
+    from gnfs_komenda.forms import ProportionateLeaveEntitlementForm
+    from gnfs_komenda.services.leave_policy_service import (
+        can_manage_proportionate_entitlement,
+        set_proportionate_annual_entitlement,
+        restore_standard_annual_entitlement,
+        get_base_annual_entitlement,
+    )
+
+    entitlement = get_object_or_404(
+        LeaveEntitlement.objects.select_related('personnel', 'personnel__rank', 'leave_type'),
+        pk=entitlement_id
+    )
+
+    if not can_manage_proportionate_entitlement(request.user, entitlement.personnel):
+        raise PermissionDenied("You do not have administrative authority to configure this personnel's leave entitlement.")
+
+    standard_days = entitlement.full_annual_entitlement or get_base_annual_entitlement(entitlement.personnel.officer_category)
+
+    if request.method == 'POST':
+        form = ProportionateLeaveEntitlementForm(request.POST, entitlement=entitlement, user=request.user)
+        if form.is_valid():
+            ent_type = form.cleaned_data['entitlement_type']
+            days = form.cleaned_data.get('proportionate_days')
+            reason = form.cleaned_data.get('reason')
+            eff_date = form.cleaned_data.get('effective_date')
+
+            try:
+                if ent_type == ProportionateLeaveEntitlementForm.EntitlementType.PROPORTIONATE:
+                    set_proportionate_annual_entitlement(entitlement, days, reason, request.user, eff_date)
+                    messages.success(request, f"Proportionate annual leave of {days} working days set for {entitlement.personnel.fullname}.")
+                else:
+                    restore_standard_annual_entitlement(entitlement, reason or "Restored standard entitlement.", request.user)
+                    messages.success(request, f"Standard full annual leave of {standard_days} working days restored for {entitlement.personnel.fullname}.")
+
+                next_url = request.POST.get('next') or request.GET.get('next')
+                if next_url:
+                    return redirect(next_url)
+                return redirect('leave-balances')
+            except ValidationError as e:
+                messages.error(request, str(e.message if hasattr(e, 'message') else e))
+        else:
+            for field, errs in form.errors.items():
+                messages.error(request, f"{field.replace('_', ' ').title()}: {', '.join(errs)}")
+    else:
+        form = ProportionateLeaveEntitlementForm(entitlement=entitlement, user=request.user)
+
+    return render(request, 'gnfs_komenda/leave/proportionate_form.html', {
+        'entitlement': entitlement,
+        'standard_days': standard_days,
+        'form': form,
+    })
+
+
+@login_required(login_url='login-staff')
 def leave_calendar_view(request):
     """Interactive Leave Calendar & Roster."""
     scoped_personnel = get_personnel_queryset_for_user(request.user)
@@ -1918,3 +2508,1006 @@ def public_holiday_delete_view(request, pk):
         holiday.delete()
         messages.success(request, f"Holiday '{name}' deleted.")
     return redirect('leave-holidays')
+
+
+@login_required(login_url='login-staff')
+def leave_policies_list_view(request):
+    """
+    National Leave Policies Management Dashboard (Section 20 & 21).
+    Super Admin / National Admin view showing Core and Custom policies.
+    """
+    from gnfs_komenda.models import LeavePolicy
+    from gnfs_komenda.services.leave_policy_service import seed_core_leave_policies
+    if not LeavePolicy.objects.exists():
+        seed_core_leave_policies()
+
+    core_policies = LeavePolicy.objects.filter(is_core_policy=True).select_related('leave_type')
+    custom_policies = LeavePolicy.objects.filter(is_core_policy=False).select_related('leave_type')
+
+    return render(request, "gnfs_komenda/leave/policies.html", {
+        "core_policies": core_policies,
+        "custom_policies": custom_policies,
+    })
+
+
+
+# ==============================================================================
+# FUNCTIONAL STRUCTURE CASCADING APIS & WORKSPACE SWITCHER
+# ==============================================================================
+
+@login_required(login_url='login-staff')
+def api_directorates(request):
+    """Return JSON list of top-level Directorates."""
+    qs = FunctionalUnit.objects.filter(parent__isnull=True, active=True).order_by('display_order', 'name')
+    data = [{"id": u.id, "name": u.name, "code": u.code} for u in qs]
+    return JsonResponse({"directorates": data})
+
+
+@login_required(login_url='login-staff')
+def api_functional_children(request):
+    """Return child functional units for a given parent_id."""
+    parent_id = request.GET.get("parent_id")
+    if not parent_id:
+        return JsonResponse({"children": []})
+    qs = FunctionalUnit.objects.filter(parent_id=parent_id, active=True).order_by('display_order', 'name')
+    data = [
+        {
+            "id": u.id,
+            "name": u.name,
+            "code": u.code,
+            "unit_type": u.unit_type,
+            "unit_type_display": u.get_unit_type_display(),
+            "has_children": u.children.filter(active=True).exists(),
+        }
+        for u in qs
+    ]
+    return JsonResponse({"children": data})
+
+
+@login_required(login_url='login-staff')
+def switch_workspace_view(request, workspace_id):
+    """Switch active management workspace in session without changing backend permissions."""
+    workspaces = get_available_workspaces(request.user)
+    valid_ids = [w['id'] for w in workspaces]
+    if workspace_id in valid_ids:
+        request.session['gnfs_active_workspace_id'] = workspace_id
+        target_ws = next((w for w in workspaces if w['id'] == workspace_id), None)
+        messages.success(request, f"Switched to workspace: {target_ws['label'] if target_ws else workspace_id}")
+        if target_ws and target_ws.get('url'):
+            return redirect(target_ws['url'])
+    else:
+        messages.error(request, "Selected workspace is not authorized for your account.")
+    return redirect('personnel')
+
+
+class FunctionalDashboardView(LoginRequiredMixin, View):
+    """Scope-aware dashboard for Directorate, Department, or Unit Heads."""
+    login_url = 'login-staff'
+
+    def get(self, request, unit_id, *args, **kwargs):
+        unit = get_object_or_404(FunctionalUnit, id=unit_id, active=True)
+        if not can_manage_functional_unit(request.user, unit):
+            raise PermissionDenied(f"You do not have management access for {unit.name}.")
+
+        NorminalRoll.sync_leaves()
+
+        # Update active workspace to match this dashboard
+        request.session['gnfs_active_workspace_id'] = f"func_{unit.id}"
+
+        descendant_ids = unit.get_descendant_ids(include_self=True)
+        personnel = NorminalRoll.active_objects.filter(functional_unit_id__in=descendant_ids).select_related('rank', 'station', 'functional_unit')
+
+        total_personnel = personnel.count()
+        senior_officers = personnel.filter(officer_category=Rank.OfficerCategory.SENIOR).count()
+        junior_officers = personnel.filter(officer_category=Rank.OfficerCategory.JUNIOR).count()
+        at_post = personnel.filter(leave_status="AT POST").count()
+        on_leave = personnel.filter(leave_status="ON LEAVE").count()
+
+        # Children breakdown
+        children = unit.children.filter(active=True).annotate(
+            personnel_count=Count('personnel', filter=Q(personnel__is_active=True), distinct=True)
+        ).order_by('display_order', 'name')
+
+        # Personnel by rank
+        ranks_breakdown = personnel.values('rank__name', 'rank__abbreviation').annotate(
+            count=Count('id')
+        ).order_by('-count')
+
+        # Pending leave requests of officers under this functional umbrella
+        from gnfs_komenda.models import LeaveRequest
+        pending_leaves = LeaveRequest.objects.filter(
+            personnel__in=personnel,
+            status='PENDING_APPROVAL'
+        ).select_related('personnel', 'leave_type')
+
+        return render(request, "gnfs_komenda/dashboard_functional.html", {
+            "unit": unit,
+            "unit_type": unit.unit_type,
+            "total_personnel": total_personnel,
+            "senior_officers": senior_officers,
+            "junior_officers": junior_officers,
+            "at_post": at_post,
+            "on_leave": on_leave,
+            "children": children,
+            "ranks_breakdown": ranks_breakdown,
+            "pending_leaves": pending_leaves,
+            "personnel": personnel[:30],
+        })
+
+
+# ==============================================================================
+# PERSONNEL TRANSFER & POSTING MANAGEMENT VIEWS
+# ==============================================================================
+
+@login_required(login_url='login-staff')
+def transfer_list_view(request):
+    """Hub for outgoing, incoming, and historical transfers."""
+    user = request.user
+    cmd_scope = get_command_scope(user)
+    level = cmd_scope.get("level")
+
+    base_qs = PersonnelTransfer.objects.select_related(
+        'personnel', 'personnel__rank', 'source_region', 'source_district',
+        'source_station', 'destination_region', 'destination_district',
+        'destination_station', 'initiated_by'
+    )
+
+    if user.is_superuser or get_user_role(user) == "NATIONAL_ADMIN":
+        outgoing = base_qs.all()
+        incoming = base_qs.all()
+    elif level == "REGIONAL" and cmd_scope.get("region"):
+        r = cmd_scope["region"]
+        outgoing = base_qs.filter(source_region=r)
+        incoming = base_qs.filter(destination_region=r)
+    elif level in ("DISTRICT",) and cmd_scope.get("district"):
+        d = cmd_scope["district"]
+        outgoing = base_qs.filter(source_district=d)
+        incoming = base_qs.filter(destination_district=d)
+    elif level == "STATION" and cmd_scope.get("station"):
+        s = cmd_scope["station"]
+        outgoing = base_qs.filter(source_station=s)
+        incoming = base_qs.filter(destination_station=s)
+    else:
+        outgoing = base_qs.none()
+        incoming = base_qs.none()
+
+    active_incoming = incoming.filter(status__in=[TransferStatus.RELEASED, TransferStatus.REPORTED])
+    awaiting_reporting = incoming.filter(status=TransferStatus.RELEASED)
+    today = timezone.now().date()
+    overdue_count = awaiting_reporting.filter(expected_reporting_date__lt=today).count()
+
+    return render(request, "gnfs_komenda/transfers/list.html", {
+        "outgoing_transfers": outgoing.order_by('-created_at')[:25],
+        "incoming_transfers": active_incoming.order_by('-created_at'),
+        "all_incoming": incoming.order_by('-created_at')[:25],
+        "awaiting_reporting_count": awaiting_reporting.count(),
+        "reported_count": incoming.filter(status=TransferStatus.REPORTED).count(),
+        "overdue_count": overdue_count,
+        "completed_count": incoming.filter(status=TransferStatus.CONFIRMED).count(),
+    })
+
+
+@login_required(login_url='login-staff')
+def transfer_create_view(request, personnel_id):
+    """Initiate a transfer for an officer."""
+    personnel = get_object_or_404(NorminalRoll, id=personnel_id)
+    if not can_manage_personnel_resolver(request.user, personnel):
+        raise PermissionDenied("You do not have authority to transfer this personnel.")
+
+    if request.method == 'POST':
+        form = PersonnelTransferForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                transfer = create_transfer(
+                    personnel=personnel,
+                    user=request.user,
+                    destination_region=form.cleaned_data['destination_region'],
+                    destination_district=form.cleaned_data.get('destination_district'),
+                    destination_station=form.cleaned_data.get('destination_station'),
+                    destination_post=form.cleaned_data.get('destination_post'),
+                    destination_functional_unit=form.cleaned_data.get('destination_functional_unit'),
+                    transfer_letter_number=form.cleaned_data.get('transfer_letter_number'),
+                    transfer_letter_date=form.cleaned_data.get('transfer_letter_date'),
+                    effective_date=form.cleaned_data.get('effective_date'),
+                    expected_reporting_date=form.cleaned_data.get('expected_reporting_date'),
+                    reason=form.cleaned_data.get('reason'),
+                    remarks=form.cleaned_data.get('remarks'),
+                    attachment=request.FILES.get('attachment'),
+                    submit_now=True
+                )
+                messages.success(request, f"Transfer {transfer.reference_number} created and submitted for approval.")
+                return redirect('transfer-detail', transfer_id=transfer.id)
+            except ValidationError as e:
+                form.add_error(None, e.message if hasattr(e, 'message') else str(e))
+    else:
+        form = PersonnelTransferForm()
+
+    return render(request, "gnfs_komenda/transfers/create.html", {
+        "personnel": personnel,
+        "form": form,
+    })
+
+
+@login_required(login_url='login-staff')
+def transfer_detail_view(request, transfer_id):
+    """View full transfer dossier and action workflow."""
+    transfer = get_object_or_404(PersonnelTransfer, id=transfer_id)
+    history = transfer.history.all().order_by('-timestamp')
+    can_release = transfer.status in (TransferStatus.APPROVED, TransferStatus.PENDING_APPROVAL)
+    can_confirm = transfer.status in (TransferStatus.RELEASED, TransferStatus.REPORTED)
+    can_cancel = transfer.status not in (TransferStatus.CONFIRMED, TransferStatus.CANCELLED)
+
+    return render(request, "gnfs_komenda/transfers/detail.html", {
+        "transfer": transfer,
+        "history": history,
+        "can_release": can_release,
+        "can_confirm": can_confirm,
+        "can_cancel": can_cancel,
+    })
+
+
+@login_required(login_url='login-staff')
+def transfer_approve_view(request, transfer_id):
+    """Approve a pending transfer."""
+    transfer = get_object_or_404(PersonnelTransfer, id=transfer_id)
+    if request.method == 'POST':
+        comments = request.POST.get('comments', '')
+        try:
+            approve_transfer(transfer, request.user, comments=comments)
+            messages.success(request, f"Transfer {transfer.reference_number} approved.")
+        except ValidationError as e:
+            messages.error(request, str(e))
+    return redirect('transfer-detail', transfer_id=transfer.id)
+
+
+@login_required(login_url='login-staff')
+def transfer_release_view(request, transfer_id):
+    """Release officer from source command."""
+    transfer = get_object_or_404(PersonnelTransfer, id=transfer_id)
+    if request.method == 'POST':
+        comments = request.POST.get('comments', '')
+        try:
+            release_officer(transfer, request.user, comments=comments)
+            messages.success(request, f"Officer {transfer.personnel.fullname} released. Status: Awaiting Reporting.")
+        except ValidationError as e:
+            messages.error(request, str(e))
+    return redirect('transfer-detail', transfer_id=transfer.id)
+
+
+@login_required(login_url='login-staff')
+def transfer_mark_reported_view(request, transfer_id):
+    """Mark that officer has reported at destination."""
+    transfer = get_object_or_404(PersonnelTransfer, id=transfer_id)
+    if request.method == 'POST':
+        comments = request.POST.get('comments', '')
+        try:
+            mark_reported(transfer, request.user, comments=comments)
+            messages.success(request, f"Officer {transfer.personnel.fullname} marked as reported at destination.")
+        except ValidationError as e:
+            messages.error(request, str(e))
+    return redirect('transfer-detail', transfer_id=transfer.id)
+
+
+@login_required(login_url='login-staff')
+def transfer_complete_placement_view(request, transfer_id):
+    """Receiving administration assigns destination district/station/post."""
+    transfer = get_object_or_404(PersonnelTransfer, id=transfer_id)
+    if request.method == 'POST':
+        form = TransferDestinationPlacementForm(request.POST, instance=transfer)
+        if form.is_valid():
+            try:
+                complete_destination_placement(
+                    transfer,
+                    request.user,
+                    destination_district=form.cleaned_data['destination_district'],
+                    destination_station=form.cleaned_data['destination_station'],
+                    destination_post=form.cleaned_data.get('destination_post'),
+                    comments=form.cleaned_data.get('remarks')
+                )
+                messages.success(request, "Destination placement updated successfully.")
+                return redirect('transfer-detail', transfer_id=transfer.id)
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        form = TransferDestinationPlacementForm(instance=transfer)
+
+    return render(request, "gnfs_komenda/transfers/placement.html", {
+        "transfer": transfer,
+        "form": form,
+    })
+
+
+@login_required(login_url='login-staff')
+def transfer_confirm_arrival_view(request, transfer_id):
+    """Confirm arrival at destination command and activate new posting."""
+    transfer = get_object_or_404(PersonnelTransfer, id=transfer_id)
+    if request.method == 'POST':
+        form = TransferConfirmArrivalForm(request.POST)
+        if form.is_valid():
+            try:
+                confirm_arrival(
+                    transfer,
+                    request.user,
+                    actual_reporting_date=form.cleaned_data['actual_reporting_date'],
+                    comments=form.cleaned_data.get('remarks')
+                )
+                messages.success(request, f"Arrival confirmed! Officer {transfer.personnel.fullname} is now active at {transfer.destination_station}.")
+                return redirect('transfer-detail', transfer_id=transfer.id)
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        form = TransferConfirmArrivalForm(initial={'actual_reporting_date': timezone.now().date()})
+
+    return render(request, "gnfs_komenda/transfers/confirm.html", {
+        "transfer": transfer,
+        "form": form,
+    })
+
+
+@login_required(login_url='login-staff')
+def transfer_cancel_view(request, transfer_id):
+    """Cancel transfer before completion."""
+    transfer = get_object_or_404(PersonnelTransfer, id=transfer_id)
+    if request.method == 'POST':
+        form = TransferCancelForm(request.POST)
+        if form.is_valid():
+            try:
+                cancel_transfer(transfer, request.user, reason=form.cleaned_data['cancellation_reason'])
+                messages.success(request, f"Transfer {transfer.reference_number} cancelled.")
+                return redirect('transfer-detail', transfer_id=transfer.id)
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        form = TransferCancelForm()
+
+    return render(request, "gnfs_komenda/transfers/cancel.html", {
+        "transfer": transfer,
+        "form": form,
+    })
+
+
+# ==============================================================================
+# SECTION 17: REGIONAL & DISTRICT COMMAND LEADERSHIP VIEWS
+# ==============================================================================
+
+@login_required(login_url='login-staff')
+def region_management_view(request, region_id):
+    """
+    Region Management Overview Page (Section 17.17).
+    Displays current RFO & 2IC leadership, districts, stations, personnel,
+    functional assignments, incoming/outgoing transfers, and personnel on leave.
+    """
+    region = get_object_or_404(Region, id=region_id)
+    can_manage = can_manage_regional_leadership(request.user, region)
+
+    districts = region.districts.filter(active=True).order_by('name')
+    stations = Station.objects.filter(district__region=region, active=True).select_related('district').order_by('name')
+    personnel_qs = NorminalRoll.active_objects.filter(station__district__region=region)
+
+    personnel_count = personnel_qs.count()
+    senior_officers = personnel_qs.filter(rank__officer_category=Rank.OfficerCategory.SENIOR).count()
+    junior_officers = personnel_qs.filter(rank__officer_category=Rank.OfficerCategory.JUNIOR).count()
+    personnel_on_leave = personnel_qs.filter(leave_status='ON_LEAVE').count()
+
+    incoming_transfers = PersonnelTransfer.objects.filter(
+        destination_region=region,
+        status__in=[TransferStatus.PENDING_APPROVAL, TransferStatus.APPROVED, TransferStatus.RELEASED, TransferStatus.REPORTED]
+    ).count()
+
+    outgoing_transfers = PersonnelTransfer.objects.filter(
+        source_region=region,
+        status__in=[TransferStatus.PENDING_APPROVAL, TransferStatus.APPROVED, TransferStatus.RELEASED, TransferStatus.REPORTED]
+    ).count()
+
+    leadership_history = get_region_leadership_history(region)
+
+    context = {
+        "region": region,
+        "current_rfo": region.current_rfo,
+        "current_2ic": region.current_2ic,
+        "can_manage": can_manage,
+        "districts": districts,
+        "stations": stations,
+        "personnel_count": personnel_count,
+        "senior_officers": senior_officers,
+        "junior_officers": junior_officers,
+        "personnel_on_leave": personnel_on_leave,
+        "incoming_transfers": incoming_transfers,
+        "outgoing_transfers": outgoing_transfers,
+        "leadership_history": leadership_history,
+    }
+    return render(request, "gnfs_komenda/leadership/manage_region.html", context)
+
+
+@login_required(login_url='login-staff')
+def manage_regional_leadership_view(request, region_id):
+    """
+    Manage Regional Leadership Appointments (RFO & 2IC) (Section 17.18).
+    Atomically closes prior appointments and creates auditable records.
+    Never overwrites history.
+    """
+    region = get_object_or_404(Region, id=region_id)
+    if not can_manage_regional_leadership(request.user, region):
+        raise PermissionDenied("You do not have permission to manage leadership for this Region.")
+
+    current_rfo = region.current_rfo
+    current_2ic = region.current_2ic
+
+    if request.method == 'POST':
+        form = RegionLeadershipForm(request.POST, region=region)
+        if form.is_valid():
+            eff_date = form.cleaned_data['effective_date']
+            ref = form.cleaned_data.get('appointment_reference', '').strip()
+            remarks = form.cleaned_data.get('remarks', '').strip()
+
+            new_rfo = form.cleaned_data.get('rfo')
+            rfo_acting = form.cleaned_data.get('rfo_is_acting', False)
+
+            new_2ic = form.cleaned_data.get('regional_2ic')
+            reg_2ic_acting = form.cleaned_data.get('regional_2ic_is_acting', False)
+
+            try:
+                # Appoint RFO if selected and changed
+                if new_rfo and (not current_rfo or current_rfo.personnel_id != new_rfo.id or current_rfo.is_acting != rfo_acting):
+                    appoint_rfo(
+                        region=region,
+                        personnel=new_rfo,
+                        effective_from=eff_date,
+                        appointed_by=request.user,
+                        appointment_reference=ref,
+                        remarks=remarks,
+                        is_acting=rfo_acting
+                    )
+                    messages.success(request, f"Regional Fire Officer appointment updated for {region.name}.")
+
+                # Appoint 2IC if selected and changed
+                if new_2ic and (not current_2ic or current_2ic.personnel_id != new_2ic.id or current_2ic.is_acting != reg_2ic_acting):
+                    appoint_regional_2ic(
+                        region=region,
+                        personnel=new_2ic,
+                        effective_from=eff_date,
+                        appointed_by=request.user,
+                        appointment_reference=ref,
+                        remarks=remarks,
+                        is_acting=reg_2ic_acting
+                    )
+                    messages.success(request, f"Regional Second-in-Command appointment updated for {region.name}.")
+
+                return redirect('region-management', region_id=region.id)
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        initial = {
+            'effective_date': timezone.now().date(),
+        }
+        if current_rfo:
+            initial['rfo'] = current_rfo.personnel
+            initial['rfo_is_acting'] = current_rfo.is_acting
+            initial['appointment_reference'] = current_rfo.appointment_reference
+        if current_2ic:
+            initial['regional_2ic'] = current_2ic.personnel
+            initial['regional_2ic_is_acting'] = current_2ic.is_acting
+
+        form = RegionLeadershipForm(initial=initial, region=region)
+
+    leadership_history = get_region_leadership_history(region)
+    return render(request, "gnfs_komenda/leadership/manage_region.html", {
+        "region": region,
+        "form": form,
+        "current_rfo": current_rfo,
+        "current_2ic": current_2ic,
+        "leadership_history": leadership_history,
+        "editing": True,
+    })
+
+
+@login_required(login_url='login-staff')
+def manage_district_leadership_view(request, district_id):
+    """
+    Manage District Command Leadership (DFO/MFO & 2IC) (Section 17.19, 17.20).
+    Configurable command type (District, Municipal, Metropolitan) and designation.
+    """
+    district = get_object_or_404(District, id=district_id)
+    if not can_manage_district_leadership(request.user, district):
+        raise PermissionDenied("You do not have permission to manage leadership for this District Command.")
+
+    current_co = district.current_commanding_officer
+    current_2ic = district.current_2ic
+
+    if request.method == 'POST':
+        form = DistrictLeadershipForm(request.POST)
+        if form.is_valid():
+            # 1. Update District Configuration
+            cmd_type = form.cleaned_data['command_type']
+            co_desig = form.cleaned_data['co_designation']
+            if district.command_type != cmd_type or district.co_designation != co_desig:
+                district.command_type = cmd_type
+                district.co_designation = co_desig
+                district.save(update_fields=['command_type', 'co_designation'])
+
+            eff_date = form.cleaned_data['effective_date']
+            ref = form.cleaned_data.get('appointment_reference', '').strip()
+            remarks = form.cleaned_data.get('remarks', '').strip()
+
+            new_co = form.cleaned_data.get('commanding_officer')
+            co_acting = form.cleaned_data.get('co_is_acting', False)
+
+            new_2ic = form.cleaned_data.get('district_2ic')
+            dist_2ic_acting = form.cleaned_data.get('district_2ic_is_acting', False)
+
+            try:
+                # Appoint Commanding Officer if selected and changed
+                if new_co and (not current_co or current_co.personnel_id != new_co.id or current_co.is_acting != co_acting or current_co.appointment_type != co_desig):
+                    appoint_commanding_officer(
+                        district=district,
+                        personnel=new_co,
+                        appointment_type=co_desig,
+                        effective_from=eff_date,
+                        appointed_by=request.user,
+                        appointment_reference=ref,
+                        remarks=remarks,
+                        is_acting=co_acting
+                    )
+                    messages.success(request, f"{co_desig} leadership appointment updated for {district.name}.")
+
+                # Appoint 2IC if selected and changed
+                if new_2ic and (not current_2ic or current_2ic.personnel_id != new_2ic.id or current_2ic.is_acting != dist_2ic_acting):
+                    appoint_district_2ic(
+                        district=district,
+                        personnel=new_2ic,
+                        effective_from=eff_date,
+                        appointed_by=request.user,
+                        appointment_reference=ref,
+                        remarks=remarks,
+                        is_acting=dist_2ic_acting
+                    )
+                    messages.success(request, f"District 2IC appointment updated for {district.name}.")
+
+                return redirect('manage-district-leadership', district_id=district.id)
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        initial = {
+            'command_type': district.command_type,
+            'co_designation': district.co_designation or 'DFO',
+            'effective_date': timezone.now().date(),
+        }
+        if current_co:
+            initial['commanding_officer'] = current_co.personnel
+            initial['co_is_acting'] = current_co.is_acting
+            initial['appointment_reference'] = current_co.appointment_reference
+        if current_2ic:
+            initial['district_2ic'] = current_2ic.personnel
+            initial['district_2ic_is_acting'] = current_2ic.is_acting
+
+        form = DistrictLeadershipForm(initial=initial)
+
+    leadership_history = get_district_leadership_history(district)
+    stations = district.stations.filter(active=True).order_by('name')
+    personnel_count = NorminalRoll.active_objects.filter(station__district=district).count()
+
+    context = {
+        "district": district,
+        "form": form,
+        "current_co": current_co,
+        "current_2ic": current_2ic,
+        "leadership_history": leadership_history,
+        "stations": stations,
+        "personnel_count": personnel_count,
+    }
+    return render(request, "gnfs_komenda/leadership/manage_district.html", context)
+
+
+# ==============================================================================
+# SECTION 17: FUNCTIONAL ORGANISATIONAL STRUCTURE CRUD & TREE VIEWS
+# ==============================================================================
+
+@login_required(login_url='login-staff')
+def organisation_tree_view(request):
+    """
+    Interactive Hierarchical Tree View of GNFS Organisation (Section 17.30).
+    Displays Directorates -> Departments -> Units with personnel counts and status.
+    """
+    tree = get_organisation_tree()
+    can_manage = can_manage_functional_structure(request.user)
+
+    total_directorates = FunctionalUnit.objects.filter(unit_type=FunctionalUnit.FunctionalUnitType.DIRECTORATE, active=True).count()
+    total_departments = FunctionalUnit.objects.filter(unit_type__in=[FunctionalUnit.FunctionalUnitType.DEPARTMENT, FunctionalUnit.FunctionalUnitType.DIVISION], active=True).count()
+    total_units = FunctionalUnit.objects.filter(unit_type=FunctionalUnit.FunctionalUnitType.UNIT, active=True).count()
+
+    return render(request, "gnfs_komenda/organisation/tree.html", {
+        "tree": tree,
+        "can_manage": can_manage,
+        "total_directorates": total_directorates,
+        "total_departments": total_departments,
+        "total_units": total_units,
+    })
+
+
+@login_required(login_url='login-staff')
+def directorate_list_view(request):
+    """List all Directorates with counts, active status and action buttons."""
+    directorates = FunctionalUnit.objects.filter(
+        unit_type=FunctionalUnit.FunctionalUnitType.DIRECTORATE
+    ).order_by('display_order', 'name')
+    can_manage = can_manage_functional_structure(request.user)
+    return render(request, "gnfs_komenda/organisation/directorates_list.html", {
+        "directorates": directorates,
+        "can_manage": can_manage,
+    })
+
+
+@login_required(login_url='login-staff')
+def directorate_create_view(request):
+    """Create a new top-level Directorate."""
+    if not can_manage_functional_structure(request.user):
+        raise PermissionDenied("Only National Administrators can manage Directorates.")
+
+    if request.method == 'POST':
+        form = DirectorateForm(request.POST)
+        if form.is_valid():
+            try:
+                create_functional_unit(
+                    name=form.cleaned_data['name'],
+                    unit_type=FunctionalUnit.FunctionalUnitType.DIRECTORATE,
+                    parent=None,
+                    code=form.cleaned_data.get('code', ''),
+                    description=form.cleaned_data.get('description', ''),
+                    display_order=form.cleaned_data.get('display_order', 0),
+                    active=form.cleaned_data.get('active', True),
+                    user=request.user
+                )
+                messages.success(request, f"Directorate '{form.cleaned_data['name']}' created successfully.")
+                return redirect('directorates-list')
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        form = DirectorateForm()
+
+    return render(request, "gnfs_komenda/organisation/unit_form.html", {
+        "form": form,
+        "title": "Add Directorate",
+        "unit_type_label": "Directorate",
+        "back_url": reverse('directorates-list'),
+    })
+
+
+@login_required(login_url='login-staff')
+def directorate_update_view(request, pk):
+    """Update an existing Directorate."""
+    unit = get_object_or_404(FunctionalUnit, pk=pk, unit_type=FunctionalUnit.FunctionalUnitType.DIRECTORATE)
+    if not can_manage_functional_structure(request.user):
+        raise PermissionDenied("Only National Administrators can manage Directorates.")
+
+    if request.method == 'POST':
+        form = DirectorateForm(request.POST, instance=unit)
+        if form.is_valid():
+            try:
+                update_functional_unit(
+                    unit=unit,
+                    name=form.cleaned_data['name'],
+                    code=form.cleaned_data.get('code', ''),
+                    description=form.cleaned_data.get('description', ''),
+                    display_order=form.cleaned_data.get('display_order', 0),
+                    active=form.cleaned_data.get('active', True),
+                    user=request.user
+                )
+                messages.success(request, f"Directorate '{unit.name}' updated successfully.")
+                return redirect('directorates-list')
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        form = DirectorateForm(instance=unit)
+
+    return render(request, "gnfs_komenda/organisation/unit_form.html", {
+        "form": form,
+        "unit": unit,
+        "title": f"Edit Directorate: {unit.name}",
+        "unit_type_label": "Directorate",
+        "back_url": reverse('directorates-list'),
+    })
+
+
+@login_required(login_url='login-staff')
+def directorate_toggle_view(request, pk):
+    """Safe soft-deactivation or reactivation of a Directorate."""
+    unit = get_object_or_404(FunctionalUnit, pk=pk, unit_type=FunctionalUnit.FunctionalUnitType.DIRECTORATE)
+    if not can_manage_functional_structure(request.user):
+        raise PermissionDenied("Only National Administrators can manage Directorates.")
+
+    if unit.active:
+        deactivate_functional_unit(unit, user=request.user)
+        messages.warning(request, f"Directorate '{unit.name}' and all sub-units have been safely deactivated.")
+    else:
+        try:
+            reactivate_functional_unit(unit, user=request.user)
+            messages.success(request, f"Directorate '{unit.name}' reactivated successfully.")
+        except ValidationError as e:
+            messages.error(request, str(e))
+
+    return redirect('directorates-list')
+
+
+@login_required(login_url='login-staff')
+def department_list_view(request):
+    """List all Departments/Divisions with parent Directorate and unit counts."""
+    departments = FunctionalUnit.objects.filter(
+        unit_type__in=[FunctionalUnit.FunctionalUnitType.DEPARTMENT, FunctionalUnit.FunctionalUnitType.DIVISION]
+    ).select_related('parent').order_by('parent__name', 'display_order', 'name')
+    can_manage = can_manage_functional_structure(request.user)
+    return render(request, "gnfs_komenda/organisation/departments_list.html", {
+        "departments": departments,
+        "can_manage": can_manage,
+    })
+
+
+@login_required(login_url='login-staff')
+def department_create_view(request):
+    """Create a new Department under a selected Directorate."""
+    if not can_manage_functional_structure(request.user):
+        raise PermissionDenied("Only National Administrators can manage Departments.")
+
+    if request.method == 'POST':
+        form = DepartmentForm(request.POST)
+        if form.is_valid():
+            try:
+                create_functional_unit(
+                    name=form.cleaned_data['name'],
+                    unit_type=FunctionalUnit.FunctionalUnitType.DEPARTMENT,
+                    parent=form.cleaned_data['parent'],
+                    code=form.cleaned_data.get('code', ''),
+                    description=form.cleaned_data.get('description', ''),
+                    display_order=form.cleaned_data.get('display_order', 0),
+                    active=form.cleaned_data.get('active', True),
+                    user=request.user
+                )
+                messages.success(request, f"Department '{form.cleaned_data['name']}' created successfully.")
+                return redirect('departments-list')
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        form = DepartmentForm()
+
+    return render(request, "gnfs_komenda/organisation/unit_form.html", {
+        "form": form,
+        "title": "Add Department / Division",
+        "unit_type_label": "Department / Division",
+        "back_url": reverse('departments-list'),
+    })
+
+
+@login_required(login_url='login-staff')
+def department_update_view(request, pk):
+    """Update an existing Department."""
+    unit = get_object_or_404(
+        FunctionalUnit,
+        pk=pk,
+        unit_type__in=[FunctionalUnit.FunctionalUnitType.DEPARTMENT, FunctionalUnit.FunctionalUnitType.DIVISION]
+    )
+    if not can_manage_functional_structure(request.user):
+        raise PermissionDenied("Only National Administrators can manage Departments.")
+
+    if request.method == 'POST':
+        form = DepartmentForm(request.POST, instance=unit)
+        if form.is_valid():
+            try:
+                update_functional_unit(
+                    unit=unit,
+                    name=form.cleaned_data['name'],
+                    parent=form.cleaned_data['parent'],
+                    code=form.cleaned_data.get('code', ''),
+                    description=form.cleaned_data.get('description', ''),
+                    display_order=form.cleaned_data.get('display_order', 0),
+                    active=form.cleaned_data.get('active', True),
+                    user=request.user
+                )
+                messages.success(request, f"Department '{unit.name}' updated successfully.")
+                return redirect('departments-list')
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        form = DepartmentForm(instance=unit)
+
+    return render(request, "gnfs_komenda/organisation/unit_form.html", {
+        "form": form,
+        "unit": unit,
+        "title": f"Edit Department: {unit.name}",
+        "unit_type_label": "Department / Division",
+        "back_url": reverse('departments-list'),
+    })
+
+
+@login_required(login_url='login-staff')
+def department_toggle_view(request, pk):
+    """Safe soft-deactivation or reactivation of a Department."""
+    unit = get_object_or_404(
+        FunctionalUnit,
+        pk=pk,
+        unit_type__in=[FunctionalUnit.FunctionalUnitType.DEPARTMENT, FunctionalUnit.FunctionalUnitType.DIVISION]
+    )
+    if not can_manage_functional_structure(request.user):
+        raise PermissionDenied("Only National Administrators can manage Departments.")
+
+    if unit.active:
+        deactivate_functional_unit(unit, user=request.user)
+        messages.warning(request, f"Department '{unit.name}' and its sub-units have been safely deactivated.")
+    else:
+        try:
+            reactivate_functional_unit(unit, user=request.user)
+            messages.success(request, f"Department '{unit.name}' reactivated successfully.")
+        except ValidationError as e:
+            messages.error(request, str(e))
+
+    return redirect('departments-list')
+
+
+@login_required(login_url='login-staff')
+def unit_list_view(request):
+    """List all functional Units with parent Department and Directorate."""
+    units = FunctionalUnit.objects.filter(
+        unit_type=FunctionalUnit.FunctionalUnitType.UNIT
+    ).select_related('parent', 'parent__parent').order_by('parent__parent__name', 'parent__name', 'display_order', 'name')
+    can_manage = can_manage_functional_structure(request.user)
+    return render(request, "gnfs_komenda/organisation/units_list.html", {
+        "units": units,
+        "can_manage": can_manage,
+    })
+
+
+@login_required(login_url='login-staff')
+def unit_create_view(request):
+    """Create a new functional Unit under a selected Department."""
+    if not can_manage_functional_structure(request.user):
+        raise PermissionDenied("Only National Administrators can manage Units.")
+
+    if request.method == 'POST':
+        form = UnitForm(request.POST)
+        if form.is_valid():
+            try:
+                create_functional_unit(
+                    name=form.cleaned_data['name'],
+                    unit_type=FunctionalUnit.FunctionalUnitType.UNIT,
+                    parent=form.cleaned_data['parent'],
+                    code=form.cleaned_data.get('code', ''),
+                    description=form.cleaned_data.get('description', ''),
+                    display_order=form.cleaned_data.get('display_order', 0),
+                    active=form.cleaned_data.get('active', True),
+                    user=request.user
+                )
+                messages.success(request, f"Unit '{form.cleaned_data['name']}' created successfully.")
+                return redirect('units-list')
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        form = UnitForm()
+
+    return render(request, "gnfs_komenda/organisation/unit_form.html", {
+        "form": form,
+        "title": "Add Unit",
+        "unit_type_label": "Unit",
+        "back_url": reverse('units-list'),
+    })
+
+
+@login_required(login_url='login-staff')
+def unit_update_view(request, pk):
+    """Update an existing Unit."""
+    unit = get_object_or_404(FunctionalUnit, pk=pk, unit_type=FunctionalUnit.FunctionalUnitType.UNIT)
+    if not can_manage_functional_structure(request.user):
+        raise PermissionDenied("Only National Administrators can manage Units.")
+
+    if request.method == 'POST':
+        form = UnitForm(request.POST, instance=unit)
+        if form.is_valid():
+            try:
+                update_functional_unit(
+                    unit=unit,
+                    name=form.cleaned_data['name'],
+                    parent=form.cleaned_data['parent'],
+                    code=form.cleaned_data.get('code', ''),
+                    description=form.cleaned_data.get('description', ''),
+                    display_order=form.cleaned_data.get('display_order', 0),
+                    active=form.cleaned_data.get('active', True),
+                    user=request.user
+                )
+                messages.success(request, f"Unit '{unit.name}' updated successfully.")
+                return redirect('units-list')
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        form = UnitForm(instance=unit)
+
+    return render(request, "gnfs_komenda/organisation/unit_form.html", {
+        "form": form,
+        "unit": unit,
+        "title": f"Edit Unit: {unit.name}",
+        "unit_type_label": "Unit",
+        "back_url": reverse('units-list'),
+    })
+
+
+@login_required(login_url='login-staff')
+def unit_toggle_view(request, pk):
+    """Safe soft-deactivation or reactivation of a Unit."""
+    unit = get_object_or_404(FunctionalUnit, pk=pk, unit_type=FunctionalUnit.FunctionalUnitType.UNIT)
+    if not can_manage_functional_structure(request.user):
+        raise PermissionDenied("Only National Administrators can manage Units.")
+
+    if unit.active:
+        deactivate_functional_unit(unit, user=request.user)
+        messages.warning(request, f"Unit '{unit.name}' has been safely deactivated.")
+    else:
+        try:
+            reactivate_functional_unit(unit, user=request.user)
+            messages.success(request, f"Unit '{unit.name}' reactivated successfully.")
+        except ValidationError as e:
+            messages.error(request, str(e))
+
+    return redirect('units-list')
+
+
+# ==============================================================================
+# SECTION 17: MULTIPLE FUNCTIONAL ASSIGNMENTS ON PERSONNEL
+# ==============================================================================
+
+@login_required(login_url='login-staff')
+def personnel_add_functional_assignment_view(request, personnel_id):
+    """Add a functional assignment to an officer (Section 17.11 - 17.15)."""
+    personnel = get_object_or_404(NorminalRoll, id=personnel_id)
+    if not can_user_manage_personnel(request.user, personnel):
+        raise PermissionDenied("You do not have permission to manage this officer's assignments.")
+
+    if request.method == 'POST':
+        form = PersonnelFunctionalAssignmentCreateForm(request.POST)
+        if form.is_valid():
+            try:
+                assign_functional_unit(
+                    personnel=personnel,
+                    functional_unit=form.cleaned_data['functional_unit'],
+                    assignment_role=form.cleaned_data.get('assignment_role', 'Member'),
+                    is_primary=form.cleaned_data.get('is_primary', False),
+                    start_date=form.cleaned_data['start_date'],
+                    assigned_by=request.user,
+                    reason=form.cleaned_data.get('reason', '')
+                )
+                messages.success(request, f"Functional assignment added for {personnel.fullname}.")
+                return redirect('staff-detail', pk=personnel.id)
+            except ValidationError as e:
+                form.add_error(None, str(e))
+    else:
+        form = PersonnelFunctionalAssignmentCreateForm(initial={'start_date': timezone.now().date()})
+
+    return render(request, "gnfs_komenda/organisation/assignment_form.html", {
+        "personnel": personnel,
+        "form": form,
+        "title": f"Add Functional Assignment - {personnel.fullname}",
+    })
+
+
+@login_required(login_url='login-staff')
+@require_POST
+def personnel_remove_functional_assignment_view(request, assignment_id):
+    """Safely remove a functional assignment, preserving history (Section 17.11)."""
+    assignment = get_object_or_404(PersonnelFunctionalAssignment, id=assignment_id)
+    personnel = assignment.personnel
+    if not can_user_manage_personnel(request.user, personnel):
+        raise PermissionDenied("You do not have permission to manage this officer's assignments.")
+
+    reason = request.POST.get('reason', 'Removed by administrator.')
+    remove_functional_assignment(assignment, user=request.user, reason=reason)
+    messages.warning(request, f"Functional assignment '{assignment.functional_unit.name}' removed for {personnel.fullname}.")
+    return redirect('staff-detail', pk=personnel.id)
+
+
+@login_required(login_url='login-staff')
+@require_POST
+def personnel_set_primary_assignment_view(request, assignment_id):
+    """Set a specific active assignment as primary (Section 17.13)."""
+    assignment = get_object_or_404(PersonnelFunctionalAssignment, id=assignment_id)
+    personnel = assignment.personnel
+    if not can_user_manage_personnel(request.user, personnel):
+        raise PermissionDenied("You do not have permission to manage this officer's assignments.")
+
+    set_primary_functional_assignment(personnel, assignment, user=request.user)
+    messages.success(request, f"'{assignment.functional_unit.name}' is now designated as Primary assignment for {personnel.fullname}.")
+    return redirect('staff-detail', pk=personnel.id)

@@ -5,7 +5,7 @@ atomic balance reservation/deduction with select_for_update(), and sync with Nor
 """
 
 from django.core.exceptions import ValidationError, PermissionDenied
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from gnfs_komenda.models import (
@@ -47,15 +47,63 @@ def is_self_approval(user, leave_request):
     return False
 
 
+def resolve_leave_approver(leave_request):
+    """
+    Resolve the designated command leadership approver for a leave request based on
+    command appointments hierarchy:
+    - If applicant is active RFO -> National HQ / National Admin
+    - If applicant is active DFO/MFO -> Regional Fire Officer (RFO) of applicant's region
+    - Otherwise -> Commanding Officer (DFO/MFO) of applicant's district
+    """
+    from gnfs_komenda.models import CommandAppointment
+    personnel = leave_request.personnel
+    if not personnel:
+        return "National Headquarters"
+
+    # Check if applicant is active RFO
+    is_rfo = CommandAppointment.objects.filter(
+        personnel=personnel,
+        is_active=True,
+        appointment_type__in=['RFO', 'ACTING_RFO']
+    ).exists()
+    if is_rfo:
+        return "National Headquarters / Chief Fire Officer"
+
+    # Check if applicant is active DFO/MFO
+    is_co = CommandAppointment.objects.filter(
+        personnel=personnel,
+        is_active=True,
+        appointment_type__in=['DFO', 'MFO', 'METRO_FO', 'ACTING_DFO', 'ACTING_MFO', 'ACTING_METRO_FO']
+    ).first()
+    if is_co:
+        reg = is_co.region or (is_co.district.region if is_co.district else None)
+        if reg and reg.current_rfo:
+            return f"Regional Fire Officer: {reg.current_rfo.personnel.fullname} ({reg.name})"
+        return f"Regional Fire Officer ({reg.name if reg else 'Regional HQ'})"
+
+    # Station personnel -> District CO
+    station = personnel.station
+    district = station.district if station else None
+    if district:
+        desig = district.co_designation or "DFO"
+        if district.current_commanding_officer:
+            return f"{desig}: {district.current_commanding_officer.personnel.fullname} ({district.name})"
+        return f"{desig} ({district.name})"
+
+    return "National Headquarters"
+
+
 def can_user_approve_leave(user, leave_request):
     """
     Determine if a user has sufficient hierarchical jurisdiction to approve a leave request.
     Anti-self-approval is strictly enforced.
     Hierarchy:
-    - Station personnel -> DFO (District Fire Officer) / Regional Admin / National Admin
-    - DFO -> Regional Fire Officer (RFO) / National Admin
+    - Station personnel -> DFO/MFO (active command appointment or District Admin) / Regional Admin / National Admin
+    - DFO/MFO -> Regional Fire Officer (active command appointment or Regional Admin) / National Admin
     - RFO / Regional Admin -> National Admin / Superuser
     """
+    from gnfs_komenda.models import CommandAppointment
+
     if not user or not user.is_authenticated:
         return False
 
@@ -70,31 +118,85 @@ def can_user_approve_leave(user, leave_request):
     if role == "NATIONAL_ADMIN":
         return True
 
-    assignment = get_user_assignment(user)
-    if not assignment or not assignment.active:
-        return False
-
     personnel = leave_request.personnel
     if not personnel:
         return False
 
     station = personnel.station
-    if not station:
-        # Personnel not assigned to any station -> only National Admin can approve
-        return False
-
-    district = station.district
+    district = station.district if station else None
     region = district.region if district else None
 
-    # Regional Admin can approve any station or district personnel within their region
-    if role == "REGIONAL_ADMIN":
-        return region and assignment.region_id == region.id
+    user_personnel = NorminalRoll.objects.filter(
+        staffID__iexact=user.username
+    ).first()
 
-    # DFO / District Admin can approve station/post personnel in their district
-    if role in ("DFO", "DISTRICT_ADMIN"):
-        return district and assignment.district_id == district.id
+    # Check if applicant is currently an active commanding officer (DFO/MFO)
+    applicant_is_co = CommandAppointment.objects.filter(
+        personnel=personnel,
+        is_active=True,
+        appointment_type__in=['DFO', 'MFO', 'METRO_FO', 'ACTING_DFO', 'ACTING_MFO', 'ACTING_METRO_FO']
+    ).exists()
+
+    # Check if applicant is currently an active RFO
+    applicant_is_rfo = CommandAppointment.objects.filter(
+        personnel=personnel,
+        is_active=True,
+        appointment_type__in=['RFO', 'ACTING_RFO']
+    ).exists()
+
+    if applicant_is_rfo:
+        # Only National Admin / Superuser can approve RFO leave
+        return False
+
+    if applicant_is_co:
+        # DFO/MFO leave must escalate to Regional Fire Officer or Regional Admin
+        if role == "REGIONAL_ADMIN":
+            assignment = get_user_assignment(user)
+            return bool(assignment and assignment.active and region and assignment.region_id == region.id)
+        if user_personnel and region:
+            active_rfo = CommandAppointment.objects.filter(
+                region=region,
+                is_active=True,
+                appointment_type__in=['RFO', 'ACTING_RFO']
+            ).first()
+            if active_rfo and active_rfo.personnel_id == user_personnel.id:
+                return True
+        return False
+
+    # Normal station personnel leave approval:
+    # 1. Active RFO of region
+    if user_personnel and region:
+        active_rfo = CommandAppointment.objects.filter(
+            region=region,
+            is_active=True,
+            appointment_type__in=['RFO', 'ACTING_RFO']
+        ).first()
+        if active_rfo and active_rfo.personnel_id == user_personnel.id:
+            return True
+
+    # 2. Regional Admin of region
+    if role == "REGIONAL_ADMIN":
+        assignment = get_user_assignment(user)
+        return bool(assignment and assignment.active and region and assignment.region_id == region.id)
+
+    # 3. Active CO (DFO/MFO) of district
+    if user_personnel and district:
+        active_co = CommandAppointment.objects.filter(
+            district=district,
+            is_active=True,
+            appointment_type__in=['DFO', 'MFO', 'METRO_FO', 'ACTING_DFO', 'ACTING_MFO', 'ACTING_METRO_FO']
+        ).first()
+        if active_co and active_co.personnel_id == user_personnel.id:
+            return True
+
+    # 4. District Admin / DFO role assignment
+    assignment = get_user_assignment(user)
+    if assignment and assignment.active:
+        if role in ("DFO", "DISTRICT_ADMIN"):
+            return bool(district and assignment.district_id == district.id)
 
     return False
+
 
 
 def submit_leave_request(
@@ -355,3 +457,232 @@ def reject_leave_request(leave_request_id, user, comments=""):
         )
 
     return leave_req
+
+
+def _notify_district_stakeholders_on_approval(leave_req, approver_user):
+    """
+    Prompt 3 Section 13:
+    Immediately notify:
+    - Personnel
+    - Administration
+    - Operations
+    - District 2IC
+    """
+    from gnfs_komenda.models import CommandAppointment, AdministrativeAssignment
+    from gnfs_komenda.security import send_notification
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    district = leave_req.routing_district
+    if not district and leave_req.personnel and leave_req.personnel.station:
+        district = leave_req.personnel.station.district
+
+    notified_user_ids = {approver_user.id}
+    if leave_req.requested_by_id:
+        notified_user_ids.add(leave_req.requested_by_id)
+
+    # 1. District 2IC
+    if district:
+        sec_ic = CommandAppointment.objects.filter(
+            district=district,
+            appointment_type="DISTRICT_2IC",
+            is_active=True
+        ).select_related('personnel').first()
+        if sec_ic and sec_ic.personnel:
+            user_2ic = User.objects.filter(username__iexact=sec_ic.personnel.staffID).first()
+            if user_2ic and user_2ic.id not in notified_user_ids:
+                send_notification(
+                    recipient=user_2ic,
+                    title=f"Command Awareness: Leave Approved for {leave_req.personnel.fullname}",
+                    message=f"Leave #{leave_req.reference_number or leave_req.id} was command approved ({leave_req.start_date} to {leave_req.last_leave_date}).",
+                    notification_type="INFO",
+                    link_url=f"/workspace/command/district/{district.id}/"
+                )
+                notified_user_ids.add(user_2ic.id)
+
+    # 2. District Administration & Operations Stakeholders
+    if district:
+        admin_assigns = AdministrativeAssignment.objects.filter(
+            district=district,
+            is_active=True
+        ).select_related('personnel')
+        for aa in admin_assigns:
+            if aa.personnel:
+                adm_u = User.objects.filter(username__iexact=aa.personnel.staffID).first()
+                if adm_u and adm_u.id not in notified_user_ids:
+                    send_notification(
+                        recipient=adm_u,
+                        title=f"Action Required: Approved Leave #{leave_req.reference_number or leave_req.id}",
+                        message=f"Leave for {leave_req.personnel.fullname} was approved by Command. Final administrative dispatch to Watch Room required.",
+                        notification_type="ACTION_REQUIRED",
+                        link_url=f"/workspace/admin/district/{district.id}/"
+                    )
+                    notified_user_ids.add(adm_u.id)
+
+
+def dfo_approve_leave(leave_request_id, user, comments=""):
+    """
+    DFO / MFO Final Command Approval (Prompt 3 Sections 11-13).
+    - Checks anti-self-approval.
+    - Resolves active command appointment for the approver.
+    - Sets status = LeaveRequest.Status.APPROVED_PENDING_ADMIN_PROCESSING.
+    - Records approved_by, approval_appointment, approved_at, approval_comment.
+    - Deducts leave balance atomically strictly once (via deduct_leave_balance_atomic).
+    - Notifies Personnel, Administration, Operations, and District 2IC.
+    """
+    from gnfs_komenda.models import CommandAppointment
+    from gnfs_komenda.services.leave_balance_service import deduct_leave_balance_atomic
+    from gnfs_komenda.security import send_notification
+
+    with transaction.atomic():
+        leave_req = LeaveRequest.objects.select_for_update().select_related(
+            'personnel', 'entitlement', 'leave_type', 'routing_district', 'routing_region'
+        ).get(pk=leave_request_id)
+
+        if is_self_approval(user, leave_req):
+            raise PermissionDenied("Self-approval is strictly prohibited. Officers cannot approve their own leave.")
+
+        if not can_user_approve_leave(user, leave_req):
+            raise PermissionDenied("You do not have command authority to approve this leave request.")
+
+        valid_pending = (
+            LeaveRequest.Status.PENDING_DFO_MFO_DECISION,
+            LeaveRequest.Status.PENDING_APPROVAL,
+            LeaveRequest.Status.PENDING_OPERATIONS_RECOMMENDATION,
+        )
+        if leave_req.status not in valid_pending:
+            raise ValidationError(
+                f"Cannot approve leave with status '{leave_req.get_status_display()}'. Must be awaiting command decision."
+            )
+
+        # Resolve command appointment of the approver
+        approver_personnel = NorminalRoll.objects.filter(staffID__iexact=user.username).first()
+        co_appt = None
+        if approver_personnel:
+            co_appt = CommandAppointment.objects.filter(
+                personnel=approver_personnel,
+                is_active=True
+            ).first()
+
+        old_status = leave_req.status
+        leave_req.status = LeaveRequest.Status.APPROVED_PENDING_ADMIN_PROCESSING
+        leave_req.processing_stage = LeaveRequest.ProcessingStage.DISTRICT_ADMIN
+        leave_req.approved_by = user
+        leave_req.approved_at = timezone.now()
+        leave_req.approval_comment = comments
+        leave_req.approval_appointment = co_appt
+
+        # Single atomic balance deduction
+        deduct_leave_balance_atomic(leave_req)
+
+        leave_req.save()
+
+        # Decision & History
+        approver_role = get_user_role(user) or (co_appt.get_appointment_type_display() if co_appt else "Commanding Officer")
+        LeaveApprovalDecision.objects.create(
+            leave_request=leave_req,
+            approver=user,
+            approver_role=approver_role,
+            decision="APPROVED",
+            comments=comments or "Command approval granted by DFO/MFO.",
+            previous_status=old_status,
+            new_status=leave_req.status
+        )
+
+        from gnfs_komenda.models import LeaveWorkflowHistory
+        LeaveWorkflowHistory.objects.create(
+            leave_request=leave_req,
+            action="COMMAND_APPROVED",
+            from_status=old_status,
+            to_status=leave_req.status,
+            actor=user,
+            actor_role=approver_role,
+            functional_office="Command",
+            comment=comments or "Command approval granted by DFO/MFO."
+        )
+
+        # Notify Personnel
+        if leave_req.requested_by:
+            send_notification(
+                recipient=leave_req.requested_by,
+                title="Leave Command Approved",
+                message=f"Your {leave_req.leave_type.name} request #{leave_req.reference_number or leave_req.id} has been APPROVED by Command. Pending final administrative processing.",
+                notification_type="SUCCESS",
+                link_url=f"/my/leave/{leave_req.id}/"
+            )
+
+        _notify_district_stakeholders_on_approval(leave_req, user)
+
+        return leave_req
+
+
+def dfo_reject_leave(leave_request_id, user, comments=""):
+    """
+    DFO / MFO Final Command Rejection (Prompt 3 Sections 11-12).
+    """
+    from gnfs_komenda.services.leave_balance_service import release_reserved_leave_days
+    from gnfs_komenda.security import send_notification
+
+    if not comments or not comments.strip():
+        raise ValidationError("A written rejection reason is mandatory.")
+
+    with transaction.atomic():
+        leave_req = LeaveRequest.objects.select_for_update().select_related(
+            'personnel', 'entitlement', 'leave_type', 'routing_district', 'routing_region'
+        ).get(pk=leave_request_id)
+
+        if is_self_approval(user, leave_req):
+            raise PermissionDenied("Self-action is strictly prohibited.")
+
+        if not can_user_approve_leave(user, leave_req):
+            raise PermissionDenied("You do not have command authority to reject this leave request.")
+
+        valid_pending = (
+            LeaveRequest.Status.PENDING_DFO_MFO_DECISION,
+            LeaveRequest.Status.PENDING_APPROVAL,
+            LeaveRequest.Status.PENDING_OPERATIONS_RECOMMENDATION,
+        )
+        if leave_req.status not in valid_pending:
+            raise ValidationError(f"Cannot reject leave with status '{leave_req.get_status_display()}'.")
+
+        old_status = leave_req.status
+        leave_req.status = LeaveRequest.Status.REJECTED
+        leave_req.rejection_reason = comments
+        leave_req.save(update_fields=['status', 'rejection_reason', 'updated_at'])
+
+        # Release reserved balance
+        release_reserved_leave_days(leave_req)
+
+        approver_role = get_user_role(user) or "Commanding Officer"
+        LeaveApprovalDecision.objects.create(
+            leave_request=leave_req,
+            approver=user,
+            approver_role=approver_role,
+            decision="REJECTED",
+            comments=comments,
+            previous_status=old_status,
+            new_status=leave_req.status
+        )
+
+        from gnfs_komenda.models import LeaveWorkflowHistory
+        LeaveWorkflowHistory.objects.create(
+            leave_request=leave_req,
+            action="COMMAND_REJECTED",
+            from_status=old_status,
+            to_status=leave_req.status,
+            actor=user,
+            actor_role=approver_role,
+            functional_office="Command",
+            comment=comments
+        )
+
+        if leave_req.requested_by:
+            send_notification(
+                recipient=leave_req.requested_by,
+                title="Leave Request Rejected",
+                message=f"Your leave request #{leave_req.id} was rejected by Command: {comments}",
+                notification_type="DANGER",
+                link_url=f"/my/leave/{leave_req.id}/"
+            )
+
+        return leave_req

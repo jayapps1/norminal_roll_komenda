@@ -1,0 +1,479 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}My Dashboard — {{ personnel.fullname }} — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1400px;">
+
+  <!-- Hero Welcome Banner -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 text-white overflow-hidden" 
+       style="background: linear-gradient(135deg, #8B0000 0%, #B22222 60%, #4A0000 100%); border-left: 6px solid #FFD700 !important;">
+    <div class="card-body p-4 p-md-4">
+      <div class="row align-items-center g-3">
+        <div class="col-lg-8">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge bg-warning text-dark fw-bold px-2 py-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+              PERSONNEL SELF-SERVICE
+            </span>
+            {% if command_appointment %}
+            <span class="badge bg-dark text-warning border border-warning px-2 py-1" style="font-size: 0.72rem;">
+              <i class="fas fa-medal me-1"></i>{{ command_appointment.get_appointment_type_display }}
+              {% if command_appointment.is_acting %}(Acting){% endif %}
+            </span>
+            {% endif %}
+            <span class="badge {% if personnel.leave_status == 'ON LEAVE' %}bg-info text-dark{% elif personnel.leave_status == 'AT POST' %}bg-success text-white{% else %}bg-secondary text-white{% endif %} px-2 py-1" style="font-size: 0.72rem;">
+              {{ personnel.leave_status|default:"AT POST" }}
+            </span>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 my-2">
+            {% if personnel.profile_picture_url %}
+            <img src="{{ personnel.profile_picture_url }}" alt="{{ personnel.fullname }}"
+                 class="rounded-circle border border-2 border-warning shadow"
+                 style="width: 56px; height: 56px; object-fit: cover; flex-shrink: 0;">
+            {% else %}
+            <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold shadow flex-shrink-0"
+                 style="width: 56px; height: 56px; font-size: 1.35rem;">
+              {{ personnel.fullname|slice:":1"|upper }}
+            </div>
+            {% endif %}
+            <div>
+              <h2 class="fw-bold mb-0 text-white">WELCOME, {{ personnel.fullname|upper }}</h2>
+              <span class="text-white-50 small">{{ personnel.rank.name|default:personnel.job_grade }} • {{ personnel.staffID }}</span>
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap align-items-center gap-3 mt-3 text-white-50 small">
+            <div>
+              <span class="text-white fw-semibold"><i class="fas fa-id-card text-warning me-1"></i>Staff ID:</span>
+              <span class="text-white bg-black bg-opacity-25 px-2 py-0-5 rounded font-monospace">{{ personnel.staffID }}</span>
+            </div>
+            <div>
+              <span class="text-white fw-semibold"><i class="fas fa-award text-warning me-1"></i>Rank:</span>
+              <span class="text-white">{{ personnel.rank.name|default:personnel.job_grade }}</span>
+              <span class="badge bg-white bg-opacity-25 text-white ms-1">{{ personnel.officer_category }}</span>
+            </div>
+            {% if primary_assignment %}
+            <div>
+              <span class="text-white fw-semibold"><i class="fas fa-briefcase text-warning me-1"></i>Assignment:</span>
+              <span class="text-white">{{ primary_assignment.functional_unit.name }}</span>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Current Posting Breadcrumb Trail -->
+          <div class="mt-3 p-2 px-3 rounded-3 bg-black bg-opacity-25 d-inline-flex flex-wrap align-items-center gap-2 small">
+            <span class="text-warning fw-bold"><i class="fas fa-map-marker-alt me-1"></i>Posting:</span>
+            <span>{{ personnel.station.district.region.name|default:"National HQ" }}</span>
+            {% if personnel.station.district %}
+            <i class="fas fa-chevron-right text-white-50" style="font-size: 0.65rem;"></i>
+            <span>{{ personnel.station.district.name }}</span>
+            {% endif %}
+            {% if personnel.station %}
+            <i class="fas fa-chevron-right text-white-50" style="font-size: 0.65rem;"></i>
+            <span class="text-white fw-bold">{{ personnel.station.name }}</span>
+            {% endif %}
+            {% if personnel.current_posting.post %}
+            <i class="fas fa-chevron-right text-white-50" style="font-size: 0.65rem;"></i>
+            <span class="text-warning">{{ personnel.current_posting.post.name }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+          <div class="d-flex flex-column flex-sm-row flex-lg-column gap-2 justify-content-lg-end">
+            <a href="{% url 'my-leave-request' %}" class="btn btn-warning text-dark fw-bold shadow-sm py-2 px-3">
+              <i class="fas fa-calendar-plus me-1"></i> Request Leave
+            </a>
+            <a href="{% url 'my-profile' %}" class="btn btn-outline-light py-2 px-3">
+              <i class="fas fa-user-circle me-1"></i> View My Profile
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions Bar -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-2">
+    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between px-2">
+      <span class="fw-bold text-muted small text-uppercase"><i class="fas fa-bolt text-warning me-1"></i>Quick Actions:</span>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'my-leave' %}" class="btn btn-sm btn-outline-danger">
+          <i class="fas fa-calendar-alt me-1"></i> My Leave
+        </a>
+        <a href="{% url 'my-posting' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-map-marked-alt me-1"></i> My Posting
+        </a>
+        <a href="{% url 'my-departments' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-sitemap me-1"></i> My Departments
+        </a>
+        <a href="{% url 'my-transfers' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-exchange-alt me-1"></i> My Transfers
+        </a>
+        <a href="{% url 'my-notifications' %}" class="btn btn-sm btn-outline-secondary position-relative">
+          <i class="fas fa-bell me-1"></i> Notifications
+          {% if unread_notifs > 0 %}
+          <span class="badge bg-danger rounded-pill ms-1">{{ unread_notifs }}</span>
+          {% endif %}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Metrics Cards Row -->
+  <div class="row g-3 mb-4">
+    <!-- Annual Leave Balance Card -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-4 h-100 bg-white p-3 border-start border-danger border-4">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="text-muted small text-uppercase fw-bold">Annual Leave Balance</span>
+            <div class="fs-2 fw-bold text-danger mt-1">
+              {{ entitlement.remaining_balance|default:"0" }}
+              <span class="fs-6 text-muted fw-normal">Days</span>
+            </div>
+          </div>
+          <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3">
+            <i class="fas fa-wallet fa-lg"></i>
+          </div>
+        </div>
+        <div class="small text-muted pt-2 border-top d-flex justify-content-between">
+          <span>Entitlement: <strong>{{ entitlement.total_entitlement|default:"0" }}d</strong></span>
+          <span>Taken: <strong>{{ entitlement.days_taken|default:"0" }}d</strong></span>
+          <span>Pending: <strong>{{ entitlement.days_reserved|default:"0" }}d</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next Approved Leave Card -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-4 h-100 bg-white p-3 border-start border-success border-4">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="text-muted small text-uppercase fw-bold">Next Approved Leave</span>
+            {% if next_approved %}
+            <div class="fs-5 fw-bold text-success mt-1 text-truncate" style="max-width: 180px;">
+              {{ next_approved.leave_type.name }}
+            </div>
+            <div class="small text-muted">
+              {{ next_approved.start_date|date:"d M Y" }} &rarr; {{ next_approved.last_leave_date|date:"d M Y" }}
+            </div>
+            {% else %}
+            <div class="fs-6 fw-semibold text-secondary mt-2">None scheduled</div>
+            <div class="small text-muted">No upcoming leave booked</div>
+            {% endif %}
+          </div>
+          <div class="bg-success bg-opacity-10 text-success rounded-circle p-3">
+            <i class="fas fa-calendar-check fa-lg"></i>
+          </div>
+        </div>
+        <div class="small text-muted pt-2 border-top">
+          {% if next_approved %}
+          <span class="text-success"><i class="fas fa-clock me-1"></i>Resumes: {{ next_approved.resume_date|date:"d M Y" }}</span>
+          {% else %}
+          <span>Ready to submit a new request</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Requests Card -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-4 h-100 bg-white p-3 border-start border-warning border-4">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="text-muted small text-uppercase fw-bold">Pending Requests</span>
+            <div class="fs-2 fw-bold text-warning mt-1">
+              {{ pending_count }}
+              <span class="fs-6 text-muted fw-normal">Active</span>
+            </div>
+          </div>
+          <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3">
+            <i class="fas fa-hourglass-half fa-lg"></i>
+          </div>
+        </div>
+        <div class="small text-muted pt-2 border-top d-flex justify-content-between">
+          <span>In workflow review</span>
+          <a href="{% url 'my-leave' %}" class="text-decoration-none fw-bold text-warning">View All &rarr;</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transfer Status Card -->
+    <div class="col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-4 h-100 bg-white p-3 border-start border-primary border-4">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="text-muted small text-uppercase fw-bold">Transfer Status</span>
+            {% if active_transfer %}
+            <div class="fs-6 fw-bold text-primary mt-1">
+              {{ active_transfer.get_status_display }}
+            </div>
+            <div class="small text-muted text-truncate" style="max-width: 170px;">
+              {{ active_transfer.destination_station.name|default:active_transfer.destination_district.name }}
+            </div>
+            {% else %}
+            <div class="fs-6 fw-semibold text-secondary mt-2">No Active Transfer</div>
+            <div class="small text-muted">Confirmed at current post</div>
+            {% endif %}
+          </div>
+          <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3">
+            <i class="fas fa-exchange-alt fa-lg"></i>
+          </div>
+        </div>
+        <div class="small text-muted pt-2 border-top">
+          {% if active_transfer %}
+          <a href="{% url 'my-transfers' %}" class="text-decoration-none fw-bold text-primary">Track Transfer &rarr;</a>
+          {% else %}
+          <span>Stationed at {{ personnel.station.name|default:"Base" }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left Column: Detailed Leave Entitlement Breakdown & Recent Leaves -->
+    <div class="col-lg-8">
+      
+      <!-- Annual Leave Ledger Card (Section 3 Spec) -->
+      <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-calculator text-danger me-2"></i>Annual Leave Summary — {{ today.year }}
+          </h6>
+          <a href="{% url 'my-leave' %}" class="btn btn-sm btn-outline-danger py-1 px-3">
+            Full Leave Ledger
+          </a>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3 text-center mb-3">
+            <div class="col-4 col-md-2">
+              <div class="p-2 rounded bg-light">
+                <span class="text-muted small d-block">Entitlement</span>
+                <strong class="fs-5 text-dark">{{ entitlement.base_entitlement|default:"0" }}</strong>
+                <span class="small text-muted d-block">Days</span>
+              </div>
+            </div>
+            <div class="col-4 col-md-2">
+              <div class="p-2 rounded bg-light">
+                <span class="text-muted small d-block">Carry Fwd</span>
+                <strong class="fs-5 text-secondary">{{ entitlement.carry_forward_days|default:"0" }}</strong>
+                <span class="small text-muted d-block">Days</span>
+              </div>
+            </div>
+            <div class="col-4 col-md-2">
+              <div class="p-2 rounded bg-light border border-secondary border-opacity-25">
+                <span class="text-muted small d-block">Total Pool</span>
+                <strong class="fs-5 text-dark">{{ entitlement.total_entitlement|default:"0" }}</strong>
+                <span class="small text-muted d-block">Days</span>
+              </div>
+            </div>
+            <div class="col-4 col-md-2">
+              <div class="p-2 rounded bg-light">
+                <span class="text-muted small d-block">Taken</span>
+                <strong class="fs-5 text-danger">{{ entitlement.days_taken|default:"0" }}</strong>
+                <span class="small text-muted d-block">Days</span>
+              </div>
+            </div>
+            <div class="col-4 col-md-2">
+              <div class="p-2 rounded bg-light">
+                <span class="text-muted small d-block">Pending</span>
+                <strong class="fs-5 text-warning">{{ entitlement.days_reserved|default:"0" }}</strong>
+                <span class="small text-muted d-block">Days</span>
+              </div>
+            </div>
+            <div class="col-4 col-md-2">
+              <div class="p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25">
+                <span class="text-danger small d-block fw-bold">Available</span>
+                <strong class="fs-5 text-danger">{{ entitlement.remaining_balance|default:"0" }}</strong>
+                <span class="small text-danger d-block">Days</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress bar -->
+          {% with total=entitlement.total_entitlement|default:1 %}
+          <div class="progress mb-2" style="height: 10px;">
+            <div class="progress-bar bg-danger" role="progressbar" 
+                 style="width: {% widthratio entitlement.days_taken total 100 %}%;" 
+                 title="Taken: {{ entitlement.days_taken }}d"></div>
+            <div class="progress-bar bg-warning" role="progressbar" 
+                 style="width: {% widthratio entitlement.days_reserved total 100 %}%;" 
+                 title="Pending: {{ entitlement.days_reserved }}d"></div>
+          </div>
+          {% endwith %}
+          <div class="d-flex justify-content-between small text-muted">
+            <span><i class="fas fa-square text-danger me-1"></i>Days Taken</span>
+            <span><i class="fas fa-square text-warning me-1"></i>Reserved in Review</span>
+            <span><i class="fas fa-square text-success me-1"></i>Available for Application</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Leave Applications Table -->
+      <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-history text-secondary me-2"></i>My Recent Leave Requests
+          </h6>
+          <a href="{% url 'my-leave-request' %}" class="btn btn-sm btn-danger py-1 px-3">
+            <i class="fas fa-plus me-1"></i> New Request
+          </a>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-muted small text-uppercase">
+              <tr>
+                <th class="ps-4">Leave Type</th>
+                <th>Days</th>
+                <th>Start Date</th>
+                <th>Resume Date</th>
+                <th>Status</th>
+                <th class="text-end pe-4">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for req in recent_leaves %}
+              <tr>
+                <td class="ps-4">
+                  <div class="fw-bold text-dark">{{ req.leave_type.name }}</div>
+                  <span class="small text-muted">Ref: #{{ req.id }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-light text-dark border">{{ req.duration }} days</span>
+                </td>
+                <td>{{ req.start_date|date:"d M Y" }}</td>
+                <td>{{ req.resume_date|date:"d M Y" }}</td>
+                <td>
+                  {% if req.status == 'APPROVED' or req.status == 'ACTIVE' %}
+                  <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>{{ req.get_status_display }}</span>
+                  {% elif req.status == 'PENDING_PROCESSING' %}
+                  <span class="badge bg-secondary"><i class="fas fa-clipboard-list me-1"></i>Awaiting Processing</span>
+                  {% elif req.status == 'PENDING_APPROVAL' %}
+                  <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half me-1"></i>Awaiting Approval</span>
+                  {% elif req.status == 'RETURNED_FOR_CORRECTION' %}
+                  <span class="badge bg-info text-dark"><i class="fas fa-edit me-1"></i>Needs Correction</span>
+                  {% elif req.status == 'REJECTED' %}
+                  <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Rejected</span>
+                  {% else %}
+                  <span class="badge bg-light text-dark">{{ req.get_status_display }}</span>
+                  {% endif %}
+                </td>
+                <td class="text-end pe-4">
+                  <a href="{% url 'my-leave-detail' req.pk %}" class="btn btn-sm btn-outline-secondary py-1 px-2" title="View Details">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  {% if req.status == 'RETURNED_FOR_CORRECTION' %}
+                  <a href="{% url 'my-leave-edit' req.pk %}" class="btn btn-sm btn-warning py-1 px-2 ms-1" title="Correct Request">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">
+                  <i class="fas fa-calendar-times fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                  No leave requests submitted yet.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Profile Summary & Notifications -->
+    <div class="col-lg-4">
+      
+      <!-- Career Posting Card -->
+      <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3">
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-map-marked-alt text-danger me-2"></i>Current Command Posting
+        </h6>
+        <div class="mb-2">
+          <span class="text-muted small d-block">Region:</span>
+          <strong class="text-dark">{{ personnel.station.district.region.name|default:"National Command" }}</strong>
+        </div>
+        <div class="mb-2">
+          <span class="text-muted small d-block">District Command:</span>
+          <strong class="text-dark">{{ personnel.station.district.name|default:"Headquarters" }}</strong>
+        </div>
+        <div class="mb-2">
+          <span class="text-muted small d-block">Fire Station:</span>
+          <strong class="text-dark">{{ personnel.station.name|default:"Not Assigned" }}</strong>
+        </div>
+        {% if personnel.current_posting.post %}
+        <div class="mb-2">
+          <span class="text-muted small d-block">Fire Post:</span>
+          <strong class="text-dark">{{ personnel.current_posting.post.name }}</strong>
+        </div>
+        {% endif %}
+        <div class="pt-2 border-top mt-2 text-end">
+          <a href="{% url 'my-posting' %}" class="text-decoration-none small fw-bold text-danger">Posting History &rarr;</a>
+        </div>
+      </div>
+
+      <!-- Functional Assignments Card -->
+      <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3">
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-sitemap text-info me-2"></i>Functional Assignments
+        </h6>
+        {% if active_assignments %}
+          {% for asgn in active_assignments %}
+          <div class="d-flex align-items-center justify-content-between p-2 rounded mb-2 {% if asgn.is_primary %}bg-danger bg-opacity-10 border border-danger border-opacity-25{% else %}bg-light{% endif %}">
+            <div>
+              <strong class="text-dark small d-block">{{ asgn.functional_unit.name }}</strong>
+              <span class="text-muted" style="font-size: 0.75rem;">{{ asgn.functional_unit.department.name }}</span>
+            </div>
+            {% if asgn.is_primary %}
+            <span class="badge bg-danger text-white" style="font-size: 0.65rem;">PRIMARY</span>
+            {% else %}
+            <span class="badge bg-secondary text-white" style="font-size: 0.65rem;">ADDITIONAL</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-muted small py-2">No functional assignments recorded.</div>
+        {% endif %}
+        <div class="pt-2 border-top mt-2 text-end">
+          <a href="{% url 'my-departments' %}" class="text-decoration-none small fw-bold text-info">View Departments &rarr;</a>
+        </div>
+      </div>
+
+      <!-- Recent Notifications Card -->
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-3">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+          <h6 class="fw-bold text-dark mb-0">
+            <i class="fas fa-bell text-warning me-2"></i>Notifications
+          </h6>
+          {% if unread_notifs > 0 %}
+          <span class="badge bg-danger rounded-pill">{{ unread_notifs }} new</span>
+          {% endif %}
+        </div>
+        <div class="notification-list">
+          {% for notif in recent_notifs %}
+          <div class="p-2 rounded mb-2 {% if not notif.is_read %}bg-warning bg-opacity-10 border-start border-warning border-3{% else %}bg-light{% endif %}">
+            <div class="small fw-semibold text-dark">{{ notif.title }}</div>
+            <div class="small text-muted">{{ notif.message|truncatechars:70 }}</div>
+            <div class="text-muted mt-1" style="font-size: 0.7rem;">{{ notif.created_at|timesince }} ago</div>
+          </div>
+          {% empty %}
+          <div class="text-muted small text-center py-3">No notifications.</div>
+          {% endfor %}
+        </div>
+        <div class="pt-2 border-top mt-2 text-end">
+          <a href="{% url 'my-notifications' %}" class="text-decoration-none small fw-bold text-warning">All Notifications &rarr;</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

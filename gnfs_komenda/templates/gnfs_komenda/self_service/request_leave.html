@@ -1,0 +1,470 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}Request Leave — GNFS Self-Service{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1200px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'my-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-user-circle me-1"></i> My Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'my-leave' %}" class="text-decoration-none text-secondary">My Leave</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Apply for Leave</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-calendar-plus text-danger me-2"></i>Personnel Leave Application
+      </h3>
+      <p class="text-muted small mb-0">Self-service statutory leave submission. Official details are verified automatically from your Nominal Roll record.</p>
+    </div>
+
+    <a href="{% url 'my-leave' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+      <i class="fas fa-arrow-left me-1"></i> Back to My Leave
+    </a>
+  </div>
+
+  <!-- Auto-Populated Personnel Summary Card (Section 2, 7 & 8) -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3 border-top border-danger border-4">
+    <div class="row align-items-center g-3">
+      <div class="col-md-2 text-center text-md-start">
+        <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle p-3">
+          <i class="fas fa-user-shield fa-2x"></i>
+        </div>
+      </div>
+      <div class="col-md-5">
+        <span class="text-muted small text-uppercase fw-bold d-block">Applicant Officer</span>
+        <h5 class="fw-bold text-dark mb-1">{{ personnel.fullname }}</h5>
+        <div class="text-muted small d-flex flex-wrap gap-1 align-items-center">
+          <span class="badge bg-secondary">{{ personnel.rank.name|default:personnel.job_grade }}</span>
+          <span class="badge bg-light text-dark border">{{ personnel.officer_category }}</span>
+          <span class="badge {% if personnel.gender == 'MALE' %}bg-info text-dark{% elif personnel.gender == 'FEMALE' %}bg-danger text-white{% else %}bg-warning text-dark{% endif %}">
+            <i class="fas fa-venus-mars me-1"></i>Sex: {{ personnel.get_gender_display|default:personnel.gender|default:"Not Set" }}
+          </span>
+          <span class="badge bg-success text-white">Annual Base: {{ base_annual_days }} Days</span>
+          <span class="font-monospace text-muted small ms-1">Staff ID: {{ personnel.staffID }}</span>
+        </div>
+      </div>
+      <div class="col-md-5">
+        <span class="text-muted small text-uppercase fw-bold d-block">Current Posting & Command</span>
+        <div class="text-dark small fw-semibold">
+          <i class="fas fa-map-marker-alt text-danger me-1"></i>
+          {{ personnel.station.district.region.name|default:"National HQ" }} &rarr;
+          {{ personnel.station.district.name|default:"HQ" }} &rarr;
+          {{ personnel.station.name|default:"Station" }}
+        </div>
+        <div class="text-muted small mt-1">
+          <i class="fas fa-route text-primary me-1"></i>
+          Workflow: <strong>{{ route_info.processor_label }}</strong> &rarr; <strong>{{ route_info.approver_label }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if sex_not_set %}
+  <div class="alert alert-warning border-warning d-flex align-items-center mb-4 rounded-3 shadow-sm">
+    <i class="fas fa-exclamation-triangle fs-4 me-3 text-warning"></i>
+    <div>
+      <strong class="d-block">Sex / Gender Not Recorded:</strong>
+      Your personnel record requires a Sex value before Maternity or Paternity leave eligibility can be determined.
+      Please contact an authorised administrator to update your Nominal Roll profile. Other leave types remain accessible.
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" id="selfServiceLeaveForm">
+    {% csrf_token %}
+    <div class="row g-4">
+      
+      <!-- Left Column: Form Controls -->
+      <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+          <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+            <i class="fas fa-edit text-danger me-2"></i>Leave Application Details
+          </h6>
+
+          <!-- Leave Type Select -->
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-uppercase text-secondary" for="leaveTypeSelect">
+              Leave Type <span class="text-danger">*</span>
+            </label>
+            <select name="leave_type" id="leaveTypeSelect" class="form-select form-select-lg" required>
+              <option value="">-- Choose Leave Type --</option>
+              {% for lt in leave_types %}
+              <option value="{{ lt.id }}"
+                      data-code="{{ lt.code }}"
+                      data-mode="{{ lt.calculation_mode }}"
+                      data-gender="{{ lt.allowed_gender }}"
+                      data-attachment="{{ lt.requires_attachment|yesno:'true,false' }}"
+                      data-junior="{{ lt.default_days_junior }}"
+                      data-senior="{{ lt.default_days_senior }}">
+                {{ lt.name }} ({{ lt.get_calculation_mode_display }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Partial Option for Annual Leave -->
+          <div class="mb-3 p-3 bg-light border rounded-3 d-none" id="annualModeBox">
+            <label class="form-label fw-bold small text-uppercase text-danger mb-2">
+              <i class="fas fa-calendar-check me-1"></i>Annual Leave Duration Option
+            </label>
+            <div class="d-flex gap-3 mb-2">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="annual_choice" id="choiceFull" value="FULL" checked>
+                <label class="form-check-label fw-semibold small" for="choiceFull" id="choiceFullLabel">
+                  Full Annual Entitlement (<span id="fullAnnualDays">36</span> working days)
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="annual_choice" id="choicePart" value="PART">
+                <label class="form-check-label fw-semibold small" for="choicePart">
+                  Partial Annual Leave (Part Days, e.g. 10 or 15 days)
+                </label>
+              </div>
+            </div>
+            <input type="hidden" name="is_proportionate" id="isProportionateInput" value="false">
+            <span class="small text-muted d-block">Taking partial leave leaves your remaining balance available for subsequent leave requests. (To prorate annual entitlement itself, an authorised administrator must configure it).</span>
+          </div>
+
+          <!-- Dates & Duration Grid -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold small text-uppercase text-secondary" for="startDateInput">
+                Start Date <span class="text-danger">*</span>
+              </label>
+              <input type="date" name="start_date" id="startDateInput" class="form-control" required min="{{ today|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold small text-uppercase text-secondary" for="durationInput" id="durationLabel">
+                Number of Days <span class="text-danger">*</span>
+              </label>
+              <input type="number" name="duration" id="durationInput" class="form-control" required min="1" max="180">
+              <span class="small text-muted" id="durationHelp">Working days exclude weekends & public holidays.</span>
+            </div>
+          </div>
+
+          <!-- Medical Reference Container (Conditional for Sick Leave) -->
+          <div class="mb-3 d-none" id="medicalRefContainer">
+            <label class="form-label fw-bold small text-uppercase text-danger" for="medicalRefInput">
+              <i class="fas fa-hospital me-1"></i>Hospital / Health Centre & Attending Doctor <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="medical_reference" id="medicalRefInput" class="form-control" placeholder="e.g. Ridge Regional Hospital / Dr. A. Mensah">
+            <span class="small text-muted">Mandatory for certified sick leave excused duty.</span>
+          </div>
+
+          <!-- Reason / Remarks -->
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-uppercase text-secondary" for="reasonInput">
+              Reason / Remarks / Destination
+            </label>
+            <textarea name="reason" id="reasonInput" rows="2" class="form-control" placeholder="Optional comments, destination during leave, or personal justification..."></textarea>
+          </div>
+
+          <!-- Contact Details While on Leave -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold small text-uppercase text-secondary" for="contactPhoneInput">
+                Emergency Contact Phone
+              </label>
+              <input type="tel" name="contact_phone" id="contactPhoneInput" class="form-control" value="{{ personnel.contact_num }}" placeholder="024XXXXXXX">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold small text-uppercase text-secondary" for="contactAddressInput">
+                Residential Address on Leave
+              </label>
+              <input type="text" name="contact_address" id="contactAddressInput" class="form-control" placeholder="City / House No / Area">
+            </div>
+          </div>
+
+          <!-- Handover Notes -->
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-uppercase text-secondary" for="handoverNotesInput">
+              Handover Notes / Relieving Officer
+            </label>
+            <textarea name="handover_notes" id="handoverNotesInput" rows="2" class="form-control" placeholder="Specify duties handed over and to whom..."></textarea>
+          </div>
+
+          <!-- Supporting Document / Attachment -->
+          <div class="mb-4">
+            <label class="form-label fw-bold small text-uppercase text-secondary" for="attachmentInput" id="attachmentLabel">
+              <i class="fas fa-paperclip me-1"></i>Supporting Document (Optional / Medical Excuse Duty)
+            </label>
+            <input type="file" name="attachment" id="attachmentInput" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+            <span class="small text-muted" id="attachmentHelp">Upload clinical cards, excuse duty papers, or handover letters.</span>
+          </div>
+
+          <!-- Submit Buttons -->
+          <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+            <a href="{% url 'my-leave' %}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-danger px-4 fw-bold shadow-sm" id="submitBtn">
+              <i class="fas fa-paper-plane me-1"></i> Submit Leave Request
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Live Calculation & Entitlement Validation Box -->
+      <div class="col-lg-5">
+        
+        <!-- Live Calculation Preview Card -->
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4 border-top border-warning border-4">
+          <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+            <h6 class="fw-bold mb-0 text-dark">
+              <i class="fas fa-calculator text-warning me-2"></i>Date Calculation Preview
+            </h6>
+            <div id="calcSpinner" class="spinner-border spinner-border-sm text-warning d-none" role="status"></div>
+          </div>
+
+          <div class="p-3 bg-light rounded-3 mb-3">
+            <div class="row g-2 text-center">
+              <div class="col-6">
+                <span class="text-muted small d-block">Start Date</span>
+                <strong id="previewStartDate" class="text-dark">--</strong>
+              </div>
+              <div class="col-6">
+                <span class="text-muted small d-block">Last Leave Day</span>
+                <strong id="previewLastDate" class="text-dark">--</strong>
+              </div>
+            </div>
+            <hr class="my-2 text-muted">
+            <div class="text-center">
+              <span class="text-muted small d-block">Expected Resume Duty Date</span>
+              <strong id="previewResumeDate" class="fs-5 text-success">--</strong>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Calendar Breakdown:</span>
+            <ul class="list-group list-group-flush small">
+              <li class="list-group-item d-flex justify-content-between px-0">
+                <span>Working Days Charged:</span>
+                <strong id="previewWorkingDays">0 days</strong>
+              </li>
+              <li class="list-group-item d-flex justify-content-between px-0">
+                <span>Weekend Days Excluded:</span>
+                <span id="previewWeekendDays">0 days</span>
+              </li>
+              <li class="list-group-item d-flex justify-content-between px-0">
+                <span>Total Elapsed Calendar Days:</span>
+                <span id="previewCalendarDays">0 days</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Public Holidays Encountered -->
+          <div class="mb-3">
+            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Statutory Holidays Included/Excluded:</span>
+            <div id="holidaysList" class="small text-muted">
+              <em>Select a date and duration to calculate.</em>
+            </div>
+          </div>
+
+          <!-- Balance Validation -->
+          <div class="alert alert-light border rounded-3 p-3 mb-0" id="balanceAlert">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small fw-semibold text-secondary">Annual Leave Balance:</span>
+              <span class="badge bg-danger" id="currentBalanceBadge">{{ annual_balance }} days remaining</span>
+            </div>
+            <div class="small text-muted" id="balanceMessage">
+              Requests exceeding your balance cannot be approved.
+            </div>
+          </div>
+        </div>
+
+        <!-- Workflow Routing Guidance Card -->
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+          <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+            <i class="fas fa-sitemap text-primary me-2"></i>Approval Workflow Path
+          </h6>
+          <div class="timeline-step d-flex gap-3 mb-3">
+            <div class="timeline-indicator text-success"><i class="fas fa-check-circle fa-lg"></i></div>
+            <div>
+              <strong class="text-dark small d-block">1. Personnel Submission</strong>
+              <span class="text-muted small">You submit this self-service request.</span>
+            </div>
+          </div>
+          <div class="timeline-step d-flex gap-3 mb-3">
+            <div class="timeline-indicator text-secondary"><i class="fas fa-clipboard-list fa-lg"></i></div>
+            <div>
+              <strong class="text-dark small d-block">2. Administrative Processing</strong>
+              <span class="text-muted small">{{ route_info.processor_label }} verifies documents & leave dates.</span>
+            </div>
+          </div>
+          <div class="timeline-step d-flex gap-3">
+            <div class="timeline-indicator text-warning"><i class="fas fa-stamp fa-lg"></i></div>
+            <div>
+              <strong class="text-dark small d-block">3. Final Command Decision</strong>
+              <span class="text-muted small">{{ route_info.approver_label }} issues official approval.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </form>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const leaveTypeSelect = document.getElementById('leaveTypeSelect');
+    const startDateInput = document.getElementById('startDateInput');
+    const durationInput = document.getElementById('durationInput');
+    const annualModeBox = document.getElementById('annualModeBox');
+    const isProportionateInput = document.getElementById('isProportionateInput');
+    const choiceFull = document.getElementById('choiceFull');
+    const choicePart = document.getElementById('choicePart');
+    const fullAnnualDays = document.getElementById('fullAnnualDays');
+    const medicalRefContainer = document.getElementById('medicalRefContainer');
+    const medicalRefInput = document.getElementById('medicalRefInput');
+    const attachmentLabel = document.getElementById('attachmentLabel');
+    const attachmentHelp = document.getElementById('attachmentHelp');
+
+    const previewStartDate = document.getElementById('previewStartDate');
+    const previewLastDate = document.getElementById('previewLastDate');
+    const previewResumeDate = document.getElementById('previewResumeDate');
+    const previewWorkingDays = document.getElementById('previewWorkingDays');
+    const previewWeekendDays = document.getElementById('previewWeekendDays');
+    const previewCalendarDays = document.getElementById('previewCalendarDays');
+    const holidaysList = document.getElementById('holidaysList');
+    const calcSpinner = document.getElementById('calcSpinner');
+
+    const officerCategory = "{{ personnel.officer_category }}";
+    const annualBalance = parseInt("{{ annual_balance }}", 10) || 0;
+    const defaultDays = officerCategory === 'SENIOR' ? 42 : 36;
+    if (fullAnnualDays) fullAnnualDays.textContent = defaultDays;
+
+    function handleLeaveTypeChange() {
+        const opt = leaveTypeSelect.options[leaveTypeSelect.selectedIndex];
+        const code = opt ? opt.getAttribute('data-code') : '';
+
+        // Annual Leave: Show Proportionate mode
+        if (code === 'ANNUAL') {
+            annualModeBox.classList.remove('d-none');
+            medicalRefContainer.classList.add('d-none');
+            if (medicalRefInput) medicalRefInput.required = false;
+
+            if (choiceFull.checked) {
+                durationInput.value = Math.min(defaultDays, annualBalance > 0 ? annualBalance : defaultDays);
+                isProportionateInput.value = 'false';
+                durationInput.readOnly = true;
+            } else {
+                durationInput.readOnly = false;
+            }
+            attachmentLabel.innerHTML = '<i class="fas fa-paperclip me-1"></i>Handover Letter / Supporting Memo (Optional)';
+            attachmentHelp.textContent = 'Optional documentation.';
+        } else if (code === 'SICK') {
+            annualModeBox.classList.add('d-none');
+            medicalRefContainer.classList.remove('d-none');
+            if (medicalRefInput) medicalRefInput.required = true;
+            durationInput.readOnly = false;
+            attachmentLabel.innerHTML = '<i class="fas fa-file-medical me-1 text-danger"></i>Hospital Excuse Duty Paper <span class="text-danger">*</span>';
+            attachmentHelp.textContent = 'Mandatory hospital recommendation for excused sick days.';
+        } else if (code === 'MATERNITY') {
+            annualModeBox.classList.add('d-none');
+            medicalRefContainer.classList.add('d-none');
+            if (medicalRefInput) medicalRefInput.required = false;
+            durationInput.value = 90;
+            durationInput.readOnly = true;
+            attachmentLabel.innerHTML = '<i class="fas fa-baby me-1 text-danger"></i>Maternity Clinical Card / EDD Report <span class="text-danger">*</span>';
+            attachmentHelp.textContent = 'Statutory 90 Calendar Days (includes weekends and public holidays). Upload copy of clinical card.';
+        } else if (code === 'PATERNITY') {
+            annualModeBox.classList.add('d-none');
+            medicalRefContainer.classList.add('d-none');
+            if (medicalRefInput) medicalRefInput.required = false;
+            durationInput.value = 5;
+            durationInput.readOnly = true;
+            attachmentLabel.innerHTML = '<i class="fas fa-child me-1"></i>Proof of Delivery / Birth Notice';
+            attachmentHelp.textContent = 'Statutory 5 Working Days (excludes weekends and public holidays).';
+        } else if (code === 'TERMINAL') {
+            annualModeBox.classList.add('d-none');
+            medicalRefContainer.classList.add('d-none');
+            if (medicalRefInput) medicalRefInput.required = false;
+            durationInput.value = 180;
+            durationInput.readOnly = true;
+        } else {
+            annualModeBox.classList.add('d-none');
+            medicalRefContainer.classList.add('d-none');
+            if (medicalRefInput) medicalRefInput.required = false;
+            durationInput.readOnly = false;
+            attachmentLabel.innerHTML = '<i class="fas fa-paperclip me-1"></i>Supporting Document (Optional)';
+            attachmentHelp.textContent = 'Attach any relevant memos or justification documents.';
+        }
+
+        triggerCalculation();
+    }
+
+    if (choiceFull) {
+        choiceFull.addEventListener('change', function() {
+            if (this.checked) {
+                durationInput.value = Math.min(defaultDays, annualBalance > 0 ? annualBalance : defaultDays);
+                isProportionateInput.value = 'false';
+                durationInput.readOnly = true;
+                durationInput.setAttribute('readonly', 'readonly');
+                triggerCalculation();
+            }
+        });
+    }
+
+    if (choicePart) {
+        choicePart.addEventListener('change', function() {
+            if (this.checked) {
+                isProportionateInput.value = 'true';
+                durationInput.readOnly = false;
+                durationInput.removeAttribute('readonly');
+                durationInput.disabled = false;
+                durationInput.removeAttribute('disabled');
+                durationInput.focus();
+                triggerCalculation();
+            }
+        });
+    }
+
+    function triggerCalculation() {
+        const startDate = startDateInput.value;
+        const duration = durationInput.value;
+        const leaveTypeId = leaveTypeSelect.value;
+
+        if (!startDate || !duration || duration <= 0) return;
+
+        if (calcSpinner) calcSpinner.classList.remove('d-none');
+
+        const url = `/api/leave/calculate/?start_date=${encodeURIComponent(startDate)}&duration=${encodeURIComponent(duration)}&leave_type_id=${encodeURIComponent(leaveTypeId)}`;
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (calcSpinner) calcSpinner.classList.add('d-none');
+                if (data.success) {
+                    previewStartDate.textContent = data.start_date;
+                    previewLastDate.textContent = data.last_leave_date;
+                    previewResumeDate.textContent = data.resume_date;
+                    previewWorkingDays.textContent = `${data.working_days_count} days`;
+                    previewWeekendDays.textContent = `${data.weekend_days_count} days`;
+                    previewCalendarDays.textContent = `${data.calendar_days_count} days`;
+
+                    if (data.holidays_encountered && data.holidays_encountered.length > 0) {
+                        holidaysList.innerHTML = data.holidays_encountered.map(h => 
+                            `<span class="badge bg-warning text-dark me-1 mb-1"><i class="fas fa-flag me-1"></i>${h}</span>`
+                        ).join(' ');
+                    } else {
+                        holidaysList.innerHTML = '<span class="text-muted small"><em>None encountered</em></span>';
+                    }
+                }
+            })
+            .catch(err => {
+                if (calcSpinner) calcSpinner.classList.add('d-none');
+                console.error("Calculation error:", err);
+            });
+    }
+
+    leaveTypeSelect.addEventListener('change', handleLeaveTypeChange);
+    startDateInput.addEventListener('change', triggerCalculation);
+    durationInput.addEventListener('input', triggerCalculation);
+});
+</script>
+{% endblock %}

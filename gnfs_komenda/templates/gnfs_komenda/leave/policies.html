@@ -1,0 +1,201 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}National Leave Policies — GNFS Administration{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1400px;">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-national' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> National Administration</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'leave-dashboard' %}" class="text-decoration-none text-secondary">Leave Hub</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Leave Policies</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-file-contract text-danger me-2"></i>National Leave Policies & Entitlements
+      </h3>
+      <p class="text-muted small mb-0">Statutory and service-level leave policies defining base entitlements, eligible sexes, and counting rules nationwide.</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'leave-dashboard' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-tachometer-alt me-1"></i> Leave Dashboard
+      </a>
+      <a href="{% url 'leave-balances' %}" class="btn btn-outline-danger btn-sm shadow-sm">
+        <i class="fas fa-wallet me-1"></i> Entitlement Balances
+      </a>
+    </div>
+  </div>
+
+  <!-- Protected Core National Policies (Section 19 & 21) -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden border-top border-danger border-4">
+    <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="fw-bold text-dark mb-0">
+          <i class="fas fa-shield-alt text-danger me-2"></i>Protected Core National Policies
+        </h5>
+        <small class="text-muted">Statutory policies established at the national service level. Alteration restricted to system configuration.</small>
+      </div>
+      <span class="badge bg-danger rounded-pill px-3 py-1">CORE GNFS POLICIES</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4">Policy Code</th>
+              <th>Leave Type</th>
+              <th>Entitlement / Duration</th>
+              <th>Eligible Category / Sex</th>
+              <th>Calculation Mode</th>
+              <th>Status</th>
+              <th class="text-end pe-4">Protection</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for policy in core_policies %}
+            <tr>
+              <td class="ps-4">
+                <span class="font-monospace fw-bold text-dark">{{ policy.policy_code }}</span>
+              </td>
+              <td>
+                <div class="fw-bold text-dark">{{ policy.name }}</div>
+                <small class="text-muted">{{ policy.description }}</small>
+              </td>
+              <td>
+                <span class="fs-5 fw-bold text-danger">{{ policy.duration }}</span>
+                <span class="text-muted small">
+                  {% if policy.calculation_mode == 'WORKING_DAYS' %}Working Days
+                  {% elif policy.calculation_mode == 'CALENDAR_DAYS' %}Calendar Days
+                  {% elif policy.calculation_mode == 'CALENDAR_MONTHS' %}Calendar Months
+                  {% else %}Days{% endif %}
+                </span>
+              </td>
+              <td>
+                {% if policy.officer_category %}
+                <span class="badge bg-secondary me-1">{{ policy.get_officer_category_display }}</span>
+                {% endif %}
+                {% if policy.eligible_sex == 'MALE' %}
+                <span class="badge bg-info text-dark"><i class="fas fa-male me-1"></i>Male Only</span>
+                {% elif policy.eligible_sex == 'FEMALE' %}
+                <span class="badge bg-danger"><i class="fas fa-female me-1"></i>Female Only</span>
+                {% else %}
+                <span class="badge bg-light text-dark border">All Personnel</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border">
+                  {{ policy.get_calculation_mode_display }}
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                  <i class="fas fa-check-circle me-1"></i>ACTIVE
+                </span>
+              </td>
+              <td class="text-end pe-4">
+                <span class="badge bg-warning text-dark px-2 py-1 fw-bold">
+                  <i class="fas fa-lock me-1"></i>PROTECTED
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">No core policies found. Please run seed_leave_policies.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional / Supplementary Leave Policies -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden border-top border-primary border-4">
+    <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="fw-bold text-dark mb-0">
+          <i class="fas fa-list-alt text-primary me-2"></i>Supplementary & Specialised Leave Policies
+        </h5>
+        <small class="text-muted">Medical, compassionate, casual, and pre-retirement leave regulations.</small>
+      </div>
+      <span class="badge bg-primary rounded-pill px-3 py-1">SERVICE POLICIES</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4">Policy Code</th>
+              <th>Leave Type</th>
+              <th>Entitlement / Duration</th>
+              <th>Eligible Scope</th>
+              <th>Requires Document</th>
+              <th>Status</th>
+              <th class="text-end pe-4">Policy Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for policy in custom_policies %}
+            <tr>
+              <td class="ps-4">
+                <span class="font-monospace fw-bold text-dark">{{ policy.policy_code }}</span>
+              </td>
+              <td>
+                <div class="fw-bold text-dark">{{ policy.name }}</div>
+                <small class="text-muted">{{ policy.description }}</small>
+              </td>
+              <td>
+                {% if policy.duration > 0 %}
+                <span class="fs-5 fw-bold text-primary">{{ policy.duration }}</span>
+                <span class="text-muted small">
+                  {% if policy.calculation_mode == 'WORKING_DAYS' %}Working Days
+                  {% elif policy.calculation_mode == 'CALENDAR_DAYS' %}Calendar Days
+                  {% elif policy.calculation_mode == 'CALENDAR_MONTHS' %}Calendar Months
+                  {% else %}Days{% endif %}
+                </span>
+                {% else %}
+                <span class="badge bg-light text-dark border">Date Range Supported</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border">
+                  {{ policy.get_eligible_sex_display }}
+                </span>
+              </td>
+              <td>
+                {% if policy.requires_document %}
+                <span class="badge bg-warning text-dark"><i class="fas fa-file-medical me-1"></i>Required</span>
+                {% else %}
+                <span class="text-muted small">Optional</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                  <i class="fas fa-check-circle me-1"></i>ACTIVE
+                </span>
+              </td>
+              <td class="text-end pe-4">
+                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                  SERVICE POLICY
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">No supplementary policies configured.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

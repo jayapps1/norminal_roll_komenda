@@ -1,0 +1,266 @@
+{% extends 'main.html' %}
+
+{% block title %}Initiate Personnel Transfer — {{ personnel.fullname }} — GNFS{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 950px;">
+
+  <!-- Breadcrumbs -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'personnel' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> Personnel Roll</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'transfer-list' %}" class="text-decoration-none text-secondary">Transfers</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'staff-detail' personnel.staffID %}" class="text-decoration-none text-secondary">{{ personnel.staffID }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Initiate Transfer</li>
+    </ol>
+  </nav>
+
+  <!-- Officer Profile Summary Card -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
+    <div class="card-header py-3 text-white d-flex justify-content-between align-items-center" style="background-color: #8B0000;">
+      <div>
+        <h5 class="mb-0 fw-bold"><i class="fas fa-user-shield me-2"></i>Initiate Transfer Order</h5>
+        <div class="small text-white-50">Transferring Officer Profile & Current Deployment</div>
+      </div>
+      <span class="badge bg-light text-dark font-monospace fs-6">{{ personnel.staffID }}</span>
+    </div>
+    <div class="card-body bg-light p-3">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <span class="text-muted small d-block">Officer Name:</span>
+          <strong class="text-dark">{{ personnel.fullname }}</strong>
+        </div>
+        <div class="col-md-3">
+          <span class="text-muted small d-block">Rank:</span>
+          <strong class="text-dark">{{ personnel.rank_short }}</strong> ({{ personnel.get_officer_category_display }})
+        </div>
+        <div class="col-md-3">
+          <span class="text-muted small d-block">Current Command:</span>
+          <strong class="text-dark">{{ personnel.station.name|default:"Headquarters" }}</strong>
+          <div class="text-muted small">{{ personnel.current_region.name }} Region</div>
+        </div>
+        <div class="col-md-3">
+          <span class="text-muted small d-block">Current Functional Unit:</span>
+          <strong class="text-dark">{{ personnel.functional_unit.name|default:"General Duty" }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transfer Initiation Form -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}
+          <div><i class="fas fa-exclamation-triangle me-1"></i>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Destination Command Placement -->
+        <h5 class="fw-bold text-dark border-bottom pb-2 mb-3" style="color: #8B0000 !important;">
+          <i class="fas fa-map-marker-alt me-2"></i>1. Destination Command Assignment
+        </h5>
+        <p class="text-muted small mb-3">
+          Select destination Region. District and Station can be specified now, or left blank if the receiving Regional Administration will assign the final station upon reporting.
+        </p>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">{{ form.destination_region.label }}</label>
+            {{ form.destination_region }}
+            {% if form.destination_region.errors %}<div class="text-danger small mt-1">{{ form.destination_region.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">{{ form.destination_district.label }}</label>
+            {{ form.destination_district }}
+            {% if form.destination_district.errors %}<div class="text-danger small mt-1">{{ form.destination_district.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">{{ form.destination_station.label }}</label>
+            {{ form.destination_station }}
+            {% if form.destination_station.errors %}<div class="text-danger small mt-1">{{ form.destination_station.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">{{ form.destination_post.label }}</label>
+            {{ form.destination_post }}
+            {% if form.destination_post.errors %}<div class="text-danger small mt-1">{{ form.destination_post.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold small">{{ form.destination_functional_unit.label }}</label>
+            {{ form.destination_functional_unit }}
+            <div class="form-text small">Optional: Assign officer to a specific Directorate / Department / Unit at destination.</div>
+            {% if form.destination_functional_unit.errors %}<div class="text-danger small mt-1">{{ form.destination_functional_unit.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <!-- Transfer Directives & Timeline -->
+        <h5 class="fw-bold text-dark border-bottom pb-2 mb-3" style="color: #8B0000 !important;">
+          <i class="fas fa-calendar-alt me-2"></i>2. Official Directives & Transfer Timeline
+        </h5>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">Transfer Letter Reference / Order No.</label>
+            {{ form.transfer_letter_number }}
+            {% if form.transfer_letter_number.errors %}<div class="text-danger small mt-1">{{ form.transfer_letter_number.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">{{ form.transfer_letter_date.label }}</label>
+            {{ form.transfer_letter_date }}
+            {% if form.transfer_letter_date.errors %}<div class="text-danger small mt-1">{{ form.transfer_letter_date.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">{{ form.effective_date.label }}</label>
+            {{ form.effective_date }}
+            <div class="form-text small">Date officer is officially detached from current post.</div>
+            {% if form.effective_date.errors %}<div class="text-danger small mt-1">{{ form.effective_date.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">{{ form.expected_reporting_date.label }}</label>
+            {{ form.expected_reporting_date }}
+            <div class="form-text small">Deadline for reporting to receiving command.</div>
+            {% if form.expected_reporting_date.errors %}<div class="text-danger small mt-1">{{ form.expected_reporting_date.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold small">Upload Official Transfer Letter / Document (PDF / Image)</label>
+            {{ form.attachment }}
+            {% if form.attachment.errors %}<div class="text-danger small mt-1">{{ form.attachment.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <!-- Administrative Justification & Remarks -->
+        <h5 class="fw-bold text-dark border-bottom pb-2 mb-3" style="color: #8B0000 !important;">
+          <i class="fas fa-file-alt me-2"></i>3. Justification & Operational Remarks
+        </h5>
+
+        <div class="row g-3 mb-4">
+          <div class="col-12">
+            <label class="form-label fw-semibold small">Transfer Reason / Operational Justification</label>
+            {{ form.reason }}
+            {% if form.reason.errors %}<div class="text-danger small mt-1">{{ form.reason.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold small">Administrative Remarks / Instructions</label>
+            {{ form.remarks }}
+            {% if form.remarks.errors %}<div class="text-danger small mt-1">{{ form.remarks.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+          <a href="{% url 'staff-detail' personnel.staffID %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Cancel & Return
+          </a>
+          <button type="submit" class="btn btn-danger px-4 shadow-sm fw-bold">
+            <i class="fas fa-paper-plane me-1"></i> Submit Transfer Order
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<!-- Cascading Destination Command JS -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const regionSelect = document.getElementById("id_trf_destination_region");
+    const districtSelect = document.getElementById("id_trf_destination_district");
+    const stationSelect = document.getElementById("id_trf_destination_station");
+    const postSelect = document.getElementById("id_trf_destination_post");
+
+    if (!regionSelect) return;
+
+    regionSelect.addEventListener("change", function() {
+        const regionId = this.value;
+        if (!districtSelect) return;
+        districtSelect.innerHTML = '<option value="">Loading districts...</option>';
+        if (stationSelect) stationSelect.innerHTML = '<option value="">---------</option>';
+        if (postSelect) postSelect.innerHTML = '<option value="">---------</option>';
+
+        if (!regionId) {
+            districtSelect.innerHTML = '<option value="">---------</option>';
+            return;
+        }
+
+        fetch(`/api/districts/?region_id=${encodeURIComponent(regionId)}`)
+            .then(res => res.json())
+            .then(data => {
+                districtSelect.innerHTML = '<option value="">Select Destination District (Optional)</option>';
+                data.districts.forEach(d => {
+                    const opt = document.createElement("option");
+                    opt.value = d.id;
+                    opt.textContent = d.name;
+                    districtSelect.appendChild(opt);
+                });
+            })
+            .catch(() => {
+                districtSelect.innerHTML = '<option value="">Error loading districts</option>';
+            });
+    });
+
+    if (districtSelect) {
+        districtSelect.addEventListener("change", function() {
+            const districtId = this.value;
+            if (!stationSelect) return;
+            stationSelect.innerHTML = '<option value="">Loading stations...</option>';
+            if (postSelect) postSelect.innerHTML = '<option value="">---------</option>';
+
+            if (!districtId) {
+                stationSelect.innerHTML = '<option value="">---------</option>';
+                return;
+            }
+
+            fetch(`/api/stations/?district_id=${encodeURIComponent(districtId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    stationSelect.innerHTML = '<option value="">Select Destination Station (Optional)</option>';
+                    data.stations.forEach(s => {
+                        const opt = document.createElement("option");
+                        opt.value = s.id;
+                        opt.textContent = s.name;
+                        stationSelect.appendChild(opt);
+                    });
+                })
+                .catch(() => {
+                    stationSelect.innerHTML = '<option value="">Error loading stations</option>';
+                });
+        });
+    }
+
+    if (stationSelect) {
+        stationSelect.addEventListener("change", function() {
+            const stationId = this.value;
+            if (!postSelect) return;
+            postSelect.innerHTML = '<option value="">Loading posts...</option>';
+
+            if (!stationId) {
+                postSelect.innerHTML = '<option value="">---------</option>';
+                return;
+            }
+
+            fetch(`/api/posts/?station_id=${encodeURIComponent(stationId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    postSelect.innerHTML = '<option value="">Select Destination Post (Optional)</option>';
+                    data.posts.forEach(p => {
+                        const opt = document.createElement("option");
+                        opt.value = p.id;
+                        opt.textContent = p.name;
+                        postSelect.appendChild(opt);
+                    });
+                })
+                .catch(() => {
+                    postSelect.innerHTML = '<option value="">Error loading posts</option>';
+                });
+        });
+    }
+});
+</script>
+{% endblock %}

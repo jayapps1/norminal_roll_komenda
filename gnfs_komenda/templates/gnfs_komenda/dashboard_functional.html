@@ -1,0 +1,301 @@
+{% extends 'main.html' %}
+
+{% block title %}{{ unit.name }} — Functional Dashboard — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'personnel' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> GNFS Central</a></li>
+          {% if unit.parent %}
+            {% if unit.parent.parent %}
+            <li class="breadcrumb-item"><a href="{% url 'dashboard-functional' unit.parent.parent.id %}" class="text-decoration-none text-secondary">{{ unit.parent.parent.name }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item"><a href="{% url 'dashboard-functional' unit.parent.id %}" class="text-decoration-none text-secondary">{{ unit.parent.name }}</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active" aria-current="page">{{ unit.name }}</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-building text-danger me-2"></i>{{ unit.name }}
+      </h3>
+      <p class="text-muted small mb-0">
+        <span class="badge bg-secondary me-2">{{ unit.get_unit_type_display }}</span>
+        {% if unit.code %}<span class="text-muted font-monospace me-2">[{{ unit.code }}]</span>{% endif %}
+        Functional Departmental Oversight & Personnel Management
+      </p>
+    </div>
+
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+      <a href="{% url 'personnel' %}" class="btn btn-outline-danger btn-sm shadow-sm">
+        <i class="fas fa-users me-1"></i> All Personnel Roll
+      </a>
+      {% if active_workspace %}
+      <span class="badge bg-danger bg-opacity-10 text-danger border border-danger d-flex align-items-center px-3 py-2">
+        <i class="fas fa-briefcase me-1"></i> Active Workspace: {{ active_workspace.label }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- KPI Metrics Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #8B0000 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Total Personnel</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ total_personnel }}</span>
+          <span class="badge bg-light text-danger border">Under Unit</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #ffc107 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Senior Officers</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ senior_officers }}</span>
+          <span class="badge bg-warning bg-opacity-25 text-dark">Senior</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #0dcaf0 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Junior Officers</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ junior_officers }}</span>
+          <span class="badge bg-info bg-opacity-25 text-dark">Junior</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #198754 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">At Post</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-success">{{ at_post }}</span>
+          <span class="badge bg-success bg-opacity-25 text-success">On Duty</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #dc3545 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">On Leave</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-danger">{{ on_leave }}</span>
+          <span class="badge bg-danger bg-opacity-25 text-danger">Absent</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #6f42c1 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Pending Leaves</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-primary">{{ pending_leaves.count }}</span>
+          <span class="badge bg-primary bg-opacity-25 text-primary">Requests</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Main Left Column -->
+    <div class="col-lg-8">
+      
+      <!-- Subordinate / Child Units Table (if Directorate or Department has children) -->
+      {% if children %}
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-sitemap text-danger me-2"></i>Subordinate Divisions / Units
+          </h6>
+          <span class="badge bg-light text-dark border">{{ children.count }} Sub-units</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small">
+              <tr>
+                <th class="ps-3">Unit Name</th>
+                <th>Classification</th>
+                <th>Code</th>
+                <th class="text-center">Staff Strength</th>
+                <th class="text-end pe-3">Action</th>
+              </tr>
+            </thead>
+            <tbody class="small">
+              {% for child in children %}
+              <tr>
+                <td class="ps-3 fw-bold">
+                  <a href="{% url 'dashboard-functional' child.id %}" class="text-decoration-none text-dark hover-danger">
+                    {{ child.name }}
+                  </a>
+                </td>
+                <td><span class="badge bg-secondary">{{ child.get_unit_type_display }}</span></td>
+                <td class="font-monospace text-muted">{{ child.code|default:"-" }}</td>
+                <td class="text-center fw-bold">{{ child.personnel_count }}</td>
+                <td class="text-end pe-3">
+                  <a href="{% url 'dashboard-functional' child.id %}" class="btn btn-sm btn-outline-danger py-0 px-2">
+                    <i class="fas fa-arrow-right me-1"></i> Dashboard
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Personnel Roster under this functional unit -->
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-user-friends text-danger me-2"></i>Personnel Assigned to this Unit
+          </h6>
+          <span class="text-muted small">Showing up to {{ personnel|length }} officers</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small">
+              <tr>
+                <th class="ps-3">Staff ID</th>
+                <th>Full Name</th>
+                <th>Rank</th>
+                <th>Geographical Command Station</th>
+                <th>Functional Assignment</th>
+                <th>Status</th>
+                <th class="text-end pe-3">Action</th>
+              </tr>
+            </thead>
+            <tbody class="small">
+              {% for p in personnel %}
+              <tr>
+                <td class="ps-3 fw-bold font-monospace">{{ p.staffID }}</td>
+                <td>
+                  <a href="{% url 'staff-detail' p.staffID %}" class="text-decoration-none fw-semibold text-dark">
+                    {{ p.fullname }}
+                  </a>
+                </td>
+                <td><span class="badge bg-light text-dark border">{{ p.rank_short }}</span></td>
+                <td>{{ p.station.name|default:"Headquarters" }}</td>
+                <td><span class="text-muted small">{{ p.functional_unit.name|default:"General Duty" }}</span></td>
+                <td>
+                  {% if p.leave_status == 'ON LEAVE' %}
+                  <span class="badge bg-danger">ON LEAVE</span>
+                  {% else %}
+                  <span class="badge bg-success">AT POST</span>
+                  {% endif %}
+                </td>
+                <td class="text-end pe-3">
+                  <a href="{% url 'staff-detail' p.staffID %}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="View Dossier">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">
+                  No personnel currently deployed under this functional unit.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Rank breakdown & Hierarchy Context -->
+    <div class="col-lg-4">
+      
+      <!-- Unit Structure Details -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white py-3 border-0">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-info-circle text-danger me-2"></i>Hierarchy Context
+          </h6>
+        </div>
+        <div class="card-body pt-0 small">
+          <div class="mb-2 pb-2 border-bottom">
+            <span class="text-muted d-block">Unit Level:</span>
+            <strong>{{ unit.get_unit_type_display }}</strong>
+          </div>
+          {% if unit.parent %}
+          <div class="mb-2 pb-2 border-bottom">
+            <span class="text-muted d-block">Parent Organisation:</span>
+            <a href="{% url 'dashboard-functional' unit.parent.id %}" class="text-decoration-none text-danger fw-bold">
+              {{ unit.parent.name }} ({{ unit.parent.get_unit_type_display }})
+            </a>
+          </div>
+          {% endif %}
+          <div class="mb-2 pb-2 border-bottom">
+            <span class="text-muted d-block">Code / Designation:</span>
+            <span class="font-monospace text-dark">{{ unit.code|default:"None Assigned" }}</span>
+          </div>
+          {% if unit.description %}
+          <div>
+            <span class="text-muted d-block">Mandate / Scope:</span>
+            <p class="text-dark mb-0">{{ unit.description }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Rank Breakdown -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-medal text-danger me-2"></i>Rank Breakdown
+          </h6>
+          <span class="badge bg-light text-dark border">{{ ranks_breakdown|length }} Ranks</span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush small">
+            {% for item in ranks_breakdown %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ item.rank__abbreviation }}</strong> &bull; <span class="text-muted">{{ item.rank__name }}</span>
+              </div>
+              <span class="badge bg-danger rounded-pill">{{ item.count }}</span>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted text-center py-3">No ranks recorded.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Pending Leave Requests under this Functional Scope -->
+      {% if pending_leaves %}
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0 text-dark">
+            <i class="fas fa-calendar-times text-warning me-2"></i>Active Leave Requests
+          </h6>
+          <span class="badge bg-warning text-dark">{{ pending_leaves.count }}</span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush small">
+            {% for req in pending_leaves|slice:":5" %}
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <strong>{{ req.personnel.fullname }}</strong>
+                <span class="badge bg-warning text-dark">Pending</span>
+              </div>
+              <div class="text-muted small mt-1">
+                {{ req.leave_type.name }} &bull; {{ req.working_days_count }} days ({{ req.start_date|date:"M d" }} - {{ req.last_leave_date|date:"M d" }})
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

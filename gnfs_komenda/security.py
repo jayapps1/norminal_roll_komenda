@@ -28,6 +28,39 @@ def get_user_assignment(user):
     return getattr(user, 'assignment', None)
 
 
+def get_personnel_for_user(user):
+    """
+    Return the authoritative NorminalRoll record linked to an authenticated user.
+    Checks:
+    1. Explicit UserAssignment.personnel linkage
+    2. Username matching NorminalRoll staffID (standard GNFS convention)
+    """
+    if not user or not user.is_authenticated:
+        return None
+
+    assignment = getattr(user, 'assignment', None)
+    if assignment and assignment.personnel:
+        return assignment.personnel
+
+    return NorminalRoll.objects.filter(staffID__iexact=user.username).select_related(
+        'rank', 'station', 'station__district', 'station__district__region', 'post', 'functional_unit'
+    ).first()
+
+
+def send_notification(recipient, title, message, notification_type="INFO", link_url=""):
+    """Create a persistent Notification for an authenticated user."""
+    from gnfs_komenda.models import Notification
+    if recipient:
+        return Notification.objects.create(
+            recipient=recipient,
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            link_url=link_url
+        )
+    return None
+
+
 def get_personnel_queryset_for_user(user, include_archived=False):
     """
     Return the strictly scoped NorminalRoll QuerySet authorized for the user.

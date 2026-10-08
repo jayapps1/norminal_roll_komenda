@@ -100,7 +100,121 @@
                 </div>
             </div>
 
-            <!-- Identity & Personal Information -->
+            <!-- Command Appointment Card (Section 17.40) -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                    <h6 class="fw-bold text-dark text-uppercase small mb-0" style="color: #8B0000 !important;">
+                        <i class="fas fa-user-shield me-2"></i>Command Appointment (Leadership)
+                    </h6>
+                    {% if current_command_appointment %}
+                    <span class="badge bg-danger">{{ current_command_appointment.get_appointment_type_display }}{% if current_command_appointment.is_acting %} (Acting){% endif %}</span>
+                    {% endif %}
+                </div>
+                <div class="row g-3 align-items-center">
+                    {% if current_command_appointment %}
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Active Appointment:</span>
+                        <strong class="text-dark fs-6">{{ current_command_appointment.get_appointment_type_display }}</strong>
+                        {% if current_command_appointment.is_acting %}
+                        <span class="badge bg-warning text-dark ms-1">Acting</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Command Jurisdiction:</span>
+                        <strong class="text-dark">
+                            {% if current_command_appointment.district %}
+                            {{ current_command_appointment.district.name }} Command
+                            {% elif current_command_appointment.region %}
+                            {{ current_command_appointment.region.name }} Region
+                            {% else %}
+                            National Headquarters
+                            {% endif %}
+                        </strong>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="text-muted small d-block">Appointed Since:</span>
+                        <strong class="text-dark">{{ current_command_appointment.effective_from|date:"d M Y" }}</strong>
+                        {% if current_command_appointment.appointment_reference %}
+                        <div class="text-muted small font-monospace">Ref: {{ current_command_appointment.appointment_reference }}</div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="col-12">
+                        <div class="alert alert-light border mb-0 text-muted small">
+                            <i class="fas fa-info-circle me-1 text-secondary"></i>
+                            <strong>No Current Command Appointment.</strong> Officer holds substantive rank and command posting without a formal command executive appointment (e.g. DFO, RFO, 2IC).
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Functional Assignments (Multiple Areas Supported - Section 17.11-17.15) -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                    <h6 class="fw-bold text-dark text-uppercase small mb-0" style="color: #8B0000 !important;">
+                        <i class="fas fa-briefcase me-2"></i>Functional Assignments (Directorate &rarr; Department &rarr; Unit)
+                    </h6>
+                    {% if can_manage_personnel %}
+                    <a href="{% url 'personnel-add-functional-assignment' staff.id %}" class="btn btn-outline-danger btn-sm py-1">
+                        <i class="fas fa-plus-circle me-1"></i> Add Functional Assignment
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if active_functional_assignments %}
+                <div class="row g-2">
+                    {% for fa in active_functional_assignments %}
+                    <div class="col-md-6">
+                        <div class="p-3 rounded border {% if fa.is_primary %}border-danger bg-danger bg-opacity-10{% else %}bg-light{% endif %} h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div>
+                                    {% if fa.is_primary %}
+                                    <span class="badge bg-danger mb-1"><i class="fas fa-star me-1"></i> PRIMARY</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary mb-1">ADDITIONAL</span>
+                                    {% endif %}
+                                    <h6 class="fw-bold mb-0 text-dark">{{ fa.functional_unit.name }}</h6>
+                                </div>
+                                {% if can_manage_personnel %}
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-link text-secondary p-0" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm small">
+                                        {% if not fa.is_primary %}
+                                        <li>
+                                            <form method="post" action="{% url 'personnel-set-primary-assignment' fa.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="dropdown-item"><i class="fas fa-star text-warning me-2"></i> Set as Primary</button>
+                                            </form>
+                                        </li>
+                                        {% endif %}
+                                        <li>
+                                            <form method="post" action="{% url 'personnel-remove-functional-assignment' fa.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Remove this functional assignment?');"><i class="fas fa-trash-alt me-2"></i> Remove</button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="text-muted small mb-1">
+                                <i class="fas fa-sitemap me-1"></i> {{ fa.functional_unit.get_full_path }}
+                            </div>
+                            <div class="small">
+                                <span class="fw-semibold">Role:</span> {{ fa.assignment_role|default:"Member" }} &bull;
+                                <span class="text-muted">Since {{ fa.start_date|date:"d M Y" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-light border mb-0 text-muted small">
+                    <i class="fas fa-info-circle me-1"></i> No active functional assignments. Officer is on general station deployment.
+                </div>
+                {% endif %}
+            </div>
             <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3">
                 <h6 class="fw-bold text-dark text-uppercase small border-bottom pb-2 mb-3" style="color: #8B0000 !important;">
                     <i class="fas fa-id-card me-2"></i>Identification & Payroll Details
@@ -259,6 +373,272 @@
                 {% endif %}
             </div>
 
+            <!-- Career Postings & Transfer History -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                    <h6 class="fw-bold text-dark text-uppercase small mb-0" style="color: #8B0000 !important;">
+                        <i class="fas fa-route me-2"></i>Career Postings & Transfer History
+                    </h6>
+                    <a href="{% url 'transfer-create' staff.pk %}" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-exchange-alt me-1"></i> Initiate Transfer
+                    </a>
+                </div>
+
+                <!-- Command Postings Table -->
+                <h6 class="small fw-bold text-uppercase text-secondary mb-2">Command Posting History</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Station / Command</th>
+                                <th>District</th>
+                                <th>Region</th>
+                                <th>Post</th>
+                                <th>Period</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for posting in postings %}
+                            <tr>
+                                <td class="fw-semibold">{{ posting.station.name|default:"Headquarters" }}</td>
+                                <td>{{ posting.district.name|default:"-" }}</td>
+                                <td>{{ posting.region.name|default:"-" }}</td>
+                                <td>{{ posting.post.name|default:"Station Direct" }}</td>
+                                <td>
+                                    {{ posting.start_date|date:"M d, Y" }} &rarr;
+                                    {% if posting.end_date %}
+                                    {{ posting.end_date|date:"M d, Y" }}
+                                    {% else %}
+                                    <span class="badge bg-success bg-opacity-25 text-success">Present</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if posting.is_current and posting.status == 'ACTIVE' %}
+                                    <span class="badge bg-success">ACTIVE</span>
+                                    {% elif posting.status == 'TRANSFERRED' %}
+                                    <span class="badge bg-secondary">TRANSFERRED</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-dark border">{{ posting.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-2">No historical postings recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Transfer Records Table -->
+                {% if transfers %}
+                <h6 class="small fw-bold text-uppercase text-secondary mb-2">Transfer Records</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ref #</th>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Effective Date</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tr in transfers %}
+                            <tr>
+                                <td class="fw-bold font-monospace">{{ tr.reference_number }}</td>
+                                <td>{{ tr.source_station.name|default:tr.source_region.name }}</td>
+                                <td>{{ tr.destination_station.name|default:tr.destination_region.name }}</td>
+                                <td>{{ tr.effective_date|date:"M d, Y" }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if tr.status == 'CONFIRMED' %}bg-success
+                                        {% elif tr.status == 'RELEASED' or tr.status == 'REPORTED' %}bg-primary
+                                        {% elif tr.status == 'PENDING_APPROVAL' %}bg-warning text-dark
+                                        {% elif tr.status == 'APPROVED' %}bg-info text-dark
+                                        {% elif tr.status == 'CANCELLED' or tr.status == 'REJECTED' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ tr.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url 'transfer-detail' tr.pk %}" class="btn btn-outline-secondary btn-sm py-0 px-2" title="View Transfer Dossier">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <!-- Command Appointment History (Section 17.41) -->
+                {% if command_appointments %}
+                <h6 class="small fw-bold text-uppercase text-secondary mb-2">Command Appointment History</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Appointment</th>
+                                <th>Jurisdiction</th>
+                                <th>Period</th>
+                                <th>Status</th>
+                                <th>Reference</th>
+                                <th>Appointed By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for apt in command_appointments %}
+                            <tr>
+                                <td>
+                                    <span class="badge {% if '2IC' in apt.appointment_type %}bg-primary{% else %}bg-danger{% endif %}">
+                                        {{ apt.get_appointment_type_display }}
+                                    </span>
+                                    {% if apt.is_acting %}<span class="badge bg-warning text-dark">Acting</span>{% endif %}
+                                </td>
+                                <td>{{ apt.district.name|default:apt.region.name|default:"National HQ" }}</td>
+                                <td>
+                                    {{ apt.effective_from|date:"M d, Y" }} &rarr;
+                                    {% if apt.is_active %}
+                                    <span class="badge bg-success bg-opacity-25 text-success">Present</span>
+                                    {% else %}
+                                    {{ apt.effective_to|date:"M d, Y" }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if apt.is_active %}
+                                    <span class="badge bg-success">ACTIVE</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">CONCLUDED</span>
+                                    {% endif %}
+                                </td>
+                                <td><code>{{ apt.appointment_reference|default:"—" }}</code></td>
+                                <td class="text-muted">{{ apt.appointed_by.username|default:"System" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <!-- Functional Assignment History -->
+                {% if functional_history %}
+                <h6 class="small fw-bold text-uppercase text-secondary mb-2">Functional Placement History</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Functional Unit</th>
+                                <th>Tier</th>
+                                <th>Role</th>
+                                <th>Period</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fa in functional_history %}
+                            <tr>
+                                <td class="fw-semibold">{{ fa.functional_unit.name }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ fa.functional_unit.get_unit_type_display }}</span></td>
+                                <td>{{ fa.role|default:"Member" }}</td>
+                                <td>
+                                    {{ fa.start_date|date:"M d, Y" }} &rarr;
+                                    {% if fa.end_date %}
+                                    {{ fa.end_date|date:"M d, Y" }}
+                                    {% else %}
+                                    <span class="badge bg-success bg-opacity-25 text-success">Present</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if fa.is_current %}
+                                    <span class="badge bg-success">ACTIVE</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">HISTORICAL</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- User Account & Authentication Status (Sections 29, 30, 31) -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                    <h6 class="fw-bold text-dark text-uppercase small mb-0" style="color: #8B0000 !important;">
+                        <i class="fas fa-user-shield me-2"></i>Account & Authentication Status
+                    </h6>
+                    <div>
+                        {% if staff.user_account %}
+                            {% if staff.user_account.assignment.must_change_password %}
+                            <span class="badge bg-warning text-dark"><i class="fas fa-key me-1"></i>CHANGE REQUIRED</span>
+                            {% elif staff.user_account.is_active %}
+                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>ACTIVE</span>
+                            {% else %}
+                            <span class="badge bg-danger"><i class="fas fa-ban me-1"></i>LOCKED</span>
+                            {% endif %}
+                        {% else %}
+                        <span class="badge bg-secondary"><i class="fas fa-user-slash me-1"></i>NOT PROVISIONED</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">Login Staff ID:</span>
+                        <strong class="text-dark fs-6">{{ staff.staffID }}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">Password Status:</span>
+                        {% if staff.user_account %}
+                            {% if staff.user_account.assignment.must_change_password %}
+                            <span class="text-warning fw-semibold small"><i class="fas fa-exclamation-triangle me-1"></i>Temporary / Change Required</span>
+                            {% else %}
+                            <span class="text-success fw-semibold small"><i class="fas fa-check me-1"></i>Private Password Set</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted small">No Account</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <span class="text-muted small d-block">2FA (TOTP) Status:</span>
+                        {% if staff.user_account.totp_device and staff.user_account.totp_device.is_confirmed %}
+                        <span class="text-success fw-semibold small"><i class="fas fa-shield-alt me-1"></i>CONFIGURED</span>
+                        {% else %}
+                        <span class="text-muted small"><i class="fas fa-shield-alt text-muted me-1"></i>Not Enabled</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 text-md-end">
+                        {% if staff.user_account %}
+                            {% if staff.user_account.is_superuser or staff.user_account.assignment.is_system_account %}
+                            <span class="badge bg-dark px-2 py-1 text-white-50"><i class="fas fa-shield-virus me-1"></i>Protected System Account</span>
+                            {% else %}
+                            <form method="post" action="{% url 'personnel-account-reset' staff.staffID %}" class="d-inline" onsubmit="return confirm('Reset login credentials for {{ staff.fullname }} ({{ staff.staffID }}) to the initial temporary password? All previous active sessions will be terminated and password change will be enforced.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm shadow-sm">
+                                    <i class="fas fa-redo-alt me-1"></i> Reset Account Access
+                                </button>
+                            </form>
+                            {% endif %}
+                        {% else %}
+                            <form method="post" action="{% url 'personnel-account-provision' staff.staffID %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger shadow-sm" style="background-color: #8B0000; border-color: #8B0000;">
+                                    <i class="fas fa-user-plus me-1"></i> Provision Account
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
             {% if not staff.is_active %}
             <div class="alert alert-danger mb-0">
                 <h6 class="fw-bold"><i class="fas fa-archive me-1"></i>Archived Record Information</h6>
@@ -273,6 +653,9 @@
                 <i class="fas fa-arrow-left me-1"></i> Back to Personnel Roll
             </a>
             <div class="btn-group">
+                <a href="{% url 'transfer-create' staff.pk %}" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-exchange-alt me-1"></i> Initiate Transfer
+                </a>
                 <a href="{% url 'editstaff' staff.staffID %}" class="btn btn-warning btn-sm">
                     <i class="fas fa-edit me-1"></i> Edit Details
                 </a>

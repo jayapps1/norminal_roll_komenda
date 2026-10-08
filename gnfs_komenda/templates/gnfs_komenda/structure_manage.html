@@ -247,6 +247,12 @@
                 </td>
                 <td class="text-end">
                   <div class="btn-group btn-group-sm">
+                    <a href="{% url 'region-management' reg.id %}" class="btn btn-outline-danger" title="Regional Overview & Structure">
+                      <i class="fas fa-sitemap"></i>
+                    </a>
+                    <a href="{% url 'manage-region-leadership' reg.id %}" class="btn btn-outline-primary" title="Appoint RFO / Regional 2IC">
+                      <i class="fas fa-user-shield"></i>
+                    </a>
                     {% if can_edit_all %}
                     <button type="button" class="btn btn-outline-secondary edit-region-btn" 
                             data-id="{{ reg.id }}" 
@@ -357,6 +363,9 @@
                 </td>
                 <td class="text-end">
                   <div class="btn-group btn-group-sm">
+                    <a href="{% url 'manage-district-leadership' dist.id %}" class="btn btn-outline-primary" title="Appoint DFO/MFO / District 2IC">
+                      <i class="fas fa-user-shield"></i>
+                    </a>
                     <button type="button" class="btn btn-outline-secondary edit-district-btn" 
                             data-id="{{ dist.id }}" 
                             data-name="{{ dist.name }}" 

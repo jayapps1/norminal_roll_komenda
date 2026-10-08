@@ -1,0 +1,134 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}My Command Posting & History — GNFS Self-Service{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1200px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'my-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-user-circle me-1"></i> My Dashboard</a></li>
+          <li class="breadcrumb-item active" aria-current="page">My Posting</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-map-marked-alt text-danger me-2"></i>Current Posting & Career History
+      </h3>
+      <p class="text-muted small mb-0">Record of official operational postings across Regions, Districts, Fire Stations, and Posts.</p>
+    </div>
+
+    <a href="{% url 'my-dashboard' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+      <i class="fas fa-arrow-left me-1"></i> Dashboard
+    </a>
+  </div>
+
+  <!-- Current Active Posting Card (Section 33) -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-4 border-top border-danger border-4">
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+      <h6 class="fw-bold text-dark mb-0">
+        <i class="fas fa-crosshairs text-danger me-2"></i>Current Active Command Posting
+      </h6>
+      <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>ACTIVE POSTING</span>
+    </div>
+
+    <div class="row g-4 align-items-center">
+      <div class="col-md-8">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Region Command:</span>
+            <h5 class="fw-bold text-dark mb-0">{{ current_posting.region.name|default:personnel.station.district.region.name|default:"National HQ" }}</h5>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">District / Municipal Command:</span>
+            <h5 class="fw-bold text-dark mb-0">{{ current_posting.district.name|default:personnel.station.district.name|default:"Headquarters" }}</h5>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Fire Station:</span>
+            <h5 class="fw-bold text-danger mb-0">{{ current_posting.station.name|default:personnel.station.name|default:"Not Assigned" }}</h5>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Fire Post:</span>
+            <h5 class="fw-bold text-secondary mb-0">{{ current_posting.post.name|default:"Main Station Facility" }}</h5>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 border-start-md ps-md-4">
+        <div class="p-3 bg-light rounded-3 text-center">
+          <span class="text-muted small d-block mb-1">Effective Date:</span>
+          <strong class="fs-6 text-dark">{{ current_posting.start_date|date:"d M Y"|default:"Active Record" }}</strong>
+          {% if current_posting.transfer_reference %}
+          <div class="small text-muted mt-2 pt-2 border-top">
+            Transfer Ref: <strong>{{ current_posting.transfer_reference }}</strong>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Posting Career History Table -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+    <div class="card-header bg-white py-3 border-bottom">
+      <h6 class="fw-bold text-dark mb-0">
+        <i class="fas fa-history text-secondary me-2"></i>Career Posting History
+      </h6>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Station / Location</th>
+            <th>District</th>
+            <th>Region</th>
+            <th>Effective From</th>
+            <th>Effective To</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for post in posting_history %}
+          <tr>
+            <td class="ps-4">
+              <strong class="text-dark">{{ post.station.name|default:"Unassigned" }}</strong>
+              {% if post.post %}
+              <div class="small text-muted">Post: {{ post.post.name }}</div>
+              {% endif %}
+            </td>
+            <td>{{ post.district.name|default:"-" }}</td>
+            <td>{{ post.region.name|default:"-" }}</td>
+            <td>{{ post.start_date|date:"d M Y"|default:"-" }}</td>
+            <td>
+              {% if post.is_current %}
+              <span class="text-success fw-bold">Present</span>
+              {% else %}
+              {{ post.end_date|date:"d M Y"|default:"-" }}
+              {% endif %}
+            </td>
+            <td>
+              {% if post.is_current %}
+              <span class="badge bg-success">Current Post</span>
+              {% else %}
+              <span class="badge bg-secondary">Historical</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">
+              No historical postings recorded.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

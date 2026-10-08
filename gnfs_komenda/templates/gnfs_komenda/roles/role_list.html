@@ -1,0 +1,300 @@
+{% extends 'main.html' %}
+
+{% block title %}Administrative Role & Access Management — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Header & Navigation Breadcrumb -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          {% if is_national %}
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-national' %}" class="text-danger text-decoration-none"><i class="fas fa-landmark me-1"></i> National HQ</a></li>
+          {% else %}
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-regional' actor_scope.region.id %}" class="text-danger text-decoration-none"><i class="fas fa-map-marked-alt me-1"></i> {{ actor_scope.region.name }}</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active fw-bold text-dark">Role & Access Management</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">Role & Access Management</h3>
+      <p class="text-muted small mb-0">
+        {% if is_national %}
+        National Application & Data Administration Hierarchy
+        {% else %}
+        {{ actor_scope.region.name }} District Administration Authority
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+      <a href="{% url 'assign-role' %}" class="btn btn-danger btn-sm shadow-sm fw-semibold" style="background-color: #8B0000; border-color: #8B0000;">
+        <i class="fas fa-user-shield me-1"></i> + Assign Administrative Role
+      </a>
+    </div>
+  </div>
+
+  <!-- Active Assignments Card -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-header bg-white border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+      <h5 class="fw-bold text-dark mb-0">
+        <i class="fas fa-id-badge text-danger me-2"></i>Active Administrative Assignments
+      </h5>
+      <span class="badge bg-danger rounded-pill px-3 py-1" style="background-color: #8B0000 !important;">{{ active_assignments.count }} Active</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light text-muted small text-uppercase">
+            <tr>
+              <th class="ps-3">Officer</th>
+              <th>Staff ID</th>
+              <th>Administrative Role</th>
+              <th>Jurisdiction Scope</th>
+              <th>Effective From</th>
+              <th>Assigned By</th>
+              <th class="text-end pe-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for asgn in active_assignments %}
+            <tr>
+              <td class="ps-3">
+                <div class="fw-bold text-dark">{{ asgn.personnel.fullname }}</div>
+                <small class="text-muted">{{ asgn.personnel.rank.name|default:asgn.personnel.job_grade }}</small>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border">{{ asgn.personnel.staffID }}</span>
+              </td>
+              <td>
+                <span class="badge bg-dark text-white fw-bold">{{ asgn.display_role_name }}</span>
+                {% if asgn.assignment_type == 'FUNCTIONAL' %}
+                <span class="badge bg-info text-dark ms-1">Functional</span>
+                {% else %}
+                <span class="badge bg-secondary ms-1">Admin</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if asgn.station %}
+                <span class="badge bg-primary text-white"><i class="fas fa-fire-extinguisher me-1"></i> {{ asgn.station.name }}</span>
+                {% if asgn.district %}<span class="badge bg-light text-dark border ms-1">{{ asgn.district.name }}</span>{% endif %}
+                {% elif asgn.district %}
+                <span class="badge bg-primary text-white"><i class="fas fa-building me-1"></i> {{ asgn.district.name }}</span>
+                {% elif asgn.region %}
+                <span class="badge bg-warning text-dark"><i class="fas fa-map-marked-alt me-1"></i> {{ asgn.region.name }}</span>
+                {% else %}
+                <span class="badge bg-danger" style="background-color: #8B0000 !important;"><i class="fas fa-globe me-1"></i> National Scope</span>
+                {% endif %}
+                {% if asgn.department %}
+                <div class="small text-muted mt-1"><i class="fas fa-sitemap me-1"></i>{{ asgn.department.name }}{% if asgn.unit %} &rsaquo; {{ asgn.unit.name }}{% endif %}</div>
+                {% elif asgn.directorate %}
+                <div class="small text-muted mt-1"><i class="fas fa-sitemap me-1"></i>{{ asgn.directorate.name }}</div>
+                {% endif %}
+              </td>
+              <td>{{ asgn.effective_from|date:"d M Y" }}</td>
+              <td>
+                <small class="text-muted">{{ asgn.assigned_by.username|default:"System" }}</small>
+              </td>
+              <td class="text-end pe-3">
+                <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#revokeModal"
+                        data-assignment-id="{{ asgn.id }}"
+                        data-officer-name="{{ asgn.personnel.fullname }}"
+                        data-staff-id="{{ asgn.personnel.staffID }}"
+                        data-role-name="{{ asgn.display_role_name }}"
+                        data-scope="{% if asgn.station %}{{ asgn.station.name }}{% elif asgn.district %}{{ asgn.district.name }}{% elif asgn.region %}{{ asgn.region.name }}{% else %}National{% endif %}">
+                  <i class="fas fa-user-slash me-1"></i> Revoke
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">
+                <i class="fas fa-shield-alt fa-2x mb-2 d-block opacity-25"></i>
+                No active administrative assignments in this scope.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if is_national %}
+  <!-- Configurable Application Roles -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-header bg-white border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+      <h5 class="fw-bold text-dark mb-0">
+        <i class="fas fa-key text-warning me-2"></i>Configured Application Roles & Permissions
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light text-muted small text-uppercase">
+            <tr>
+              <th class="ps-3">Role Code</th>
+              <th>Role Name</th>
+              <th>Description</th>
+              <th>Type</th>
+              <th>Permissions Granted</th>
+              <th class="text-end pe-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in roles %}
+            <tr>
+              <td class="ps-3 fw-bold text-dark">{{ r.code }}</td>
+              <td class="fw-semibold">{{ r.name }}</td>
+              <td class="text-muted small">{{ r.description|default:"—" }}</td>
+              <td>
+                {% if r.is_system_role %}
+                <span class="badge bg-secondary">System Role</span>
+                {% else %}
+                <span class="badge bg-info text-dark">Custom Role</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border">{{ r.permissions.count }} Permissions</span>
+              </td>
+              <td class="text-end pe-3">
+                <a href="{% url 'role-permissions-edit' r.id %}" class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold">
+                  <i class="fas fa-cog me-1"></i> Configure Permissions
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Assignment History Card -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white">
+    <div class="card-header bg-white border-0 pt-3 pb-2">
+      <h5 class="fw-bold text-dark mb-0">
+        <i class="fas fa-history text-secondary me-2"></i>Administrative Assignment History (Revocations / Ended)
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light text-muted small text-uppercase">
+            <tr>
+              <th class="ps-3">Officer</th>
+              <th>Staff ID</th>
+              <th>Role</th>
+              <th>Scope</th>
+              <th>Tenure</th>
+              <th>Revoked By</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in history_assignments %}
+            <tr>
+              <td class="ps-3 fw-semibold">{{ h.personnel.fullname }}</td>
+              <td><span class="badge bg-light text-dark border">{{ h.personnel.staffID }}</span></td>
+              <td><span class="badge bg-secondary">{{ h.display_role_name }}</span></td>
+              <td>
+                {% if h.station %}{{ h.station.name }}
+                {% elif h.district %}{{ h.district.name }}
+                {% elif h.region %}{{ h.region.name }}
+                {% else %}National{% endif %}
+              </td>
+              <td class="small">{{ h.effective_from|date:"d/m/Y" }} &rarr; {{ h.effective_to|date:"d/m/Y"|default:"Present" }}</td>
+              <td class="small text-muted">{{ h.revoked_by.username|default:"System" }}</td>
+              <td class="small text-danger">{{ h.revocation_reason|default:"Reassigned" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-3 text-muted">No historical revocations recorded.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal Confirmation for Role Revocation (Section 10, 17, 64) -->
+<div class="modal fade" id="revokeModal" tabindex="-1" aria-labelledby="revokeModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white" style="background-color: #8B0000 !important;">
+        <h5 class="modal-title fw-bold" id="revokeModalLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>Revoke Administrative Access
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="revokeForm" method="POST" action="">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="alert alert-warning small border-0 mb-3">
+            <i class="fas fa-info-circle me-1"></i>
+            This action will remove the officer's administrative workspace but will <strong>NOT</strong> delete the officer's personnel record, user account, or service history.
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label text-muted small mb-0">Officer:</label>
+            <div class="fw-bold text-dark" id="modalOfficerName"></div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-muted small mb-0">Staff ID:</label>
+            <div class="fw-bold text-dark" id="modalStaffID"></div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-muted small mb-0">Role:</label>
+            <div><span class="badge bg-dark" id="modalRoleName"></span></div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small mb-0">Jurisdiction Scope:</label>
+            <div class="fw-bold text-dark" id="modalScope"></div>
+          </div>
+
+          <div class="mb-3">
+            <label for="id_reason" class="form-label fw-bold text-dark">Reason for Revocation *</label>
+            <textarea name="reason" id="id_reason" class="form-control" rows="3" required placeholder="State official administrative reassignment or transition reason..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger btn-sm fw-bold" style="background-color: #8B0000; border-color: #8B0000;">
+            <i class="fas fa-user-slash me-1"></i> Confirm Revocation
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const revokeModal = document.getElementById('revokeModal');
+  if (revokeModal) {
+    revokeModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      const assignmentId = button.getAttribute('data-assignment-id');
+      const officerName = button.getAttribute('data-officer-name');
+      const staffId = button.getAttribute('data-staff-id');
+      const roleName = button.getAttribute('data-role-name');
+      const scope = button.getAttribute('data-scope');
+
+      document.getElementById('modalOfficerName').textContent = officerName;
+      document.getElementById('modalStaffID').textContent = staffId;
+      document.getElementById('modalRoleName').textContent = roleName;
+      document.getElementById('modalScope').textContent = scope;
+
+      const form = document.getElementById('revokeForm');
+      form.action = '/roles/revoke/' + assignmentId + '/';
+    });
+  }
+});
+</script>
+{% endblock content %}

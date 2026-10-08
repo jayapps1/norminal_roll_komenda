@@ -1,0 +1,225 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}Regional Administration Leave Inbox — {{ region.name }} — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1400px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-regional' region.id %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-map-marked-alt me-1"></i> {{ region.name }} Region</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Regional Leave Inbox</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-tasks text-danger me-2"></i>Regional Leave Administration
+      </h3>
+      <p class="text-muted small mb-0">Review & verify statutory leave for Regional personnel and District Fire Officers (DFOs/MFOs) across {{ region.name }} Region.</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'dashboard-regional' region.id %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-arrow-left me-1"></i> Regional Dashboard
+      </a>
+      <a href="{% url 'regional-leave-approvals' region.id %}" class="btn btn-outline-danger btn-sm shadow-sm fw-bold">
+        <i class="fas fa-stamp me-1"></i> RFO Approval Queue &rarr;
+      </a>
+    </div>
+  </div>
+
+  <!-- Regional Command Leadership Banner (Section 17) -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3 border-start border-danger border-4">
+    <div class="row align-items-center g-3">
+      <div class="col-md-6">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+            <i class="fas fa-user-shield fa-2x"></i>
+          </div>
+          <div>
+            <span class="badge bg-danger mb-1">RFO &bull; Regional Fire Officer</span>
+            <h5 class="fw-bold mb-0 text-dark">{{ current_rfo.personnel.fullname|default:"Command Vacant" }}</h5>
+            <div class="text-muted small">{{ region.name }} Regional Command &bull; {{ current_rfo.personnel.rank.name|default:"RFO" }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 text-md-end">
+        <span class="badge bg-warning text-dark fs-6 px-3 py-2 me-2">
+          <i class="fas fa-inbox me-1"></i> {{ pending_co_leaves.count|add:pending_regional_staff.count }} Pending Review
+        </span>
+        <span class="badge bg-info text-dark fs-6 px-3 py-2">
+          <i class="fas fa-share-square me-1"></i> {{ forwarded_to_rfo.count }} With RFO
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Critical Section: DFO / MFO Personal Leave Queue (Section 18 & 19) -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4 border-top border-warning border-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <div>
+        <h6 class="fw-bold mb-0 text-dark">
+          <i class="fas fa-shield-alt text-warning me-2"></i>District Commanding Officers (DFO / MFO) Personal Leave
+        </h6>
+        <span class="text-muted small">Special workflow: DFOs/MFOs cannot approve their own leave; requests route here for verification before RFO decision.</span>
+      </div>
+      <span class="badge bg-warning text-dark">{{ pending_co_leaves.count }} Pending Verification</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Commanding Officer</th>
+            <th>District Command</th>
+            <th>Appointment</th>
+            <th>Leave Type</th>
+            <th>Days</th>
+            <th>Start Date</th>
+            <th>Status</th>
+            <th class="text-end pe-4">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in pending_co_leaves %}
+          <tr>
+            <td class="ps-4">
+              <strong class="text-dark">{{ req.personnel.fullname }}</strong>
+              <div class="small text-muted">{{ req.personnel.staffID }} &bull; {{ req.personnel.rank.name }}</div>
+            </td>
+            <td><strong>{{ req.routing_district.name|default:req.personnel.station.district.name }}</strong></td>
+            <td><span class="badge bg-dark text-warning border border-warning">{{ req.personnel.current_command_appointment.get_appointment_type_display|default:"DFO" }}</span></td>
+            <td>{{ req.leave_type.name }}</td>
+            <td><strong class="text-danger">{{ req.duration }}d</strong></td>
+            <td>{{ req.start_date|date:"d M Y" }}</td>
+            <td><span class="badge bg-secondary">Awaiting Review</span></td>
+            <td class="text-end pe-4">
+              <a href="{% url 'regional-leave-process' region.id req.pk %}" class="btn btn-sm btn-danger fw-bold shadow-sm">
+                <i class="fas fa-check-circle me-1"></i> Verify & Forward to RFO
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">
+              No DFO/MFO personal leave applications awaiting verification.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Regional Command Personnel Leave Applications (Section 16) -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <div>
+        <h6 class="fw-bold mb-0 text-dark">
+          <i class="fas fa-users text-danger me-2"></i>Regional Headquarters Personnel Applications
+        </h6>
+        <span class="text-muted small">Officers posted directly under Regional Command.</span>
+      </div>
+      <span class="badge bg-secondary">{{ pending_regional_staff.count }} Pending</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Officer</th>
+            <th>Rank</th>
+            <th>Station / Unit</th>
+            <th>Leave Type</th>
+            <th>Days</th>
+            <th>Start Date</th>
+            <th>Submitted</th>
+            <th class="text-end pe-4">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in pending_regional_staff %}
+          <tr>
+            <td class="ps-4">
+              <strong class="text-dark">{{ req.personnel.fullname }}</strong>
+              <div class="small text-muted">{{ req.personnel.staffID }}</div>
+            </td>
+            <td>{{ req.personnel.rank.name|default:req.personnel.job_grade }}</td>
+            <td>{{ req.personnel.station.name|default:"Regional HQ" }}</td>
+            <td>{{ req.leave_type.name }}</td>
+            <td><strong class="text-danger">{{ req.duration }}d</strong></td>
+            <td>{{ req.start_date|date:"d M Y" }}</td>
+            <td>{{ req.created_at|date:"d M Y" }}</td>
+            <td class="text-end pe-4">
+              <a href="{% url 'regional-leave-process' region.id req.pk %}" class="btn btn-sm btn-danger fw-bold shadow-sm">
+                <i class="fas fa-check-circle me-1"></i> Process / Verify
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">
+              No regional headquarters leave requests awaiting processing.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Forwarded to RFO Summary -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <h6 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-share-square text-info me-2"></i>Requests Forwarded to RFO for Final Approval
+      </h6>
+      <span class="badge bg-info text-dark">{{ forwarded_to_rfo.count }} In Queue</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Officer</th>
+            <th>Leave Type</th>
+            <th>Days</th>
+            <th>Start Date</th>
+            <th>Processed On</th>
+            <th>Processed By</th>
+            <th class="text-end pe-4">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in forwarded_to_rfo %}
+          <tr>
+            <td class="ps-4">
+              <strong class="text-dark">{{ req.personnel.fullname }}</strong>
+              <div class="small text-muted">{{ req.personnel.staffID }}</div>
+            </td>
+            <td>{{ req.leave_type.name }}</td>
+            <td>{{ req.duration }} days</td>
+            <td>{{ req.start_date|date:"d M Y" }}</td>
+            <td>{{ req.processed_at|date:"d M Y H:i" }}</td>
+            <td><span class="small text-muted">{{ req.processed_by.username }}</span></td>
+            <td class="text-end pe-4">
+              <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half me-1"></i>Awaiting RFO Decision</span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-3 text-muted">
+              No requests currently awaiting decision with the RFO.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

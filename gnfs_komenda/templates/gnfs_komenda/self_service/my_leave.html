@@ -1,0 +1,217 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}My Leave & Balances — GNFS Self-Service{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1350px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'my-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-user-circle me-1"></i> My Dashboard</a></li>
+          <li class="breadcrumb-item active" aria-current="page">My Leave Hub</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-calendar-alt text-danger me-2"></i>My Leave & Balances
+      </h3>
+      <p class="text-muted small mb-0">Track statutory leave entitlements, active applications, balances, and historical records.</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'my-leave-request' %}" class="btn btn-danger btn-sm shadow-sm fw-bold">
+        <i class="fas fa-plus me-1"></i> Apply for Leave
+      </a>
+      <a href="{% url 'my-dashboard' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-arrow-left me-1"></i> Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Annual Leave Entitlement Details Card -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden border-top border-danger border-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <div>
+        <h6 class="fw-bold mb-0 text-dark">
+          <i class="fas fa-wallet text-danger me-2"></i>Leave Entitlement Summary — Leave Year {{ year }}
+        </h6>
+        <span class="text-muted small">Configured according to your officer category: <strong>{{ personnel.officer_category }}</strong></span>
+      </div>
+      <div class="dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+          <i class="fas fa-calendar-alt me-1"></i> Year: {{ year }}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+          <li><a class="dropdown-item {% if year == 2026 %}active{% endif %}" href="?year=2026">2026</a></li>
+          <li><a class="dropdown-item {% if year == 2025 %}active{% endif %}" href="?year=2025">2025</a></li>
+          <li><a class="dropdown-item {% if year == 2024 %}active{% endif %}" href="?year=2024">2024</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <!-- Annual Leave Card -->
+        <div class="col-md-3">
+          <div class="p-3 rounded-3 bg-light border h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-muted small text-uppercase fw-bold">Annual Entitlement</span>
+              <span class="badge bg-secondary">Statutory</span>
+            </div>
+            <div class="fs-2 fw-bold text-dark">{{ annual_ent.base_entitlement|default:"0" }} <span class="fs-6 text-muted fw-normal">Days</span></div>
+            <div class="text-muted small mt-1">Carry forward from previous year: <strong>{{ annual_ent.carry_forward_days|default:"0" }}d</strong></div>
+          </div>
+        </div>
+
+        <!-- Days Taken Card -->
+        <div class="col-md-3">
+          <div class="p-3 rounded-3 bg-light border h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-muted small text-uppercase fw-bold">Leave Taken</span>
+              <span class="badge bg-danger">Approved</span>
+            </div>
+            <div class="fs-2 fw-bold text-danger">{{ annual_ent.days_taken|default:"0" }} <span class="fs-6 text-muted fw-normal">Days</span></div>
+            <div class="text-muted small mt-1">Completed or actively ongoing leave</div>
+          </div>
+        </div>
+
+        <!-- Days Reserved (Pending) Card -->
+        <div class="col-md-3">
+          <div class="p-3 rounded-3 bg-light border h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-muted small text-uppercase fw-bold">Pending Approval</span>
+              <span class="badge bg-warning text-dark">Reserved</span>
+            </div>
+            <div class="fs-2 fw-bold text-warning">{{ annual_ent.days_reserved|default:"0" }} <span class="fs-6 text-muted fw-normal">Days</span></div>
+            <div class="text-muted small mt-1">In administrative or command workflow</div>
+          </div>
+        </div>
+
+        <!-- Available Balance Card -->
+        <div class="col-md-3">
+          <div class="p-3 rounded-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-danger small text-uppercase fw-bold">Available Balance</span>
+              <span class="badge bg-danger text-white">Remaining</span>
+            </div>
+            <div class="fs-2 fw-bold text-danger">{{ annual_ent.remaining_balance|default:"0" }} <span class="fs-6 text-danger fw-normal">Days</span></div>
+            <div class="text-muted small mt-1">Available to apply for immediately</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leave History Filter & Records Table (Section 6) -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+    <div class="card-header bg-white py-3 border-bottom">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h6 class="fw-bold mb-0 text-dark">
+          <i class="fas fa-list-alt text-danger me-2"></i>My Leave History
+        </h6>
+        <!-- Filter Pills -->
+        <div class="d-flex flex-wrap gap-1">
+          <a href="?status=all" class="btn btn-sm {% if status_filter == 'all' %}btn-danger{% else %}btn-outline-secondary{% endif %} py-1 px-2">All</a>
+          <a href="?status=PENDING_PROCESSING" class="btn btn-sm {% if status_filter == 'PENDING_PROCESSING' %}btn-danger{% else %}btn-outline-secondary{% endif %} py-1 px-2">Processing</a>
+          <a href="?status=PENDING_APPROVAL" class="btn btn-sm {% if status_filter == 'PENDING_APPROVAL' %}btn-danger{% else %}btn-outline-secondary{% endif %} py-1 px-2">Awaiting Approval</a>
+          <a href="?status=APPROVED" class="btn btn-sm {% if status_filter == 'APPROVED' %}btn-danger{% else %}btn-outline-secondary{% endif %} py-1 px-2">Approved</a>
+          <a href="?status=ACTIVE" class="btn btn-sm {% if status_filter == 'ACTIVE' %}btn-danger{% else %}btn-outline-secondary{% endif %} py-1 px-2">Active</a>
+          <a href="?status=RETURNED_FOR_CORRECTION" class="btn btn-sm {% if status_filter == 'RETURNED_FOR_CORRECTION' %}btn-warning text-dark fw-bold{% else %}btn-outline-warning text-dark{% endif %} py-1 px-2">Correction</a>
+          <a href="?status=REJECTED" class="btn btn-sm {% if status_filter == 'REJECTED' %}btn-danger{% else %}btn-outline-secondary{% endif %} py-1 px-2">Rejected</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Leave Ref & Type</th>
+            <th>Year</th>
+            <th>Duration</th>
+            <th>Leave Period</th>
+            <th>Resume Date</th>
+            <th>Workflow Status</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in page_obj %}
+          <tr>
+            <td class="ps-4">
+              <div class="fw-bold text-dark">{{ req.leave_type.name }}</div>
+              <span class="small text-muted font-monospace">LR-{{ req.id }}</span>
+            </td>
+            <td><span class="badge bg-light text-dark border">{{ req.leave_year }}</span></td>
+            <td>
+              <span class="fw-semibold">{{ req.duration }}</span>
+              <span class="small text-muted">{{ req.leave_type.get_calculation_mode_display }}</span>
+            </td>
+            <td>
+              <div class="text-dark small">{{ req.start_date|date:"d M Y" }}</div>
+              <div class="text-muted small">&rarr; {{ req.last_leave_date|date:"d M Y" }}</div>
+            </td>
+            <td>
+              <strong class="text-success small">{{ req.resume_date|date:"d M Y" }}</strong>
+            </td>
+            <td>
+              {% if req.status == 'APPROVED' or req.status == 'ACTIVE' %}
+              <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>{{ req.get_status_display }}</span>
+              {% elif req.status == 'PENDING_PROCESSING' %}
+              <span class="badge bg-secondary"><i class="fas fa-clipboard-list me-1"></i>Awaiting Processing</span>
+              {% elif req.status == 'PENDING_APPROVAL' %}
+              <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half me-1"></i>Awaiting Command Decision</span>
+              {% elif req.status == 'RETURNED_FOR_CORRECTION' %}
+              <span class="badge bg-info text-dark"><i class="fas fa-exclamation-circle me-1"></i>Returned for Correction</span>
+              {% elif req.status == 'REJECTED' %}
+              <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Rejected</span>
+              {% elif req.status == 'COMPLETED' %}
+              <span class="badge bg-dark"><i class="fas fa-flag-checkered me-1"></i>Completed</span>
+              {% else %}
+              <span class="badge bg-light text-dark">{{ req.get_status_display }}</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              <a href="{% url 'my-leave-detail' req.pk %}" class="btn btn-sm btn-outline-secondary py-1 px-2" title="View Full Timeline">
+                <i class="fas fa-eye me-1"></i> View
+              </a>
+              {% if req.status == 'RETURNED_FOR_CORRECTION' %}
+              <a href="{% url 'my-leave-edit' req.pk %}" class="btn btn-sm btn-warning py-1 px-2 ms-1 fw-bold" title="Edit and Resubmit">
+                <i class="fas fa-edit me-1"></i> Correct
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="fas fa-folder-open fa-2x mb-2 d-block text-secondary opacity-50"></i>
+              No leave records found matching this criteria.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+      <span class="small text-muted">Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</span>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}">Next</a></li>
+        {% endif %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

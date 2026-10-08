@@ -1,0 +1,204 @@
+{% extends 'main.html' %}
+
+{% block title %}GNFS Organisational Structure Tree — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-national' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> National</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Organisational Structure</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-sitemap text-danger me-2"></i>GNFS Functional Organisational Tree
+      </h3>
+      <p class="text-muted small mb-0">Directorates &rarr; Departments / Divisions &rarr; Units &rarr; Personnel (Section 17.30)</p>
+    </div>
+
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+      <a href="{% url 'directorates-list' %}" class="btn btn-outline-danger btn-sm shadow-sm">
+        <i class="fas fa-layer-group me-1"></i> Directorates
+      </a>
+      <a href="{% url 'departments-list' %}" class="btn btn-outline-primary btn-sm shadow-sm">
+        <i class="fas fa-building me-1"></i> Departments
+      </a>
+      <a href="{% url 'units-list' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-cubes me-1"></i> Units
+      </a>
+      {% if can_manage %}
+      <a href="{% url 'directorate-create' %}" class="btn btn-danger btn-sm shadow-sm fw-bold">
+        <i class="fas fa-plus me-1"></i> Add Directorate
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Overview Stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 border-start border-danger border-4 bg-white p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small">Directorates</div>
+            <h3 class="fw-bold mb-0 text-danger">{{ total_directorates }}</h3>
+          </div>
+          <i class="fas fa-layer-group fa-2x text-danger opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 border-start border-primary border-4 bg-white p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small">Departments / Divisions</div>
+            <h3 class="fw-bold mb-0 text-primary">{{ total_departments }}</h3>
+          </div>
+          <i class="fas fa-building fa-2x text-primary opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 border-start border-success border-4 bg-white p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small">Units / Sub-Units</div>
+            <h3 class="fw-bold mb-0 text-success">{{ total_units }}</h3>
+          </div>
+          <i class="fas fa-cubes fa-2x text-success opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Organisational Tree Card -->
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 fw-bold text-dark">
+        <i class="fas fa-network-wired text-danger me-2"></i>Hierarchy Explorer
+      </h5>
+      <span class="badge bg-secondary">Directorate &gt; Department &gt; Unit</span>
+    </div>
+    <div class="card-body p-4">
+      {% for dir in tree %}
+      <div class="border rounded p-3 mb-3 bg-white shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-danger fs-6 px-3 py-2">
+              <i class="fas fa-layer-group me-1"></i> {{ dir.name }}
+            </span>
+            {% if dir.code %}
+              <code class="text-danger fw-bold">[{{ dir.code }}]</code>
+            {% endif %}
+            {% if not dir.active %}
+              <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+            <span class="badge bg-light text-dark border">
+              <i class="fas fa-users me-1"></i> {{ dir.personnel_count }} Personnel
+            </span>
+          </div>
+          {% if can_manage %}
+          <div class="btn-group btn-group-sm">
+            <a href="{% url 'department-create' %}?directorate={{ dir.id }}" class="btn btn-outline-primary" title="Add Department under this Directorate">
+              <i class="fas fa-plus me-1"></i> Add Dept
+            </a>
+            <a href="{% url 'directorate-edit' dir.id %}" class="btn btn-outline-secondary" title="Edit Directorate">
+              <i class="fas fa-edit"></i>
+            </a>
+            <a href="{% url 'directorate-toggle' dir.id %}" class="btn btn-outline-{% if dir.active %}danger{% else %}success{% endif %}" title="{% if dir.active %}Deactivate{% else %}Reactivate{% endif %}">
+              <i class="fas fa-{% if dir.active %}ban{% else %}check{% endif %}"></i>
+            </a>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Departments Under Directorate -->
+        {% if dir.children %}
+        <div class="ms-4 ps-3 border-start border-2 border-danger border-opacity-25 mt-3">
+          {% for dept in dir.children %}
+          <div class="mb-3 p-2 rounded bg-light border">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary px-2 py-1">
+                  <i class="fas fa-building me-1"></i> {{ dept.name }}
+                </span>
+                {% if dept.code %}
+                  <code class="text-primary">[{{ dept.code }}]</code>
+                {% endif %}
+                {% if not dept.active %}
+                  <span class="badge bg-secondary">Inactive</span>
+                {% endif %}
+                <span class="badge bg-white text-dark border small">
+                  <i class="fas fa-users me-1"></i> {{ dept.personnel_count }}
+                </span>
+              </div>
+              {% if can_manage %}
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'unit-create' %}?department={{ dept.id }}" class="btn btn-outline-success btn-sm py-0" title="Add Unit">
+                  <i class="fas fa-plus"></i> Unit
+                </a>
+                <a href="{% url 'department-edit' dept.id %}" class="btn btn-outline-secondary btn-sm py-0" title="Edit">
+                  <i class="fas fa-edit"></i>
+                </a>
+                <a href="{% url 'department-toggle' dept.id %}" class="btn btn-outline-{% if dept.active %}danger{% else %}success{% endif %} btn-sm py-0">
+                  <i class="fas fa-{% if dept.active %}ban{% else %}check{% endif %}"></i>
+                </a>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Units Under Department -->
+            {% if dept.children %}
+            <div class="ms-3 ps-3 border-start border-2 border-primary border-opacity-25 mt-2">
+              <div class="d-flex flex-wrap gap-2">
+                {% for u in dept.children %}
+                <div class="badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-sm">
+                  <i class="fas fa-cubes text-success"></i>
+                  <span class="fw-semibold">{{ u.name }}</span>
+                  {% if u.code %}<span class="text-muted small">({{ u.code }})</span>{% endif %}
+                  {% if not u.active %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+                  <span class="badge bg-light text-secondary border small">{{ u.personnel_count }} officers</span>
+                  {% if can_manage %}
+                  <a href="{% url 'unit-edit' u.id %}" class="text-secondary ms-1" title="Edit Unit"><i class="fas fa-edit"></i></a>
+                  <a href="{% url 'unit-toggle' u.id %}" class="text-{% if u.active %}danger{% else %}success{% endif %} ms-1" title="Toggle Active"><i class="fas fa-{% if u.active %}ban{% else %}check{% endif %}"></i></a>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% else %}
+              <div class="ms-3 text-muted small fst-italic">No units configured under this department.</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="ms-4 text-muted small fst-italic mt-2">No departments configured under this directorate.</div>
+        {% endif %}
+      </div>
+      {% empty %}
+      <div class="text-center py-5 text-muted">
+        <i class="fas fa-sitemap fa-3x mb-3 text-secondary opacity-50"></i>
+        <h5>No Functional Units Found</h5>
+        <p>Run the functional structure seeder or use "Add Directorate" to create the initial structure.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

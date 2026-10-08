@@ -122,6 +122,26 @@ class UserAssignment(models.Model):
         default=GNFSUserRole.STAFF,
         db_index=True
     )
+    personnel = models.OneToOneField(
+        'gnfs_komenda.NorminalRoll',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="user_assignment"
+    )
+    must_change_password = models.BooleanField(
+        default=False,
+        help_text="Require user to change their password on next login."
+    )
+    is_system_account = models.BooleanField(
+        default=False,
+        help_text="True if this is a bootstrap/technical system admin account."
+    )
+    password_changed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp of when user last changed their password."
+    )
     region = models.ForeignKey(
         'gnfs_komenda.Region',
         on_delete=models.SET_NULL,
@@ -157,6 +177,21 @@ class UserAssignment(models.Model):
     class Meta:
         verbose_name = "User Assignment"
         verbose_name_plural = "User Assignments"
+
+    @property
+    def account_status(self):
+        """Human-readable account status summary."""
+        if not self.user.is_active:
+            return "INACTIVE / LOCKED"
+        if self.must_change_password:
+            return "CHANGE REQUIRED"
+        return "ACTIVE"
+
+    @property
+    def totp_configured(self):
+        """Return True if 2FA (TOTP) is active and confirmed."""
+        totp = getattr(self.user, 'totp_device', None)
+        return bool(totp and totp.is_confirmed)
 
     def clean(self):
         super().clean()

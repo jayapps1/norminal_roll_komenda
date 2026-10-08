@@ -1,0 +1,174 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}Verify Leave Request #{{ leave_req.id }} — {{ region.name }} Regional Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1200px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'regional-leave-inbox' region.id %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-tasks me-1"></i> Regional Inbox</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Verify Request #{{ leave_req.id }}</li>
+        </ol>
+      </nav>
+      <div class="d-flex align-items-center gap-2">
+        <h3 class="fw-bold mb-0 text-dark">Regional Verification: {{ leave_req.personnel.fullname }}</h3>
+        <span class="badge bg-secondary">Administrative Stage</span>
+      </div>
+      <p class="text-muted small mb-0">Check dates, balances, and attachments before forwarding to the Regional Fire Officer (RFO).</p>
+    </div>
+
+    <a href="{% url 'regional-leave-inbox' region.id %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+      <i class="fas fa-arrow-left me-1"></i> Back to Regional Inbox
+    </a>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left Column: Details & Balances -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-user-check text-danger me-2"></i>Applicant Details
+        </h6>
+
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Officer Name:</span>
+            <strong class="text-dark">{{ leave_req.personnel.fullname }}</strong>
+            <div class="small text-muted">{{ leave_req.personnel.rank.name|default:leave_req.personnel.job_grade }} &bull; {{ leave_req.personnel.staffID }}</div>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">Appointment / Role:</span>
+            {% if leave_req.personnel.current_command_appointment %}
+            <span class="badge bg-dark text-warning border border-warning">
+              {{ leave_req.personnel.current_command_appointment.get_appointment_type_display }}
+            </span>
+            <div class="small text-muted mt-1">{{ leave_req.routing_district.name }} District Command</div>
+            {% else %}
+            <strong class="text-dark">Regional Personnel</strong>
+            <div class="small text-muted">{{ region.name }} Regional HQ</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="p-3 bg-light rounded-3 mb-3">
+          <div class="row g-3 text-center">
+            <div class="col-4">
+              <span class="text-muted small d-block">Start Date</span>
+              <strong class="text-dark">{{ leave_req.start_date|date:"d M Y" }}</strong>
+            </div>
+            <div class="col-4 border-start border-end">
+              <span class="text-muted small d-block">Duration</span>
+              <strong class="text-danger fs-5">{{ leave_req.duration }}</strong>
+              <span class="small text-muted d-block">{{ leave_req.leave_type.get_calculation_mode_display }}</span>
+            </div>
+            <div class="col-4">
+              <span class="text-muted small d-block">Calculated Resume Date</span>
+              <strong class="text-success">{{ leave_req.resume_date|date:"d M Y" }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entitlement Verification -->
+        <div class="card border border-secondary border-opacity-25 rounded-3 p-3 mb-3">
+          <span class="text-muted small text-uppercase fw-bold d-block mb-2">Entitlement Verification</span>
+          <div class="row g-2 text-center small">
+            <div class="col-3">
+              <span class="text-muted d-block">Statutory Pool</span>
+              <strong>{{ entitlement.total_entitlement|default:"0" }}d</strong>
+            </div>
+            <div class="col-3">
+              <span class="text-muted d-block">Taken</span>
+              <strong class="text-danger">{{ entitlement.days_taken|default:"0" }}d</strong>
+            </div>
+            <div class="col-3">
+              <span class="text-muted d-block">Reserved</span>
+              <strong class="text-warning">{{ entitlement.days_reserved|default:"0" }}d</strong>
+            </div>
+            <div class="col-3">
+              <span class="text-muted d-block">Remaining</span>
+              <strong class="text-success">{{ entitlement.remaining_balance|default:"0" }}d</strong>
+            </div>
+          </div>
+        </div>
+
+        {% if leave_req.medical_reference %}
+        <div class="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3 mb-3">
+          <strong class="text-danger small d-block"><i class="fas fa-hospital me-1"></i>Medical Reference:</strong>
+          <span class="text-dark">{{ leave_req.medical_reference }}</span>
+        </div>
+        {% endif %}
+
+        {% if leave_req.reason %}
+        <div class="mb-3">
+          <span class="text-muted small d-block fw-semibold">Reason / Remarks:</span>
+          <p class="text-dark small mb-0">{{ leave_req.reason }}</p>
+        </div>
+        {% endif %}
+
+        {% if leave_req.handover_notes %}
+        <div class="mb-3">
+          <span class="text-muted small d-block fw-semibold">Handover Notes:</span>
+          <p class="text-dark small mb-0">{{ leave_req.handover_notes }}</p>
+        </div>
+        {% endif %}
+
+        {% if leave_req.attachment %}
+        <div class="p-3 bg-light rounded-3 d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <i class="fas fa-file-pdf text-danger me-2 fa-lg"></i>
+            <span class="small fw-semibold text-dark">Supporting Document Attached</span>
+          </div>
+          <a href="{{ leave_req.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-danger">
+            <i class="fas fa-external-link-alt me-1"></i> Inspect File
+          </a>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!-- Right Column: Verification Action Form -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4 border-top border-danger border-4">
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-tasks text-danger me-2"></i>Processing Action
+        </h6>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-uppercase text-secondary" for="commentsInput">
+              Verification Notes / Instructions
+            </label>
+            <textarea name="comments" id="commentsInput" rows="4" class="form-control" placeholder="Enter notes for the RFO, or explain corrections required..."></textarea>
+            <span class="small text-muted">Mandatory if returning for correction.</span>
+          </div>
+
+          <div class="d-grid gap-2">
+            <!-- Forward to RFO -->
+            <button type="submit" name="action" value="FORWARD" class="btn btn-success py-2 fw-bold shadow-sm">
+              <i class="fas fa-share-square me-1"></i> Verify & Forward to RFO for Final Decision
+            </button>
+
+            <!-- Return for Correction -->
+            <button type="submit" name="action" value="RETURN_FOR_CORRECTION" class="btn btn-warning text-dark py-2 fw-bold shadow-sm">
+              <i class="fas fa-undo me-1"></i> Return for Correction
+            </button>
+          </div>
+        </form>
+
+        <div class="alert alert-light border rounded-3 p-3 mt-4 mb-0 small text-muted">
+          <i class="fas fa-shield-alt text-danger me-1"></i>
+          <strong>Governance Notice:</strong> Regional administration performs administrative checking. Command approval belongs solely to the Regional Fire Officer (RFO).
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

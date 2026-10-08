@@ -1,0 +1,94 @@
+{% extends 'main.html' %}
+
+{% block title %}Confirm Arrival & Activate Posting — {{ transfer.reference_number }} — GNFS{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 800px;">
+
+  <!-- Breadcrumbs -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'personnel' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> Personnel Roll</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'transfer-list' %}" class="text-decoration-none text-secondary">Transfers</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'transfer-detail' transfer.id %}" class="text-decoration-none text-secondary">{{ transfer.reference_number }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Confirm Arrival</li>
+    </ol>
+  </nav>
+
+  <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="card-header py-3 text-white bg-success d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="mb-0 fw-bold"><i class="fas fa-check-circle me-2"></i>Confirm Officer Arrival & Activate Posting</h5>
+        <div class="small text-white-50">Transfer Order {{ transfer.reference_number }}</div>
+      </div>
+      <span class="badge bg-light text-success font-monospace fs-6">{{ transfer.personnel.staffID }}</span>
+    </div>
+
+    <div class="card-body p-4">
+      <div class="alert alert-warning mb-4">
+        <h6 class="fw-bold mb-1"><i class="fas fa-shield-alt me-1"></i>Official Posting Activation Notice</h6>
+        <p class="small mb-0">
+          Confirming arrival will atomically close the officer's previous posting at <strong>{{ transfer.source_station.name|default:transfer.source_region.name }}</strong> and activate their new operational posting at <strong>{{ transfer.destination_station.name }}</strong> ({{ transfer.destination_region.name }}).
+        </p>
+      </div>
+
+      <div class="card bg-light border-0 p-3 mb-4 rounded-3">
+        <div class="row g-2 small">
+          <div class="col-md-6">
+            <span class="text-muted d-block">Officer Name:</span>
+            <strong class="text-dark">{{ transfer.personnel.fullname }}</strong> ({{ transfer.personnel.rank_short }})
+          </div>
+          <div class="col-md-6">
+            <span class="text-muted d-block">Receiving Station:</span>
+            <strong class="text-success">{{ transfer.destination_station.name }}</strong>
+          </div>
+          <div class="col-md-6">
+            <span class="text-muted d-block">Transfer Type:</span>
+            <strong>{{ transfer.get_transfer_type_display }}</strong>
+          </div>
+          <div class="col-md-6">
+            <span class="text-muted d-block">Expected Reporting Date:</span>
+            <strong>{{ transfer.expected_reporting_date|date:"F d, Y" }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for err in form.non_field_errors %}
+          <div><i class="fas fa-exclamation-triangle me-1"></i>{{ err }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold small">{{ form.actual_reporting_date.label }}</label>
+          {{ form.actual_reporting_date }}
+          <div class="form-text small">Date officer physically reported for duty at this station.</div>
+          {% if form.actual_reporting_date.errors %}<div class="text-danger small mt-1">{{ form.actual_reporting_date.errors }}</div>{% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold small">{{ form.remarks.label }}</label>
+          {{ form.remarks }}
+          {% if form.remarks.errors %}<div class="text-danger small mt-1">{{ form.remarks.errors }}</div>{% endif %}
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+          <a href="{% url 'transfer-detail' transfer.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Cancel
+          </a>
+          <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" onclick="return confirm('Confirm arrival and activate posting at this station?');">
+            <i class="fas fa-check-double me-1"></i> Confirm Arrival & Activate Posting
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

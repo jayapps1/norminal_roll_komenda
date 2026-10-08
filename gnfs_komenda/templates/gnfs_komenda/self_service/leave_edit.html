@@ -1,0 +1,115 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}Correct Leave Request #{{ leave_req.id }} — GNFS Self-Service{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1000px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'my-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-user-circle me-1"></i> My Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'my-leave' %}" class="text-decoration-none text-secondary">My Leave</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'my-leave-detail' leave_req.pk %}" class="text-decoration-none text-secondary">Request #{{ leave_req.id }}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Correct & Resubmit</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-edit text-warning me-2"></i>Correct & Resubmit Leave Request
+      </h3>
+      <p class="text-muted small mb-0">Modify requested dates, upload missing documents, or address reviewer remarks.</p>
+    </div>
+
+    <a href="{% url 'my-leave-detail' leave_req.pk %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+      <i class="fas fa-arrow-left me-1"></i> Cancel
+    </a>
+  </div>
+
+  <!-- Correction Reason Banner -->
+  <div class="alert alert-warning border border-warning rounded-4 shadow-sm p-4 mb-4">
+    <div class="d-flex gap-3">
+      <div class="text-warning"><i class="fas fa-exclamation-circle fa-2x"></i></div>
+      <div>
+        <h5 class="fw-bold text-dark mb-1">Correction Instructions from Administration / Approver</h5>
+        <p class="mb-0 text-dark">
+          {{ leave_req.correction_reason|default:"Please adjust the dates or attach missing documentation and resubmit." }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+      <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+        <i class="fas fa-calendar-alt text-danger me-2"></i>{{ leave_req.leave_type.name }} Application Details
+      </h6>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label fw-bold small text-uppercase text-secondary" for="startDate">Start Date <span class="text-danger">*</span></label>
+          <input type="date" name="start_date" id="startDate" class="form-control" value="{{ leave_req.start_date|date:'Y-m-d' }}" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-bold small text-uppercase text-secondary" for="duration">Number of Days <span class="text-danger">*</span></label>
+          <input type="number" name="duration" id="duration" class="form-control" value="{{ leave_req.duration }}" required min="1" max="180">
+        </div>
+      </div>
+
+      {% if leave_req.leave_type.code == 'SICK' %}
+      <div class="mb-3">
+        <label class="form-label fw-bold small text-uppercase text-danger" for="medicalRef">
+          <i class="fas fa-hospital me-1"></i>Hospital / Health Centre & Attending Doctor <span class="text-danger">*</span>
+        </label>
+        <input type="text" name="medical_reference" id="medicalRef" class="form-control" value="{{ leave_req.medical_reference|default:'' }}">
+      </div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label class="form-label fw-bold small text-uppercase text-secondary" for="reason">Reason / Destination Remarks</label>
+        <textarea name="reason" id="reason" rows="2" class="form-control">{{ leave_req.reason }}</textarea>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label fw-bold small text-uppercase text-secondary" for="contactPhone">Emergency Contact Phone</label>
+          <input type="tel" name="contact_phone" id="contactPhone" class="form-control" value="{{ leave_req.contact_phone }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-bold small text-uppercase text-secondary" for="contactAddress">Residential Address on Leave</label>
+          <input type="text" name="contact_address" id="contactAddress" class="form-control" value="{{ leave_req.contact_address }}">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold small text-uppercase text-secondary" for="handoverNotes">Handover Notes</label>
+        <textarea name="handover_notes" id="handoverNotes" rows="2" class="form-control">{{ leave_req.handover_notes }}</textarea>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-bold small text-uppercase text-secondary" for="attachment">
+          <i class="fas fa-paperclip me-1"></i>Update Supporting Document
+        </label>
+        {% if leave_req.attachment %}
+        <div class="small text-muted mb-2">
+          Current file: <a href="{{ leave_req.attachment.url }}" target="_blank">{{ leave_req.attachment.name }}</a>
+        </div>
+        {% endif %}
+        <input type="file" name="attachment" id="attachment" class="form-control">
+        <span class="small text-muted">Upload a new document if requested by reviewer.</span>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+        <a href="{% url 'my-leave-detail' leave_req.pk %}" class="btn btn-outline-secondary">Back to Details</a>
+        <button type="submit" class="btn btn-warning px-4 fw-bold shadow-sm">
+          <i class="fas fa-paper-plane me-1"></i> Resubmit for Processing
+        </button>
+      </div>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

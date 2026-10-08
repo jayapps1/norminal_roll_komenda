@@ -1,0 +1,71 @@
+{% extends 'main.html' %}
+
+{% block title %}Configure Permissions: {{ role.name }} — GNFS{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'role-list' %}" class="text-danger text-decoration-none">Role Management</a></li>
+      <li class="breadcrumb-item active text-dark fw-bold">Configure Permissions</li>
+    </ol>
+  </nav>
+
+  <div class="card border-0 shadow-sm rounded-3 bg-white">
+    <div class="card-header bg-white border-0 pt-4 pb-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="badge bg-danger mb-1" style="background-color: #8B0000 !important;">{{ role.code }}</span>
+          <h4 class="fw-bold text-dark mb-0">{{ role.name }}</h4>
+          <p class="text-muted small mb-0">{{ role.description }}</p>
+        </div>
+        <div>
+          <span class="badge bg-light text-dark border">{{ role.permissions.count }} Granted</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body p-4 pt-2">
+      <form method="POST" action="">
+        {% csrf_token %}
+
+        <p class="text-muted small mb-3">
+          Configure the specific system capabilities granted to officers holding the <strong>{{ role.name }}</strong> administrative role.
+        </p>
+
+        {% for module_name, perms in perms_by_module.items %}
+        <div class="mb-4">
+          <h6 class="fw-bold text-dark text-uppercase border-bottom pb-1 mb-2" style="letter-spacing: 0.5px;">
+            <i class="fas fa-folder-open text-warning me-1"></i> {{ module_name }}
+          </h6>
+          <div class="row g-2">
+            {% for perm in perms %}
+            <div class="col-md-6">
+              <div class="form-check p-2 border rounded-2 h-100 bg-light">
+                <input class="form-check-input ms-0 me-2" type="checkbox" name="permissions" value="{{ perm.id }}" id="perm_{{ perm.id }}"
+                       {% if perm.id in current_perm_ids %}checked{% endif %}>
+                <label class="form-check-label d-block text-dark fw-semibold small" for="perm_{{ perm.id }}">
+                  {{ perm.name }}
+                  <span class="d-block text-muted fw-normal" style="font-size: 0.75rem;">{{ perm.description }}</span>
+                </label>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+          <a href="{% url 'role-list' %}" class="btn btn-outline-secondary">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-danger px-4 fw-bold" style="background-color: #8B0000; border-color: #8B0000;">
+            <i class="fas fa-save me-1"></i> Save Permissions
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock content %}

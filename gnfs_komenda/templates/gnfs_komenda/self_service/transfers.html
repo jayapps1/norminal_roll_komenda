@@ -1,0 +1,157 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}My Transfers & Postings — GNFS Self-Service{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1200px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'my-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-user-circle me-1"></i> My Dashboard</a></li>
+          <li class="breadcrumb-item active" aria-current="page">My Transfers</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-exchange-alt text-warning me-2"></i>My Transfers & Posting Status
+      </h3>
+      <p class="text-muted small mb-0">Track official transfer orders, relocation instructions, and transfer history.</p>
+    </div>
+
+    <a href="{% url 'my-dashboard' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+      <i class="fas fa-arrow-left me-1"></i> Dashboard
+    </a>
+  </div>
+
+  <!-- Active Transfer Card (Section 35) -->
+  {% if active_transfer %}
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-4 border-top border-warning border-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-2 mb-3 gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <h6 class="fw-bold text-dark mb-0">
+          <i class="fas fa-route text-warning me-2"></i>Active Transfer Directive
+        </h6>
+        <span class="badge bg-light text-dark border font-monospace">{{ active_transfer.reference_number|default:"TRF-PENDING" }}</span>
+      </div>
+      <span class="badge bg-warning text-dark fs-6">{{ active_transfer.get_status_display }}</span>
+    </div>
+
+    <div class="row g-4 align-items-center">
+      <!-- Source Location -->
+      <div class="col-md-5">
+        <div class="p-3 bg-light rounded-3">
+          <span class="text-muted small text-uppercase fw-bold d-block mb-1">Relieving From (Current Posting):</span>
+          <h5 class="fw-bold text-dark mb-1">{{ active_transfer.source_station.name|default:"Origin Station" }}</h5>
+          <div class="small text-muted">
+            {{ active_transfer.source_region.name }} &rarr; {{ active_transfer.source_district.name }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow Indicator -->
+      <div class="col-md-2 text-center text-warning">
+        <i class="fas fa-arrow-right fa-2x d-none d-md-inline-block"></i>
+        <i class="fas fa-arrow-down fa-2x d-inline-block d-md-none my-2"></i>
+      </div>
+
+      <!-- Destination Location -->
+      <div class="col-md-5">
+        <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3">
+          <span class="text-warning small text-uppercase fw-bold d-block mb-1">Destination Posting:</span>
+          <h5 class="fw-bold text-dark mb-1">{{ active_transfer.destination_station.name|default:active_transfer.destination_district.name }}</h5>
+          <div class="small text-muted">
+            {{ active_transfer.destination_region.name }} &rarr; {{ active_transfer.destination_district.name }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-3 pt-3 border-top small text-muted">
+      <div class="col-sm-4">
+        <span>Effective Date: <strong class="text-dark">{{ active_transfer.effective_date|date:"d M Y"|default:"Immediate" }}</strong></span>
+      </div>
+      <div class="col-sm-4">
+        <span>Expected Reporting Date: <strong class="text-danger">{{ active_transfer.expected_reporting_date|date:"d M Y"|default:"TBD" }}</strong></span>
+      </div>
+      <div class="col-sm-4 text-sm-end">
+        <span>Type: <strong class="text-dark">{{ active_transfer.get_transfer_type_display|default:"Standard Transfer" }}</strong></span>
+      </div>
+    </div>
+
+    {% if active_transfer.special_instructions %}
+    <div class="mt-3 p-3 bg-light rounded-3 small">
+      <strong class="text-dark d-block mb-1">Special Instructions:</strong>
+      <p class="mb-0 text-muted">{{ active_transfer.special_instructions }}</p>
+    </div>
+    {% endif %}
+
+    <div class="alert alert-light border rounded-3 p-2 mt-3 mb-0 small text-muted">
+      <i class="fas fa-info-circle text-primary me-1"></i>
+      Arrival and reporting must be officially confirmed by the Receiving Station Officer or District Administration.
+    </div>
+  </div>
+  {% else %}
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-4 text-center">
+    <div class="py-4">
+      <i class="fas fa-check-circle fa-3x text-success mb-3 opacity-50"></i>
+      <h5 class="fw-bold text-dark mb-1">No Active Transfer Orders</h5>
+      <p class="text-muted small mb-0">You are currently confirmed at your duty station: <strong>{{ personnel.station.name|default:"Base" }}</strong>.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Transfer History Table -->
+  <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+    <div class="card-header bg-white py-3 border-bottom">
+      <h6 class="fw-bold text-dark mb-0">
+        <i class="fas fa-history text-secondary me-2"></i>Transfer Records & History
+      </h6>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-muted small text-uppercase">
+          <tr>
+            <th class="ps-4">Reference</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Effective Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for trf in transfers %}
+          <tr>
+            <td class="ps-4">
+              <strong class="text-dark">{{ trf.reference_number|default:"TRF" }}</strong>
+            </td>
+            <td>
+              <div class="text-dark">{{ trf.source_station.name|default:trf.source_district.name }}</div>
+              <span class="small text-muted">{{ trf.source_region.name }}</span>
+            </td>
+            <td>
+              <div class="text-dark">{{ trf.destination_station.name|default:trf.destination_district.name }}</div>
+              <span class="small text-muted">{{ trf.destination_region.name }}</span>
+            </td>
+            <td>{{ trf.effective_date|date:"d M Y"|default:"-" }}</td>
+            <td>
+              <span class="badge bg-light text-dark border">{{ trf.get_status_display }}</span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center py-4 text-muted">
+              No historical transfers on file.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

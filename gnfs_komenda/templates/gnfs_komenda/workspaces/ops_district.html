@@ -1,0 +1,435 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}{{ district.name }} Operations Workspace{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Breadcrumbs & Header (Section 30, 31, 67) -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          {% if scope.level == 'NATIONAL' %}
+          <li class="breadcrumb-item"><a href="{% url 'workspace-ops-national' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-fire-extinguisher me-1"></i> National Operations</a></li>
+          {% endif %}
+          {% if scope.level == 'NATIONAL' or scope.level == 'REGIONAL' %}
+          <li class="breadcrumb-item"><a href="{% url 'workspace-ops-regional' region.id %}" class="text-decoration-none text-secondary">{{ region.name }} Operations</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active" aria-current="page">{{ district.name }} Operations</li>
+        </ol>
+      </nav>
+      <div class="text-uppercase text-danger fw-bold small" style="letter-spacing: 1px;">
+        {{ district.name|upper }} &bull; OPERATIONS FUNCTIONAL WORKSPACE
+      </div>
+      <h2 class="fw-bold mb-0 text-dark" style="color: #8B0000 !important;">DISTRICT OPERATIONS WORKSPACE</h2>
+      <p class="text-muted small mb-0">Operational personnel availability, station/post strength readiness, and leave recommendations</p>
+    </div>
+  </div>
+
+  <!-- 5 Operational Strength Metrics Cards (Prompt 2 Section 8) -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-danger border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Operational Personnel</span>
+        <h4 class="fw-bold text-dark mb-0 mt-1">{{ total_ops }}</h4>
+        <span class="small text-muted">Operations Force</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-success border-4">
+        <span class="text-muted small fw-semibold text-uppercase">At Post</span>
+        <h4 class="fw-bold text-success mb-0 mt-1">{{ at_post }}</h4>
+        <span class="small text-muted">Ready for Deployment</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-warning border-4">
+        <span class="text-muted small fw-semibold text-uppercase">On Leave</span>
+        <h4 class="fw-bold text-warning mb-0 mt-1">{{ on_leave }}</h4>
+        <span class="small text-muted">Authorized Absence</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-info border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Returning Soon</span>
+        <h4 class="fw-bold text-info mb-0 mt-1">{{ returning_soon }}</h4>
+        <span class="small text-muted">Resuming in 7 Days</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-primary border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Awaiting Rec.</span>
+        <h4 class="fw-bold text-primary mb-0 mt-1">{{ awaiting_rec_count }}</h4>
+        <span class="small text-muted">Operations Decision</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational Scope & Authority Banner (Prompt 2 Section 8, 10) -->
+  <div class="alert alert-secondary border-0 rounded-3 shadow-sm p-3 mb-4 d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fas fa-fire-extinguisher fa-2x text-danger" style="color: #8B0000 !important;"></i>
+      <div class="small">
+        <strong class="text-dark">OPERATIONAL CONSOLE & PRIVACY COMPLIANCE:</strong>
+        <span class="text-muted">Scoped strictly to operational personnel. Bank accounts, payroll, and sensitive HR data are strictly omitted. Operations reviews shift and station readiness to formulate recommendations. <strong>Operations cannot finally approve leave requests.</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Station & Post Operational Strength Breakdown (Section 30) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+      <div>
+        <h5 class="fw-bold mb-0 text-dark">OPERATIONAL STRENGTH BY STATION & POST</h5>
+        <span class="text-muted small">Current live readiness per operational fire station and market post</span>
+      </div>
+    </div>
+    <div class="row g-3">
+      {% for stn in station_strength %}
+      <div class="col-md-6 col-lg-4">
+        <div class="p-3 border rounded-3 bg-light">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong class="text-dark">{{ stn.station.name }}</strong>
+            <span class="badge bg-danger">{{ stn.total }} Total</span>
+          </div>
+          <div class="d-flex justify-content-between small text-muted">
+            <span>Available at Post: <strong class="text-success">{{ stn.available }}</strong></span>
+            <span>On Leave: <strong class="text-warning">{{ stn.on_leave }}</strong></span>
+          </div>
+          <!-- Progress bar -->
+          <div class="progress mt-2" style="height: 6px;">
+            {% if stn.total > 0 %}
+            <div class="progress-bar bg-success" role="progressbar" style="width: {% widthratio stn.available stn.total 100 %}%;"></div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12 text-center py-3 text-muted">
+        No operational stations recorded under this district.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Operations Tabs & Inboxes (Prompt 2 Section 9, 10) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
+    <div class="card-header bg-white border-bottom p-0">
+      <ul class="nav nav-tabs card-header-tabs mx-3 mt-2" id="opsTabs" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link active fw-bold small text-dark" id="roster-tab" data-bs-toggle="tab" data-bs-target="#ops-roster" type="button">
+            <i class="fas fa-user-shield text-danger me-1"></i> Operations Personnel ({{ total_ops }})
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link fw-bold small text-dark" id="awaiting-tab" data-bs-toggle="tab" data-bs-target="#awaiting-rec" type="button">
+            <i class="fas fa-clipboard-list text-primary me-1"></i> Awaiting Recommendation
+            {% if inbox_awaiting_rec.exists %}<span class="badge bg-danger ms-1">{{ inbox_awaiting_rec.count }}</span>{% endif %}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link fw-bold small text-dark" id="rec-tab" data-bs-toggle="tab" data-bs-target="#recommended" type="button">
+            <i class="fas fa-thumbs-up text-success me-1"></i> Recommended ({{ inbox_recommended.count }})
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link fw-bold small text-dark" id="not-rec-tab" data-bs-toggle="tab" data-bs-target="#not-recommended" type="button">
+            <i class="fas fa-thumbs-down text-danger me-1"></i> Not Recommended ({{ inbox_not_recommended.count }})
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link fw-bold small text-dark" id="ops-leave-tab" data-bs-toggle="tab" data-bs-target="#ops-on-leave" type="button">
+            <i class="fas fa-user-clock text-warning me-1"></i> Ops Force On Leave ({{ inbox_on_leave.count }})
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card-body p-0">
+      <div class="tab-content" id="opsTabsContent">
+
+        <!-- 1. Operations Personnel Roster Tab (Prompt 2 Section 9 - Zero Bank/HR Data) -->
+        <div class="tab-pane fade show active p-3" id="ops-roster" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Staff ID</th>
+                  <th>Full Name</th>
+                  <th>Rank</th>
+                  <th>Station / Post</th>
+                  <th>Watch / Shift</th>
+                  <th>Availability Status</th>
+                  <th>Leave Type</th>
+                  <th>Leave Start</th>
+                  <th>Resume Date</th>
+                  <th>Days Remaining</th>
+                  <th>Upcoming Leave</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for op in ops_roster %}
+                <tr>
+                  <td><strong class="font-monospace text-dark">{{ op.staffID }}</strong></td>
+                  <td><strong class="text-dark">{{ op.name }}</strong></td>
+                  <td>{{ op.rank }}</td>
+                  <td>{{ op.station }}</td>
+                  <td><span class="badge bg-light text-dark border">{{ op.watch }}</span></td>
+                  <td>
+                    {% if op.leave_status == 'ON LEAVE' %}
+                    <span class="badge bg-warning text-dark border border-warning">ON LEAVE</span>
+                    {% else %}
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success">AT POST</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ op.leave_type }}</td>
+                  <td>{{ op.leave_start|date:"d M Y"|default:"-" }}</td>
+                  <td>
+                    {% if op.resume_date %}
+                    <strong class="text-success">{{ op.resume_date|date:"d M Y" }}</strong>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if op.days_remaining > 0 %}
+                    <strong class="text-danger">{{ op.days_remaining }}</strong> <small class="text-muted">days</small>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if op.upcoming_leave %}
+                    <small class="text-primary fw-semibold">{{ op.upcoming_leave.leave_type.name }} ({{ op.upcoming_leave.start_date|date:"d M" }})</small>
+                    {% else %}
+                    <span class="text-muted small">-</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="11" class="text-center py-4 text-muted">No operational personnel found under this district command.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. Awaiting Recommendation Tab (Prompt 2 Section 10) -->
+        <div class="tab-pane fade p-3" id="awaiting-rec" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Ref #</th>
+                  <th>Officer</th>
+                  <th>Rank / Station</th>
+                  <th>Leave Type</th>
+                  <th>Duration</th>
+                  <th>Dates</th>
+                  <th>Current Strength</th>
+                  <th class="text-end pe-3">Operations Recommendation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lr in inbox_awaiting_rec %}
+                <tr>
+                  <td><strong class="font-monospace text-dark">{{ lr.reference_number|default:lr.id }}</strong></td>
+                  <td>
+                    <strong class="text-dark d-block">{{ lr.personnel.fullname }}</strong>
+                    <small class="text-muted">{{ lr.personnel.staffID }}</small>
+                  </td>
+                  <td>
+                    <div>{{ lr.personnel.rank.abbreviation|default:lr.personnel.rank.name }}</div>
+                    <small class="text-muted">{{ lr.personnel.station.name }}</small>
+                  </td>
+                  <td><span class="badge bg-light text-dark border">{{ lr.leave_type.name }}</span></td>
+                  <td><strong>{{ lr.duration }}</strong> days</td>
+                  <td>{{ lr.start_date|date:"d M Y" }} &rarr; {{ lr.resume_date|date:"d M Y" }}</td>
+                  <td>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success">{{ at_post }} / {{ total_ops }} Available</span>
+                  </td>
+                  <td class="text-end pe-3">
+                    <button type="button" class="btn btn-danger btn-sm py-1 px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#recModal{{ lr.id }}" style="background-color: #8B0000; border-color: #8B0000;">
+                      <i class="fas fa-edit me-1"></i> Recommend Leave
+                    </button>
+
+                    <!-- Operations Recommendation Modal (Section 48) -->
+                    <div class="modal fade text-start" id="recModal{{ lr.id }}" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <form method="post" action="{% url 'operations-recommend-leave' lr.id %}">
+                            {% csrf_token %}
+                            <div class="modal-header">
+                              <h6 class="modal-title fw-bold">OPERATIONS RECOMMENDATION</h6>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                              <div class="p-3 bg-light rounded-3 mb-3 small">
+                                <div class="row g-2">
+                                  <div class="col-6">Officer: <strong>{{ lr.personnel.fullname }}</strong></div>
+                                  <div class="col-6">Rank: <strong>{{ lr.personnel.rank.abbreviation|default:lr.personnel.rank.name }}</strong></div>
+                                  <div class="col-6">Station: <strong>{{ lr.personnel.station.name }}</strong></div>
+                                  <div class="col-6">Duration: <strong>{{ lr.duration }} Days</strong></div>
+                                  <div class="col-12 border-top pt-2">Operational Strength: <strong class="text-success">{{ at_post }} of {{ total_ops }} personnel available at post</strong></div>
+                                </div>
+                              </div>
+
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark">Recommendation Decision *</label>
+                                <select name="recommendation" class="form-select" required>
+                                  <option value="">-- Choose Operations Recommendation --</option>
+                                  <option value="RECOMMEND">RECOMMEND (Operational strength permits leave)</option>
+                                  <option value="NOT_RECOMMEND">NOT RECOMMEND (Operational duty requirements prevent leave)</option>
+                                  <option value="RETURN_FOR_CORRECTION">RETURN FOR CORRECTION (Dates/Handover requires amendment)</option>
+                                </select>
+                              </div>
+
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark">Operations Remarks / Justification *</label>
+                                <textarea name="comments" class="form-control" rows="3" required placeholder="State operational justification or strength remarks..."></textarea>
+                              </div>
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                              <button type="submit" class="btn btn-danger btn-sm fw-bold px-3" style="background-color: #8B0000; border-color: #8B0000;">
+                                Submit Recommendation
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center py-4 text-muted">No leave requests currently awaiting Operations recommendation.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. Recommended Tab -->
+        <div class="tab-pane fade p-3" id="recommended" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Ref #</th>
+                  <th>Officer</th>
+                  <th>Leave Type</th>
+                  <th>Duration</th>
+                  <th>Recommended At</th>
+                  <th>Recommended By</th>
+                  <th>Comments</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lr in inbox_recommended %}
+                <tr>
+                  <td><strong class="font-monospace text-dark">{{ lr.reference_number|default:lr.id }}</strong></td>
+                  <td>{{ lr.personnel.fullname }}</td>
+                  <td>{{ lr.leave_type.name }}</td>
+                  <td>{{ lr.duration }} days</td>
+                  <td>{{ lr.operations_recommended_at|date:"d M Y H:i" }}</td>
+                  <td>{{ lr.operations_recommended_by.username }}</td>
+                  <td><small class="text-muted">{{ lr.operations_comments }}</small></td>
+                  <td><span class="badge bg-light text-dark border">{{ lr.get_status_display }}</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center py-4 text-muted">No recently recommended leave requests.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. Not Recommended Tab -->
+        <div class="tab-pane fade p-3" id="not-recommended" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Ref #</th>
+                  <th>Officer</th>
+                  <th>Leave Type</th>
+                  <th>Duration</th>
+                  <th>Recorded At</th>
+                  <th>Reason Recorded</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lr in inbox_not_recommended %}
+                <tr>
+                  <td><strong class="font-monospace text-dark">{{ lr.reference_number|default:lr.id }}</strong></td>
+                  <td>{{ lr.personnel.fullname }}</td>
+                  <td>{{ lr.leave_type.name }}</td>
+                  <td>{{ lr.duration }} days</td>
+                  <td>{{ lr.operations_recommended_at|date:"d M Y H:i" }}</td>
+                  <td><small class="text-danger">{{ lr.operations_comments }}</small></td>
+                  <td><span class="badge bg-light text-dark border">{{ lr.get_status_display }}</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">No requests recorded with not-recommended status.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. Operational Personnel on Leave Tab -->
+        <div class="tab-pane fade p-3" id="ops-on-leave" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Officer</th>
+                  <th>Rank / Station</th>
+                  <th>Leave Type</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in inbox_on_leave %}
+                <tr>
+                  <td>
+                    <strong class="text-dark d-block">{{ p.fullname }}</strong>
+                    <small class="text-muted">{{ p.staffID }}</small>
+                  </td>
+                  <td>{{ p.rank.abbreviation|default:p.rank.name }} &bull; {{ p.station.name }}</td>
+                  <td><span class="badge bg-warning text-dark">{{ p.leave_type|default:"On Leave" }}</span></td>
+                  <td>{{ p.start_leave|date:"d M Y" }}</td>
+                  <td><strong class="text-danger">{{ p.end_leave|date:"d M Y" }}</strong></td>
+                  <td><span class="badge bg-warning text-dark">{{ p.leave_status }}</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">No operational personnel currently on leave.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

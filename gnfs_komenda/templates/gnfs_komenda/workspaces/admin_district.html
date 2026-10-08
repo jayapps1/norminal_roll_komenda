@@ -1,0 +1,653 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}{{ district.name }} District Administration{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Breadcrumbs & Header (Section 19-21) -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          {% if scope.level == 'NATIONAL' %}
+          <li class="breadcrumb-item"><a href="{% url 'workspace-admin-national' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> National Admin</a></li>
+          {% endif %}
+          {% if scope.level == 'NATIONAL' or scope.level == 'REGIONAL' %}
+          <li class="breadcrumb-item"><a href="{% url 'workspace-admin-regional' region.id %}" class="text-decoration-none text-secondary">{{ region.name }} Admin</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active" aria-current="page">{{ district.name }} Administration</li>
+        </ol>
+      </nav>
+      <div class="text-uppercase text-danger fw-bold small" style="letter-spacing: 1px;">
+        {{ district.name|upper }} &bull; ADMINISTRATION WORKSPACE
+      </div>
+      <h2 class="fw-bold mb-0 text-dark" style="color: #8B0000 !important;">DISTRICT PERSONNEL ADMINISTRATION</h2>
+      <p class="text-muted small mb-0">Personnel management, leave verification pipeline, balances, and operational dispatches</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'admin-create-leave' district.id %}" class="btn btn-danger btn-sm shadow-sm fw-bold" style="background-color: #8B0000; border-color: #8B0000;">
+        <i class="fas fa-plus-circle me-1"></i> Create Leave for Officer
+      </a>
+      <a href="{% url 'workspace-accounts-district' district.id %}" class="btn btn-outline-secondary btn-sm shadow-sm fw-semibold">
+        <i class="fas fa-list-alt me-1"></i> Nominal Roll
+      </a>
+    </div>
+  </div>
+
+  <!-- 8 Metric Cards (Prompt 2 Section 5) -->
+  <div class="row g-2 mb-4">
+    <div class="col-6 col-md-3 col-xl">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-danger border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Total Personnel</span>
+        <h4 class="fw-bold text-dark mb-0 mt-1">{{ total_personnel }}</h4>
+        <span class="small text-muted">Total Strength</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-success border-4">
+        <span class="text-muted small fw-semibold text-uppercase">At Post</span>
+        <h4 class="fw-bold text-success mb-0 mt-1">{{ at_post }}</h4>
+        <span class="small text-muted">On Active Duty</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-warning border-4">
+        <span class="text-muted small fw-semibold text-uppercase">On Leave</span>
+        <h4 class="fw-bold text-warning mb-0 mt-1">{{ on_leave }}</h4>
+        <span class="small text-muted">Authorized Leave</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-info border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Leave Requests</span>
+        <h4 class="fw-bold text-info mb-0 mt-1">{{ leave_requests }}</h4>
+        <span class="small text-muted">Awaiting Admin</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-primary border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Awaiting Ops</span>
+        <h4 class="fw-bold text-primary mb-0 mt-1">{{ awaiting_ops }}</h4>
+        <span class="small text-muted">Operations Review</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-dark border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Awaiting DFO/MFO</span>
+        <h4 class="fw-bold text-dark mb-0 mt-1">{{ awaiting_command }}</h4>
+        <span class="small text-muted">Command Decision</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-secondary border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Returning Soon</span>
+        <h4 class="fw-bold text-secondary mb-0 mt-1">{{ returning_soon }}</h4>
+        <span class="small text-muted">Next 7 Days</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-danger border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Deferred Leave</span>
+        <h4 class="fw-bold text-danger mb-0 mt-1">{{ deferred_count }}</h4>
+        <span class="small text-muted">Carry-Forward Active</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Authority Notice (Section 7) -->
+  <div class="alert alert-secondary border-0 rounded-3 shadow-sm p-3 mb-4 d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fas fa-shield-alt fa-2x text-danger" style="color: #8B0000 !important;"></i>
+      <div>
+        <h6 class="fw-bold mb-0 text-dark">DISTRICT ADMINISTRATION AUTHORITY NOTICE</h6>
+        <span class="small text-muted">Administration verifies personnel eligibility, leave balances, and routes applications to Operations and Command. Administration <strong>cannot finally approve</strong> leave requests.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Required Alert: Approved Awaiting Watch Room Release -->
+  {% if inbox_final_processing.exists %}
+  <div class="alert alert-warning border border-warning rounded-3 shadow-sm p-3 mb-4 d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fas fa-bell fa-2x text-warning"></i>
+      <div>
+        <h6 class="fw-bold mb-0 text-dark">APPROVED LEAVE — ACTION REQUIRED ({{ inbox_final_processing.count }})</h6>
+        <span class="small text-muted">Command approval has been granted. Administration must release these approved records to the Watch Room for Station Diary entry.</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Administration Tabs: Personnel Roster + Leave Pipeline (Prompt 2 Section 6, 7) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
+    <div class="card-header bg-white border-bottom p-0">
+      <ul class="nav nav-tabs card-header-tabs mx-3 mt-2" id="adminTabs" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link active fw-bold small text-dark" id="personnel-tab" data-bs-toggle="tab" data-bs-target="#district-personnel" type="button">
+            <i class="fas fa-users text-danger me-1"></i> District Personnel ({{ total_personnel }})
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link fw-bold small text-dark" id="new-tab" data-bs-toggle="tab" data-bs-target="#new-requests" type="button">
+            <i class="fas fa-inbox text-danger me-1"></i> New Leave Requests
+            {% if inbox_new.exists %}<span class="badge bg-danger ms-1">{{ inbox_new.count }}</span>{% endif %}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link fw-bold small text-dark" id="final-tab" data-bs-toggle="tab" data-bs-target="#final-processing" type="button">
+            <i class="fas fa-share-square text-warning me-1"></i> Awaiting Release to Watch Room
+            {% if inbox_final_processing.exists %}<span class="badge bg-warning text-dark ms-1">{{ inbox_final_processing.count }}</span>{% endif %}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link fw-bold small text-dark" id="ops-tab" data-bs-toggle="tab" data-bs-target="#awaiting-ops" type="button">
+            <i class="fas fa-hourglass-half text-info me-1"></i> At Operations ({{ inbox_awaiting_ops.count }})
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link fw-bold small text-dark" id="cmd-tab" data-bs-toggle="tab" data-bs-target="#awaiting-cmd" type="button">
+            <i class="fas fa-user-shield text-primary me-1"></i> At Command ({{ inbox_awaiting_command.count }})
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link fw-bold small text-dark" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-leave" type="button">
+            <i class="fas fa-calendar-check text-success me-1"></i> On Leave ({{ inbox_active.count }})
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link fw-bold small text-dark" id="returned-tab" data-bs-toggle="tab" data-bs-target="#returned-reqs" type="button">
+            <i class="fas fa-undo text-secondary me-1"></i> Returned ({{ inbox_returned.count }})
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card-body p-0">
+      <div class="tab-content" id="adminTabsContent">
+
+        <!-- 1. District Personnel Roster Tab (Prompt 2 Section 6) -->
+        <div class="tab-pane fade show active p-3" id="district-personnel" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Officer Profile</th>
+                  <th>Rank & Category</th>
+                  <th>Posting & Unit</th>
+                  <th>Leave Status</th>
+                  <th>Annual Entitlement</th>
+                  <th>Taken</th>
+                  <th>Remaining</th>
+                  <th>Deferred</th>
+                  <th>Upcoming / Resuming</th>
+                  <th class="text-end pe-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in personnel_roster %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      {% if item.personnel.photo %}
+                      <img src="{{ item.personnel.photo.url }}" class="rounded-circle border" style="width: 34px; height: 34px; object-fit: cover;">
+                      {% else %}
+                      <div class="rounded-circle bg-light border text-danger fw-bold d-flex align-items-center justify-content-center" style="width: 34px; height: 34px; font-size: 0.8rem;">
+                        {{ item.personnel.initials|default:"GN" }}
+                      </div>
+                      {% endif %}
+                      <div>
+                        <strong class="text-dark d-block">{{ item.personnel.fullname }}</strong>
+                        <small class="font-monospace text-muted">{{ item.personnel.staffID }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div><strong>{{ item.rank }}</strong></div>
+                    <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">{{ item.officer_category }}</span>
+                  </td>
+                  <td>
+                    <div>{{ item.station }}</div>
+                    <small class="text-muted">{{ item.functional_assignment }}</small>
+                  </td>
+                  <td>
+                    {% if item.leave_status == 'ON LEAVE' %}
+                    <span class="badge bg-warning text-dark border border-warning">ON LEAVE</span>
+                    {% else %}
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success">AT POST</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <strong>{{ item.total_entitlement }}</strong> days
+                    {% if item.is_prorated %}
+                    <span class="badge bg-info text-dark" style="font-size: 0.65rem;">Prorated</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ item.days_taken }} days</td>
+                  <td><strong class="text-success">{{ item.days_remaining }}</strong> days</td>
+                  <td>
+                    {% if item.deferred_leave > 0 %}
+                    <span class="badge bg-warning text-dark">{{ item.deferred_leave }} days</span>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.returning_soon %}
+                    <span class="badge bg-danger animate__animated animate__pulse animate__infinite">Returning Soon</span>
+                    {% elif item.upcoming_leave %}
+                    <small class="text-primary fw-semibold">From {{ item.upcoming_leave.start_date|date:"d M" }}</small>
+                    {% else %}
+                    <span class="text-muted small">-</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end pe-3">
+                    <a href="{% url 'staff-detail' item.personnel.staffID %}" class="btn btn-outline-secondary btn-sm py-0 px-2" title="View Dossier">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="10" class="text-center py-4 text-muted">No personnel records found for this district.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. New Requests Tab (Prompt 2 Section 7 - Verify & Forward to Operations) -->
+        <div class="tab-pane fade p-3" id="new-requests" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded border">
+            <div>
+              <strong class="text-dark"><i class="fas fa-tasks text-danger me-1"></i> District Leave Review Pipeline</strong>
+              <div class="small text-muted">Review officer entitlement, previous leave, and routing. Authorized actions: <code>FORWARD_TO_OPERATIONS</code> (Forward to Operations) or <code>RETURN_FOR_CORRECTION</code> (Return for Correction). District Administration cannot finally approve.</div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Ref #</th>
+                  <th>Officer</th>
+                  <th>Rank & Station</th>
+                  <th>Functional Unit</th>
+                  <th>Leave Type</th>
+                  <th>Balance</th>
+                  <th>Requested</th>
+                  <th>Dates</th>
+                  <th>Docs</th>
+                  <th class="text-end pe-3">Administration Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lr in inbox_new %}
+                <tr>
+                  <td><strong class="font-monospace text-dark">{{ lr.reference_number|default:lr.id }}</strong></td>
+                  <td>
+                    <strong class="text-dark d-block">{{ lr.personnel.fullname }}</strong>
+                    <small class="text-muted">{{ lr.personnel.staffID }}</small>
+                  </td>
+                  <td>
+                    <div>{{ lr.personnel.rank.abbreviation|default:lr.personnel.rank.name }}</div>
+                    <small class="text-muted">{{ lr.personnel.station.name }}</small>
+                  </td>
+                  <td>
+                    <small class="text-muted">{{ lr.personnel.primary_functional_assignment.functional_unit.name|default:"General Duty" }}</small>
+                  </td>
+                  <td><span class="badge bg-light text-dark border">{{ lr.leave_type.name }}</span></td>
+                  <td>
+                    {% if lr.entitlement %}
+                    <div><strong>{{ lr.entitlement.remaining_balance }}</strong> rem.</div>
+                    <small class="text-muted">{{ lr.entitlement.days_taken }} taken</small>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td><strong>{{ lr.duration }}</strong> <small class="text-muted">days</small></td>
+                  <td>
+                    <div>{{ lr.start_date|date:"d M Y" }}</div>
+                    <small class="text-success">Resume: {{ lr.resume_date|date:"d M Y" }}</small>
+                  </td>
+                  <td>
+                    {% if lr.attachment %}
+                    <a href="{{ lr.attachment.url }}" target="_blank" class="badge bg-secondary text-decoration-none">
+                      <i class="fas fa-paperclip me-1"></i> Doc
+                    </a>
+                    {% else %}
+                    <span class="text-muted small">None</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end pe-3">
+                    <div class="d-flex justify-content-end gap-1">
+                      <!-- Verify and Forward to Operations Form -->
+                      <form method="post" action="{% url 'admin-process-leave' lr.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="FORWARD_TO_OPERATIONS">
+                        <button type="submit" class="btn btn-success btn-sm py-1 px-2 fw-bold" onclick="return confirm('Verify application and forward to Operations for recommendation?');">
+                          <i class="fas fa-check me-1"></i> Forward to Ops
+                        </button>
+                      </form>
+
+                      <!-- Return for correction modal trigger -->
+                      <button type="button" class="btn btn-outline-warning btn-sm py-1 px-2" data-bs-toggle="modal" data-bs-target="#returnModal{{ lr.id }}">
+                        <i class="fas fa-reply me-1"></i> Return
+                      </button>
+
+                      <a href="{% url 'leave-detail' lr.id %}" class="btn btn-outline-secondary btn-sm py-1 px-2" title="Review Dossier">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                    </div>
+
+                    <!-- Return Modal -->
+                    <div class="modal fade text-start" id="returnModal{{ lr.id }}" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <form method="post" action="{% url 'admin-process-leave' lr.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="RETURN_FOR_CORRECTION">
+                            <div class="modal-header">
+                              <h6 class="modal-title fw-bold">Return Leave Request for Correction</h6>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                              <p class="small text-muted">Officer: <strong>{{ lr.personnel.fullname }}</strong> ({{ lr.leave_type.name }}, {{ lr.duration }} days)</p>
+                              <label class="form-label small fw-bold">Reason / Required Correction *</label>
+                              <textarea name="comments" class="form-control form-control-sm" rows="3" required placeholder="Specify corrections required..."></textarea>
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                              <button type="submit" class="btn btn-warning btn-sm fw-bold">Return to Applicant</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="10" class="text-center py-4 text-muted">No leave requests currently pending administrative review.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. Final Processing Tab (Release to Watch Room) -->
+        <div class="tab-pane fade p-3" id="final-processing" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Ref #</th>
+                  <th>Officer</th>
+                  <th>Leave Type</th>
+                  <th>Approved Duration</th>
+                  <th>Dates</th>
+                  <th>Approved By</th>
+                  <th>Ops Recommendation</th>
+                  <th class="text-end pe-3">Dispatch Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lr in inbox_final_processing %}
+                <tr>
+                  <td><strong class="font-monospace text-dark">{{ lr.reference_number|default:lr.id }}</strong></td>
+                  <td>
+                    <strong class="text-dark d-block">{{ lr.personnel.fullname }}</strong>
+                    <small class="text-muted">{{ lr.personnel.staffID }} &bull; {{ lr.personnel.station.name }}</small>
+                  </td>
+                  <td><span class="badge bg-light text-dark border">{{ lr.leave_type.name }}</span></td>
+                  <td><strong class="text-success">{{ lr.duration }}</strong> days</td>
+                  <td>{{ lr.start_date|date:"d M Y" }} &rarr; {{ lr.resume_date|date:"d M Y" }}</td>
+                  <td>
+                    <span class="small fw-semibold text-dark">{{ lr.approved_by.username|default:"Command" }}</span>
+                    <small class="text-muted d-block">{{ lr.approved_at|date:"d M Y H:i" }}</small>
+                  </td>
+                  <td>
+                    {% if lr.operations_recommendation == 'RECOMMEND' %}
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success">Recommended</span>
+                    {% elif lr.operations_recommendation == 'NOT_RECOMMEND' %}
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">Not Recommended</span>
+                    {% else %}
+                    <span class="text-muted small">-</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end pe-3">
+                    <form method="post" action="{% url 'admin-release-watch-room' lr.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-warning btn-sm py-1 px-3 fw-bold text-dark" onclick="return confirm('Release this approved leave to Watch Room for Station Diary entry?');">
+                        <i class="fas fa-paper-plane me-1"></i> Release to Watch Room
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center py-4 text-muted">No approved leave records currently awaiting Watch Room release.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. At Operations Tab -->
+        <div class="tab-pane fade p-3" id="awaiting-ops" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Ref #</th>
+                  <th>Officer</th>
+                  <th>Rank / Station</th>
+                  <th>Leave Type</th>
+                  <th>Duration</th>
+                  <th>Forwarded At</th>
+                  <th>Stage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lr in inbox_awaiting_ops %}
+                <tr>
+                  <td><strong class="font-monospace text-dark">{{ lr.reference_number|default:lr.id }}</strong></td>
+                  <td>{{ lr.personnel.fullname }}</td>
+                  <td>{{ lr.personnel.rank.abbreviation|default:lr.personnel.rank.name }} &bull; {{ lr.personnel.station.name }}</td>
+                  <td>{{ lr.leave_type.name }}</td>
+                  <td>{{ lr.duration }} days</td>
+                  <td>{{ lr.processed_at|date:"d M Y H:i" }}</td>
+                  <td><span class="badge bg-info text-dark">Awaiting Operations Recommendation</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">No leave requests currently at Operations.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. At Command Tab -->
+        <div class="tab-pane fade p-3" id="awaiting-cmd" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Ref #</th>
+                  <th>Officer</th>
+                  <th>Leave Type</th>
+                  <th>Duration</th>
+                  <th>Ops Recommendation</th>
+                  <th>Stage</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lr in inbox_awaiting_command %}
+                <tr>
+                  <td><strong class="font-monospace text-dark">{{ lr.reference_number|default:lr.id }}</strong></td>
+                  <td>{{ lr.personnel.fullname }}</td>
+                  <td>{{ lr.leave_type.name }}</td>
+                  <td>{{ lr.duration }} days</td>
+                  <td>
+                    {% if lr.operations_recommendation == 'RECOMMEND' %}
+                    <span class="badge bg-success">Recommended</span>
+                    {% elif lr.operations_recommendation == 'NOT_RECOMMEND' %}
+                    <span class="badge bg-danger">Not Recommended</span>
+                    {% else %}
+                    <span class="text-muted small">Pending</span>
+                    {% endif %}
+                  </td>
+                  <td><span class="badge bg-primary">Awaiting DFO / MFO Decision</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">No leave requests currently awaiting command approval.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 5. Active On Leave Tab (Days Remaining Calculator) -->
+        <div class="tab-pane fade p-3" id="active-leave" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Officer</th>
+                  <th>Leave Type</th>
+                  <th>Calculation</th>
+                  <th>Start Date</th>
+                  <th>Last Day</th>
+                  <th>Resume Duty</th>
+                  <th>Duration</th>
+                  <th>Elapsed</th>
+                  <th>Days Remaining</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in active_leaves_data %}
+                <tr>
+                  <td>
+                    <strong class="text-dark d-block">{{ item.leave_req.personnel.fullname }}</strong>
+                    <small class="text-muted">{{ item.leave_req.personnel.staffID }} &bull; {{ item.leave_req.personnel.station.name }}</small>
+                  </td>
+                  <td><span class="badge bg-light text-dark border">{{ item.leave_req.leave_type.name }}</span></td>
+                  <td>
+                    {% if item.is_working_days %}
+                    <span class="badge bg-secondary">Working Days</span>
+                    {% else %}
+                    <span class="badge bg-light text-dark border">Calendar Days</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ item.leave_req.start_date|date:"d M Y" }}</td>
+                  <td>{{ item.leave_req.last_leave_date|date:"d M Y" }}</td>
+                  <td><strong class="text-success">{{ item.leave_req.resume_date|date:"d M Y" }}</strong></td>
+                  <td>{{ item.leave_req.duration }}</td>
+                  <td>{{ item.elapsed_days }} days</td>
+                  <td>
+                    <strong class="fs-6 text-danger">{{ item.days_remaining }}</strong> <small class="text-muted">days left</small>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="9" class="text-center py-4 text-muted">No personnel currently on active leave under this district.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 6. Returned Requests Tab -->
+        <div class="tab-pane fade p-3" id="returned-reqs" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+              <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+                <tr>
+                  <th>Ref #</th>
+                  <th>Officer</th>
+                  <th>Leave Type</th>
+                  <th>Returned At</th>
+                  <th>Reason / Correction Required</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lr in inbox_returned %}
+                <tr>
+                  <td><strong class="font-monospace text-dark">{{ lr.reference_number|default:lr.id }}</strong></td>
+                  <td>{{ lr.personnel.fullname }}</td>
+                  <td>{{ lr.leave_type.name }}</td>
+                  <td>{{ lr.updated_at|date:"d M Y H:i" }}</td>
+                  <td><span class="text-danger small">{{ lr.correction_reason }}</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center py-4 text-muted">No requests currently in returned status.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Prorated Leave Entitlement Registry (Section 23) -->
+  {% if prorated_entitlements.exists %}
+  <div class="card border-0 shadow-sm rounded-3 bg-white p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+      <div>
+        <h5 class="fw-bold mb-0 text-dark">PROPORTIONATE / PRORATED LEAVE REGISTRY</h5>
+        <span class="text-muted small">Personnel with audited prorated annual entitlements</span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+        <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+          <tr>
+            <th>Officer</th>
+            <th>Leave Year</th>
+            <th>Entitlement Type</th>
+            <th>Full Entitlement</th>
+            <th>Approved Prorated</th>
+            <th>Reason Recorded</th>
+            <th class="text-end pe-3">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ent in prorated_entitlements %}
+          <tr>
+            <td>
+              <strong class="text-dark d-block">{{ ent.personnel.fullname }}</strong>
+              <small class="text-muted">{{ ent.personnel.staffID }}</small>
+            </td>
+            <td>{{ ent.leave_year }}</td>
+            <td><span class="badge bg-warning text-dark">PRORATED</span></td>
+            <td>{{ ent.full_annual_entitlement|default:ent.base_entitlement }} Working Days</td>
+            <td><strong class="text-success">{{ ent.base_entitlement }} Working Days</strong></td>
+            <td>{{ ent.proration_reason|default:"Proportionate annual leave calculated per policy." }}</td>
+            <td class="text-end pe-3">
+              <a href="{% url 'leave-set-proportionate' ent.id %}?next={{ request.path }}" class="btn btn-sm btn-outline-warning" title="Edit Proportionate Entitlement">
+                <i class="fas fa-edit me-1"></i> Edit
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

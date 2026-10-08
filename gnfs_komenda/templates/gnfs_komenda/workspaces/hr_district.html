@@ -1,0 +1,112 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}{{ district.name }} Human Resource Workspace{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Breadcrumbs & Header (Section 36, 37) -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'workspace-admin-district' district.id %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> {{ district.name }} Admin</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ district.name }} HR</li>
+        </ol>
+      </nav>
+      <div class="text-uppercase text-danger fw-bold small" style="letter-spacing: 1px;">
+        {{ district.name|upper }} &bull; HUMAN RESOURCE FUNCTIONAL WORKSPACE
+      </div>
+      <h2 class="fw-bold mb-0 text-dark" style="color: #8B0000 !important;">HUMAN RESOURCE WORKSPACE</h2>
+      <p class="text-muted small mb-0">Personnel strength analytics, officer categories, rank distribution, and postings</p>
+    </div>
+  </div>
+
+  <!-- Fallback Responsibility Banner (Section 37, 78) -->
+  {% if is_fallback %}
+  <div class="alert alert-info border-0 rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center gap-3">
+    <div class="text-info"><i class="fas fa-info-circle fa-2x"></i></div>
+    <div>
+      <h6 class="fw-bold mb-0 text-dark">HR Office Unestablished &bull; Delegated Responsibility</h6>
+      <span class="small text-muted">{{ fallback_note }}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- HR Analytics Cards (Section 36) -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-danger border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Total District Personnel</span>
+        <h3 class="fw-bold text-dark mb-0 mt-1">{{ total_personnel }}</h3>
+        <span class="small text-muted">Active Force</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-primary border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Senior Officers</span>
+        <h3 class="fw-bold text-primary mb-0 mt-1">{{ senior_officers }}</h3>
+        <span class="small text-muted">Commissioned Ranks</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-success border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Junior Officers</span>
+        <h3 class="fw-bold text-success mb-0 mt-1">{{ junior_officers }}</h3>
+        <span class="small text-muted">Non-Commissioned Ranks</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-warning border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Fire Stations / Posts</span>
+        <h3 class="fw-bold text-warning mb-0 mt-1">{{ stations_count }}</h3>
+        <span class="small text-muted">Duty Locations</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rank Distribution Table (Section 36) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+      <div>
+        <h5 class="fw-bold mb-0 text-dark">RANK DISTRIBUTION</h5>
+        <span class="text-muted small">Live rank breakdown of officers serving in {{ district.name }} District</span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+        <thead class="table-light text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">
+          <tr>
+            <th>Rank Title</th>
+            <th>Abbreviation</th>
+            <th>Personnel Count</th>
+            <th style="width: 250px;">Proportion</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rank_distribution %}
+          <tr>
+            <td><strong class="text-dark">{{ r.rank__name|default:"Unassigned" }}</strong></td>
+            <td><span class="badge bg-light text-dark border">{{ r.rank__abbreviation|default:"-" }}</span></td>
+            <td><strong>{{ r.count }}</strong> officers</td>
+            <td>
+              <div class="progress" style="height: 8px;">
+                {% if total_personnel > 0 %}
+                <div class="progress-bar bg-danger" role="progressbar" style="width: {% widthratio r.count total_personnel 100 %}%;"></div>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center py-4 text-muted">No rank distribution data available.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

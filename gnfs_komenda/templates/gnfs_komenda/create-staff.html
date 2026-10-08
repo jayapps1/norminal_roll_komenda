@@ -102,8 +102,8 @@
                     </div>
                 </div>
 
-                <!-- SECTION 2: ORGANISATIONAL DEPLOYMENT & CASCADING DROPDOWNS -->
-                <div class="section-title">2. GNFS Organisational Assignment</div>
+                <!-- SECTION 2: COMMAND / POSTING -->
+                <div class="section-title"><i class="fa-solid fa-map-location-dot me-2 text-danger"></i>2. Command / Posting</div>
                 <div class="row g-3 mb-4">
                     <div class="col-md-3">
                         <label for="filter_region" class="form-label small fw-bold text-dark">1. Region (Filter)</label>
@@ -133,7 +133,7 @@
                     </div>
 
                     <div class="col-md-3">
-                        <label for="id_post" class="form-label small fw-bold text-dark">4. Sub-Post / Market Post</label>
+                        <label for="id_post" class="form-label small fw-bold text-dark">4. Fire Post / Sub-Post</label>
                         <select name="post" id="id_post" class="form-select {% if form.post.errors %}is-invalid{% endif %}">
                             <option value="">None (Station Direct)</option>
                             {% for choice in form.post.field.queryset %}
@@ -143,6 +143,49 @@
                             {% endfor %}
                         </select>
                         {% for error in form.post.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <!-- SECTION 3: FUNCTIONAL ASSIGNMENT -->
+                <div class="section-title"><i class="fa-solid fa-sitemap me-2 text-danger"></i>3. Functional Assignment</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label for="id_directorate" class="form-label small fw-bold text-dark">Directorate</label>
+                        <select name="directorate" id="id_directorate" class="form-select {% if form.directorate.errors %}is-invalid{% endif %}">
+                            <option value="">[ Select Directorate ]</option>
+                            {% for dir_choice in form.fields.directorate.queryset %}
+                            <option value="{{ dir_choice.id }}" {% if form.directorate.value|stringformat:"s" == dir_choice.id|stringformat:"s" %}selected{% endif %}>
+                                {{ dir_choice.name }} ({{ dir_choice.code }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% for error in form.directorate.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="id_department" class="form-label small fw-bold text-dark">Department / Division</label>
+                        <select name="department" id="id_department" class="form-select {% if form.department.errors %}is-invalid{% endif %}">
+                            <option value="">[ Select Department / Division ]</option>
+                            {% for dept_choice in form.fields.department.queryset %}
+                            <option value="{{ dept_choice.id }}" {% if form.department.value|stringformat:"s" == dept_choice.id|stringformat:"s" %}selected{% endif %}>
+                                {{ dept_choice.name }} ({{ dept_choice.code }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% for error in form.department.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="id_unit" class="form-label small fw-bold text-dark">Unit</label>
+                        <select name="unit" id="id_unit" class="form-select {% if form.unit.errors %}is-invalid{% endif %}">
+                            <option value="">[ Select Unit ]</option>
+                            {% for unit_choice in form.fields.unit.queryset %}
+                            <option value="{{ unit_choice.id }}" {% if form.unit.value|stringformat:"s" == unit_choice.id|stringformat:"s" %}selected{% endif %}>
+                                {{ unit_choice.name }} ({{ unit_choice.code }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% for error in form.unit.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
                 </div>
 
@@ -212,6 +255,20 @@
                                 <strong>Leave Called Off:</strong> Force immediately back to AT POST and clear leave schedule.
                             </label>
                         </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 5: USER ACCOUNT PROVISIONING -->
+                <div class="section-title"><i class="fa-solid fa-user-lock me-2 text-danger"></i>5. User Account Provisioning</div>
+                <div class="card border-0 bg-light p-3 rounded-3 mb-4">
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" role="switch" id="id_create_user_account" name="create_user_account" {% if form.create_user_account.value or form.create_user_account.value is None %}checked{% endif %}>
+                        <label class="form-check-label fw-bold text-dark" for="id_create_user_account">
+                            Create Personnel Login Account
+                        </label>
+                    </div>
+                    <div class="form-text text-muted small ms-4">
+                        Automatically provisions a self-service account with Staff ID as the username and initial temporary password (<code>@Jay0697</code>). Mandatory private password change will be enforced on first login.
                     </div>
                 </div>
 
@@ -377,6 +434,54 @@ document.addEventListener("DOMContentLoaded", function () {
             const initialRankVal = "{{ form.rank.value|default:'' }}";
             fetchRanksForCategory(categorySelect.value, initialRankVal);
         }
+    }
+
+    // 6. Dynamic Functional Assignment Cascading Dropdowns
+    const directorateSelect = document.getElementById("id_directorate");
+    const departmentSelect = document.getElementById("id_department");
+    const unitSelect = document.getElementById("id_unit");
+
+    if (directorateSelect && departmentSelect && unitSelect) {
+        directorateSelect.addEventListener("change", function () {
+            const dirId = this.value;
+            departmentSelect.innerHTML = '<option value="">[ Select Department / Division ]</option>';
+            unitSelect.innerHTML = '<option value="">[ Select Unit ]</option>';
+            if (!dirId) return;
+
+            fetch(`/api/functional-children/?parent_id=${encodeURIComponent(dirId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.children && data.children.length > 0) {
+                        data.children.forEach(c => {
+                            const opt = document.createElement("option");
+                            opt.value = c.id;
+                            opt.textContent = `${c.name} (${c.code || c.unit_type_display})`;
+                            departmentSelect.appendChild(opt);
+                        });
+                    }
+                })
+                .catch(err => console.error("Error loading departments:", err));
+        });
+
+        departmentSelect.addEventListener("change", function () {
+            const deptId = this.value;
+            unitSelect.innerHTML = '<option value="">[ Select Unit ]</option>';
+            if (!deptId) return;
+
+            fetch(`/api/functional-children/?parent_id=${encodeURIComponent(deptId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.children && data.children.length > 0) {
+                        data.children.forEach(c => {
+                            const opt = document.createElement("option");
+                            opt.value = c.id;
+                            opt.textContent = `${c.name} (${c.code || c.unit_type_display})`;
+                            unitSelect.appendChild(opt);
+                        });
+                    }
+                })
+                .catch(err => console.error("Error loading units:", err));
+        });
     }
 });
 </script>

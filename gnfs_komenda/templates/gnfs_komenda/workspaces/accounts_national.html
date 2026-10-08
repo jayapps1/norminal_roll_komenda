@@ -1,0 +1,107 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}National Accounts Directorate — Nominal Roll Overview{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Breadcrumbs & Header (Section 15, 16, 73) -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <div class="text-uppercase text-danger fw-bold small" style="letter-spacing: 1px;">
+        NATIONAL ACCOUNTS DIRECTORATE &bull; FUNCTIONAL OVERSIGHT
+      </div>
+      <h2 class="fw-bold mb-0 text-dark" style="color: #8B0000 !important;">NATIONAL NOMINAL ROLL OVERVIEW</h2>
+      <p class="text-muted small mb-0">Nationwide personnel oversight across all {{ regions_count }} regional commands</p>
+    </div>
+  </div>
+
+  <!-- National Aggregate Metrics Cards (Section 15, 73) -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-danger border-4">
+        <span class="text-muted small fw-semibold text-uppercase">National Personnel Strength</span>
+        <h3 class="fw-bold text-dark mb-0 mt-1">{{ national_personnel }}</h3>
+        <span class="small text-muted">Across {{ regions_count }} Regions</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-success border-4">
+        <span class="text-muted small fw-semibold text-uppercase">At Post</span>
+        <h3 class="fw-bold text-success mb-0 mt-1">{{ national_at_post }}</h3>
+        <span class="small text-muted">Active On Duty</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-warning border-4">
+        <span class="text-muted small fw-semibold text-uppercase">On Leave</span>
+        <h3 class="fw-bold text-warning mb-0 mt-1">{{ national_on_leave }}</h3>
+        <span class="small text-muted">Authorized Leave</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-primary border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Regions</span>
+        <h3 class="fw-bold text-primary mb-0 mt-1">{{ regions_count }}</h3>
+        <span class="small text-muted">Regional Commands</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-danger border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Payroll Exceptions</span>
+        <h3 class="fw-bold text-danger mb-0 mt-1">{{ national_exceptions }}</h3>
+        <span class="small text-muted">Missing Bank / Account Info</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Regional Nominal Rolls Drill-Down (Section 15, 73) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+      <div>
+        <h5 class="fw-bold mb-0 text-dark">REGIONAL COMMANDS</h5>
+        <span class="text-muted small">Select a region to audit its district nominal rolls</span>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      {% for rs in region_summaries %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card border rounded-3 p-3 h-100 hover-shadow transition">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h6 class="fw-bold mb-0 text-dark">{{ rs.region.name }}</h6>
+              <small class="text-muted">{{ rs.districts_count }} Districts</small>
+            </div>
+            <span class="badge bg-light text-dark border">{{ rs.personnel_count }} Personnel</span>
+          </div>
+
+          <div class="row g-2 my-2 py-2 bg-light rounded text-center small">
+            <div class="col-4">
+              <span class="text-muted d-block" style="font-size: 0.7rem;">At Post</span>
+              <strong class="text-success">{{ rs.at_post }}</strong>
+            </div>
+            <div class="col-4 border-start border-end">
+              <span class="text-muted d-block" style="font-size: 0.7rem;">On Leave</span>
+              <strong class="text-warning">{{ rs.on_leave }}</strong>
+            </div>
+            <div class="col-4">
+              <span class="text-muted d-block" style="font-size: 0.7rem;">Exceptions</span>
+              <strong class="text-danger">{{ rs.payroll_exceptions }}</strong>
+            </div>
+          </div>
+
+          <div class="mt-auto pt-2">
+            <a href="{% url 'workspace-accounts-regional' rs.region.id %}" class="btn btn-outline-danger btn-sm w-100 fw-bold">
+              <i class="fas fa-layer-group me-1"></i> View Regional Roll
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

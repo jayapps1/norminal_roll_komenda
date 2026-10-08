@@ -122,6 +122,11 @@
                                 <a href="{% url 'leave-apply' %}?staffID={{ row.personnel.staffID }}" class="btn btn-outline-danger" title="Apply for Leave">
                                     <i class="fas fa-plus"></i>
                                 </a>
+                                {% if row.annual %}
+                                <a href="{% url 'leave-set-proportionate' row.annual.id %}" class="btn btn-outline-warning" title="Configure Proportionate / Prorated Entitlement">
+                                    <i class="fas fa-percentage"></i>
+                                </a>
+                                {% endif %}
                                 {% if row.annual and user.is_superuser %}
                                 <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#adjustModal{{ row.annual.id }}" title="Adjust Balance">
                                     <i class="fas fa-sliders-h"></i>

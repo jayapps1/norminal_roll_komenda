@@ -1,0 +1,119 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}{{ region.name }} Regional Accounts — Nominal Roll{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Breadcrumbs & Header (Section 14, 72) -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          {% if scope.level == 'NATIONAL' %}
+          <li class="breadcrumb-item"><a href="{% url 'workspace-accounts-national' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-file-invoice-dollar me-1"></i> National Accounts</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active" aria-current="page">{{ region.name }} Regional Accounts</li>
+        </ol>
+      </nav>
+      <div class="text-uppercase text-danger fw-bold small" style="letter-spacing: 1px;">
+        {{ region.name|upper }} REGIONAL ACCOUNTS
+      </div>
+      <h2 class="fw-bold mb-0 text-dark" style="color: #8B0000 !important;">REGIONAL NOMINAL ROLL</h2>
+      <p class="text-muted small mb-0">Regional accounts oversight across all {{ districts_count }} districts under {{ region.name }}</p>
+    </div>
+  </div>
+
+  <!-- Regional Aggregate Metrics Cards (Section 14) -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-danger border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Total Regional Personnel</span>
+        <h3 class="fw-bold text-dark mb-0 mt-1">{{ total_personnel }}</h3>
+        <span class="small text-muted">Across {{ districts_count }} Districts</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-success border-4">
+        <span class="text-muted small fw-semibold text-uppercase">At Post</span>
+        <h3 class="fw-bold text-success mb-0 mt-1">{{ at_post }}</h3>
+        <span class="small text-muted">Active On Duty</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-warning border-4">
+        <span class="text-muted small fw-semibold text-uppercase">On Leave</span>
+        <h3 class="fw-bold text-warning mb-0 mt-1">{{ on_leave }}</h3>
+        <span class="small text-muted">Authorized Leave</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-primary border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Districts</span>
+        <h3 class="fw-bold text-primary mb-0 mt-1">{{ districts_count }}</h3>
+        <span class="small text-muted">Operational Commands</span>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 border-start border-danger border-4">
+        <span class="text-muted small fw-semibold text-uppercase">Payroll Exceptions</span>
+        <h3 class="fw-bold text-danger mb-0 mt-1">{{ payroll_exceptions }}</h3>
+        <span class="small text-muted">Missing Bank / Account Info</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- District Nominal Rolls Drill-Down Cards (Section 14) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white p-4">
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+      <div>
+        <h5 class="fw-bold mb-0 text-dark">DISTRICT NOMINAL ROLLS</h5>
+        <span class="text-muted small">Select a district to view and audit its scoped personnel roll</span>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      {% for ds in district_summaries %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card border rounded-3 p-3 h-100 hover-shadow transition">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h6 class="fw-bold mb-0 text-dark">{{ ds.district.name }}</h6>
+              <small class="text-muted">{{ ds.district.code|default:"Command District" }}</small>
+            </div>
+            <span class="badge bg-light text-dark border">{{ ds.personnel_count }} Personnel</span>
+          </div>
+
+          <div class="row g-2 my-2 py-2 bg-light rounded text-center small">
+            <div class="col-4">
+              <span class="text-muted d-block" style="font-size: 0.7rem;">At Post</span>
+              <strong class="text-success">{{ ds.at_post }}</strong>
+            </div>
+            <div class="col-4 border-start border-end">
+              <span class="text-muted d-block" style="font-size: 0.7rem;">On Leave</span>
+              <strong class="text-warning">{{ ds.on_leave }}</strong>
+            </div>
+            <div class="col-4">
+              <span class="text-muted d-block" style="font-size: 0.7rem;">Exceptions</span>
+              <strong class="text-danger">{{ ds.payroll_exceptions }}</strong>
+            </div>
+          </div>
+
+          <div class="mt-auto pt-2">
+            <a href="{% url 'workspace-accounts-district' ds.district.id %}" class="btn btn-outline-danger btn-sm w-100 fw-bold">
+              <i class="fas fa-list me-1"></i> View District Roll
+            </a>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12 text-center py-4 text-muted">
+        No districts registered under this region.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

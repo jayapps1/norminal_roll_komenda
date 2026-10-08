@@ -1,0 +1,146 @@
+{% extends 'main.html' %}
+
+{% block title %}Assign Station Placement — {{ transfer.reference_number }} — GNFS{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 800px;">
+
+  <!-- Breadcrumbs -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'personnel' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> Personnel Roll</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'transfer-list' %}" class="text-decoration-none text-secondary">Transfers</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'transfer-detail' transfer.id %}" class="text-decoration-none text-secondary">{{ transfer.reference_number }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Assign Placement</li>
+    </ol>
+  </nav>
+
+  <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="card-header py-3 text-white" style="background-color: #8B0000;">
+      <h5 class="mb-0 fw-bold"><i class="fas fa-map-pin me-2"></i>Assign Destination Placement</h5>
+      <div class="small text-white-50">Transfer Order {{ transfer.reference_number }} &bull; {{ transfer.personnel.fullname }}</div>
+    </div>
+
+    <div class="card-body p-4">
+      <div class="alert alert-info d-flex align-items-center mb-4">
+        <i class="fas fa-info-circle fs-4 me-3"></i>
+        <div>
+          The officer has been transferred into <strong>{{ transfer.destination_region.name }} Region</strong>.
+          Assign the specific receiving <strong>District</strong> and <strong>Fire Station</strong> below to complete placement before arrival confirmation.
+        </div>
+      </div>
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for err in form.non_field_errors %}
+          <div><i class="fas fa-exclamation-triangle me-1"></i>{{ err }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold small">{{ form.destination_district.label }}</label>
+          {{ form.destination_district }}
+          {% if form.destination_district.errors %}<div class="text-danger small mt-1">{{ form.destination_district.errors }}</div>{% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold small">{{ form.destination_station.label }}</label>
+          {{ form.destination_station }}
+          {% if form.destination_station.errors %}<div class="text-danger small mt-1">{{ form.destination_station.errors }}</div>{% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold small">{{ form.destination_post.label }}</label>
+          {{ form.destination_post }}
+          {% if form.destination_post.errors %}<div class="text-danger small mt-1">{{ form.destination_post.errors }}</div>{% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold small">Placement Remarks / Administrative Notes</label>
+          {{ form.remarks }}
+          {% if form.remarks.errors %}<div class="text-danger small mt-1">{{ form.remarks.errors }}</div>{% endif %}
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+          <a href="{% url 'transfer-detail' transfer.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Cancel
+          </a>
+          <button type="submit" class="btn btn-warning text-dark fw-bold px-4 shadow-sm">
+            <i class="fas fa-save me-1"></i> Save Placement Assignment
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<!-- Chained district -> station filter script -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const districtSelect = document.getElementById("id_place_district");
+    const stationSelect = document.getElementById("id_place_station");
+    const postSelect = document.getElementById("id_place_post");
+
+    if (districtSelect && stationSelect) {
+        districtSelect.addEventListener("change", function() {
+            const districtId = this.value;
+            stationSelect.innerHTML = '<option value="">Loading stations...</option>';
+            if (postSelect) postSelect.innerHTML = '<option value="">---------</option>';
+
+            if (!districtId) {
+                stationSelect.innerHTML = '<option value="">---------</option>';
+                return;
+            }
+
+            fetch(`/api/stations/?district_id=${encodeURIComponent(districtId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    stationSelect.innerHTML = '<option value="">Select Destination Station</option>';
+                    data.stations.forEach(s => {
+                        const opt = document.createElement("option");
+                        opt.value = s.id;
+                        opt.textContent = s.name;
+                        stationSelect.appendChild(opt);
+                    });
+                })
+                .catch(() => {
+                    stationSelect.innerHTML = '<option value="">Error loading stations</option>';
+                });
+        });
+    }
+
+    if (stationSelect && postSelect) {
+        stationSelect.addEventListener("change", function() {
+            const stationId = this.value;
+            postSelect.innerHTML = '<option value="">Loading posts...</option>';
+
+            if (!stationId) {
+                postSelect.innerHTML = '<option value="">---------</option>';
+                return;
+            }
+
+            fetch(`/api/posts/?station_id=${encodeURIComponent(stationId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    postSelect.innerHTML = '<option value="">Select Destination Post (Optional)</option>';
+                    data.posts.forEach(p => {
+                        const opt = document.createElement("option");
+                        opt.value = p.id;
+                        opt.textContent = p.name;
+                        postSelect.appendChild(opt);
+                    });
+                })
+                .catch(() => {
+                    postSelect.innerHTML = '<option value="">Error loading posts</option>';
+                });
+        });
+    }
+});
+</script>
+{% endblock %}

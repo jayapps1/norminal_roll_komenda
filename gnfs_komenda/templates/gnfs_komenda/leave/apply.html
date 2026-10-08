@@ -101,13 +101,13 @@
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="annual_mode" id="modePart" value="PART">
                                     <label class="form-check-label fw-semibold small" for="modePart">
-                                        Proportionate Leave (Part Days, e.g. 10 or 15 days)
+                                        Partial Annual Leave (Part Days, e.g. 10 or 15 days)
                                     </label>
                                 </div>
                             </div>
                             <div class="form-text small text-muted">
                                 <i class="fas fa-info-circle me-1 text-primary"></i>
-                                If you take proportionate leave, the unused remaining days will remain in your balance for future requests this year.
+                                If you take partial leave, the unused remaining days will remain in your balance for future requests this year. (Proportionate annual entitlement configuration is managed by authorised administrators).
                             </div>
                             <!-- Hidden checkbox that syncs with form -->
                             <div style="display: none;">
@@ -455,13 +455,15 @@ document.addEventListener('DOMContentLoaded', function() {
         triggerCalculation();
     }
 
-    // Proportionate Radio Handlers
+    // Partial / Full Leave Radio Handlers
     if (modeFull) {
         modeFull.addEventListener('change', function() {
             if (this.checked) {
                 const fullAnnualDays = officerCategory === 'SENIOR' ? 42 : 36;
                 durationInput.value = Math.min(fullAnnualDays, currentAvailable > 0 ? currentAvailable : fullAnnualDays);
                 if (isProportionateInput) isProportionateInput.checked = false;
+                durationInput.readOnly = true;
+                durationInput.setAttribute('readonly', 'readonly');
                 triggerCalculation();
             }
         });
@@ -472,6 +474,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (this.checked) {
                 if (isProportionateInput) isProportionateInput.checked = true;
                 // Leave duration editable for user entry
+                durationInput.readOnly = false;
+                durationInput.removeAttribute('readonly');
+                durationInput.disabled = false;
+                durationInput.removeAttribute('disabled');
                 durationInput.focus();
                 triggerCalculation();
             }

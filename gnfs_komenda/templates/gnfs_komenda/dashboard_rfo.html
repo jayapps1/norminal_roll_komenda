@@ -1,0 +1,257 @@
+{% extends 'main.html' %}
+
+{% block title %}{{ region.name }} Regional Command — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Header (Section 27) -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
+    <div>
+      <div class="text-uppercase text-danger fw-bold small" style="letter-spacing: 1px;">
+        GHANA NATIONAL FIRE SERVICE
+      </div>
+      <h2 class="fw-bold mb-0 text-dark" style="color: #8B0000 !important;">{{ region.name|upper }} REGIONAL COMMAND</h2>
+      <p class="text-muted small mb-0">Operational Command, Force Readiness & Leave Authority</p>
+    </div>
+
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+      <a href="{% url 'regional-leave-approvals' region.id %}" class="btn btn-danger btn-sm shadow-sm fw-bold" style="background-color: #8B0000; border-color: #8B0000;">
+        <i class="fas fa-stamp me-1"></i> RFO Leave Approvals ({{ leave_awaiting_approval }})
+      </a>
+      <a href="{% url 'my-dashboard' %}" class="btn btn-outline-secondary btn-sm shadow-sm fw-semibold">
+        <i class="fas fa-user me-1"></i> My Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Leadership Banner (Section 27) -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3 border-top border-danger border-3">
+    <div class="row align-items-center g-3">
+      <div class="col-md-6">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+            <i class="fas fa-star fa-2x"></i>
+          </div>
+          <div>
+            <span class="badge bg-danger mb-1" style="background-color: #8B0000 !important;">Regional Fire Officer (RFO)</span>
+            {% if current_rfo %}
+            <h5 class="fw-bold mb-0 text-dark">
+              {{ current_rfo.personnel.fullname }}
+              {% if current_rfo.is_acting %}<span class="badge bg-warning text-dark">Acting</span>{% endif %}
+            </h5>
+            <div class="text-muted small">{{ current_rfo.personnel.rank.name|default:current_rfo.personnel.job_grade }} &bull; {{ current_rfo.personnel.staffID }}</div>
+            {% else %}
+            <div class="text-secondary fw-semibold">No Active RFO Appointed</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+            <i class="fas fa-shield-alt fa-2x"></i>
+          </div>
+          <div>
+            <span class="badge bg-primary mb-1">Regional Second-in-Command (2IC)</span>
+            {% if current_2ic %}
+            <h5 class="fw-bold mb-0 text-dark">
+              {{ current_2ic.personnel.fullname }}
+              {% if current_2ic.is_acting %}<span class="badge bg-warning text-dark">Acting</span>{% endif %}
+            </h5>
+            <div class="text-muted small">{{ current_2ic.personnel.rank.name|default:current_2ic.personnel.job_grade }} &bull; {{ current_2ic.personnel.staffID }}</div>
+            {% else %}
+            <div class="text-secondary fw-semibold">No Active 2IC Appointed</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Command Summary Metrics (Section 27) -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #8B0000 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Regional Personnel</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ total_personnel }}</span>
+          <span class="badge bg-danger" style="background-color: #8B0000 !important;">Strength</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #0d6efd !important;">
+        <div class="text-muted small text-uppercase fw-semibold">District Commands</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ district_count }}</span>
+          <span class="badge bg-primary">Commands</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #198754 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">At Post</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-success">{{ at_post }}</span>
+          <i class="fas fa-user-check text-success fs-5 opacity-50"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #dc3545 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">On Leave</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-danger">{{ on_leave }}</span>
+          <i class="fas fa-calendar-times text-danger fs-5 opacity-50"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #ffc107 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Leave Awaiting Approval</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-warning">{{ leave_awaiting_approval }}</span>
+          <a href="{% url 'regional-leave-approvals' region.id %}" class="badge bg-warning text-dark text-decoration-none">Queue</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #B8860B !important;">
+        <div class="text-muted small text-uppercase fw-semibold">DFO/MFO Leave Requests</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ dfo_leave_requests.count }}</span>
+          <span class="badge bg-warning text-dark">COs</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #0dcaf0 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Incoming Transfers</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-info">{{ incoming_transfers }}</span>
+          <i class="fas fa-plane-arrival text-info fs-5 opacity-50"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3 col-xl-3">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100" style="border-left: 4px solid #d63384 !important;">
+        <div class="text-muted small text-uppercase fw-semibold">Reporting Overdue</div>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-danger">{{ reporting_overdue }}</span>
+          <i class="fas fa-exclamation-circle text-danger fs-5 opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Command Functions (Section 27, 28) -->
+  <div class="row g-3 mb-4">
+    <!-- Subordinate District Commands -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+        <div class="card-header bg-white border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="fas fa-sitemap text-danger me-2"></i>District Commands in {{ region.name }}
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light text-muted">
+                <tr>
+                  <th class="ps-3">District Command</th>
+                  <th>Commanding Officer</th>
+                  <th>2IC</th>
+                  <th>Personnel</th>
+                  <th class="text-end pe-3">Command View</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for d in districts %}
+                <tr>
+                  <td class="ps-3 fw-bold text-dark">{{ d.name }}</td>
+                  <td>
+                    {% if d.current_commanding_officer %}
+                    <span class="fw-semibold">{{ d.current_commanding_officer.personnel.fullname }}</span>
+                    {% else %}
+                    <span class="text-muted fst-italic">Unassigned</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if d.current_2ic %}
+                    <span>{{ d.current_2ic.personnel.fullname }}</span>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td><strong>{{ d.personnel_count }}</strong></td>
+                  <td class="text-end pe-3">
+                    <a href="{% url 'dashboard-district-command' d.id %}" class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold">
+                      Command
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DFO / MFO Command Leave Requests Queue -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+        <div class="card-header bg-white border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="fas fa-stamp text-warning me-2"></i>CO Leave Requiring RFO Decision
+          </h5>
+          <a href="{% url 'regional-leave-approvals' region.id %}" class="btn btn-sm btn-outline-warning text-dark py-0 px-2 fw-semibold">Full Queue &rarr;</a>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light text-muted">
+                <tr>
+                  <th class="ps-3">Officer</th>
+                  <th>Type</th>
+                  <th>Dates</th>
+                  <th class="text-end pe-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lr in dfo_leave_requests %}
+                <tr>
+                  <td class="ps-3 fw-semibold">
+                    {{ lr.personnel.fullname }}
+                    <small class="text-muted d-block">{{ lr.personnel.job_grade }}</small>
+                  </td>
+                  <td><span class="badge bg-light text-dark border">{{ lr.leave_type.code }}</span></td>
+                  <td>{{ lr.start_date|date:"d M" }} &rarr; {{ lr.last_leave_date|date:"d M" }}</td>
+                  <td class="text-end pe-3">
+                    <a href="{% url 'regional-leave-decision' region.id lr.id %}" class="btn btn-sm btn-danger py-0 px-2 fw-bold" style="background-color: #8B0000; border-color: #8B0000;">
+                      Decide
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-3">No commanding officer leave requests pending decision.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock content %}

@@ -1,0 +1,441 @@
+{% extends 'main.html' %}
+
+{% block title %}{{ region.name }} Regional Leadership & Management — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-national' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-landmark me-1"></i> National</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'dashboard-regional' region.id %}" class="text-decoration-none text-danger">{{ region.name }}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Command Leadership</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-shield-alt text-danger me-2"></i>{{ region.name }} Regional Command
+      </h3>
+      <p class="text-muted small mb-0">Formal Regional Command Appointments & Regional Administration</p>
+    </div>
+
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+      <a href="{% url 'dashboard-regional' region.id %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-chart-line me-1"></i> Regional Dashboard
+      </a>
+      {% if can_manage %}
+      <a href="{% url 'manage-region-leadership' region.id %}" class="btn btn-danger btn-sm shadow-sm fw-bold">
+        <i class="fas fa-user-tie me-1"></i> Manage Leadership
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Regional Leadership Cards -->
+  <div class="row g-3 mb-4">
+    <!-- RFO Card -->
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 border-start border-danger border-4 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <span class="badge bg-danger mb-2">Regional Fire Officer (RFO)</span>
+              {% if current_rfo %}
+                <h4 class="fw-bold mb-1 text-dark">
+                  <a href="{% url 'staff-detail' current_rfo.personnel.id %}" class="text-decoration-none text-dark hover-danger">
+                    {{ current_rfo.personnel.fullname }}
+                  </a>
+                  {% if current_rfo.is_acting %}
+                    <span class="badge bg-warning text-dark ms-1">Acting</span>
+                  {% endif %}
+                </h4>
+                <div class="text-muted small mb-2">
+                  <span class="fw-semibold">Staff ID:</span> {{ current_rfo.personnel.staffID }} &bull;
+                  <span class="fw-semibold">Rank:</span> {{ current_rfo.personnel.rank.name|default:current_rfo.personnel.job_grade|default:"N/A" }}
+                </div>
+                <div class="small text-secondary">
+                  <i class="fas fa-calendar-alt me-1 text-danger"></i> Appointed: <strong>{{ current_rfo.effective_from|date:"d M Y" }}</strong>
+                  {% if current_rfo.appointment_reference %}
+                    &bull; Ref: <code>{{ current_rfo.appointment_reference }}</code>
+                  {% endif %}
+                </div>
+              {% else %}
+                <h5 class="text-secondary fw-semibold mt-2 mb-1">No Active RFO Appointed</h5>
+                <p class="text-muted small mb-0">Use "Manage Leadership" to formally appoint a substantive or acting RFO.</p>
+              {% endif %}
+            </div>
+            <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+              <i class="fas fa-user-shield fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Regional 2IC Card -->
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 border-start border-primary border-4 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <span class="badge bg-primary mb-2">Regional Second-in-Command (2IC)</span>
+              {% if current_2ic %}
+                <h4 class="fw-bold mb-1 text-dark">
+                  <a href="{% url 'staff-detail' current_2ic.personnel.id %}" class="text-decoration-none text-dark hover-primary">
+                    {{ current_2ic.personnel.fullname }}
+                  </a>
+                  {% if current_2ic.is_acting %}
+                    <span class="badge bg-warning text-dark ms-1">Acting</span>
+                  {% endif %}
+                </h4>
+                <div class="text-muted small mb-2">
+                  <span class="fw-semibold">Staff ID:</span> {{ current_2ic.personnel.staffID }} &bull;
+                  <span class="fw-semibold">Rank:</span> {{ current_2ic.personnel.rank.name|default:current_2ic.personnel.job_grade|default:"N/A" }}
+                </div>
+                <div class="small text-secondary">
+                  <i class="fas fa-calendar-alt me-1 text-primary"></i> Appointed: <strong>{{ current_2ic.effective_from|date:"d M Y" }}</strong>
+                  {% if current_2ic.appointment_reference %}
+                    &bull; Ref: <code>{{ current_2ic.appointment_reference }}</code>
+                  {% endif %}
+                </div>
+              {% else %}
+                <h5 class="text-secondary fw-semibold mt-2 mb-1">No Active 2IC Appointed</h5>
+                <p class="text-muted small mb-0">Use "Manage Leadership" to formally appoint a Regional 2IC.</p>
+              {% endif %}
+            </div>
+            <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+              <i class="fas fa-user-check fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if editing %}
+  <!-- Appointment Management Form Modal / Section -->
+  <div class="card shadow-sm border-0 mb-4 bg-light border-top border-danger border-3">
+    <div class="card-header bg-white py-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-dark">
+          <i class="fas fa-edit text-danger me-2"></i>Configure Regional Leadership Appointments
+        </h5>
+        <a href="{% url 'region-management' region.id %}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-times me-1"></i> Close Form
+        </a>
+      </div>
+    </div>
+    <div class="card-body bg-white">
+      <form method="post">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="row g-3">
+          <!-- RFO -->
+          <div class="col-md-6 border-end pe-md-4">
+            <h6 class="fw-bold text-danger mb-3"><i class="fas fa-user-shield me-1"></i> Regional Fire Officer (RFO)</h6>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">{{ form.rfo.label }}</label>
+              {{ form.rfo }}
+              {% if form.rfo.errors %}<div class="text-danger small">{{ form.rfo.errors }}</div>{% endif %}
+              <div class="form-text small">Select from eligible personnel. Does not require Department membership.</div>
+            </div>
+            <div class="form-check form-switch mb-3">
+              {{ form.rfo_is_acting }}
+              <label class="form-check-label fw-semibold" for="{{ form.rfo_is_acting.id_for_label }}">
+                Acting Appointment (Temporary)
+              </label>
+            </div>
+          </div>
+
+          <!-- 2IC -->
+          <div class="col-md-6 ps-md-4">
+            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user-check me-1"></i> Regional Second-in-Command (2IC)</h6>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">{{ form.regional_2ic.label }}</label>
+              {{ form.regional_2ic }}
+              {% if form.regional_2ic.errors %}<div class="text-danger small">{{ form.regional_2ic.errors }}</div>{% endif %}
+              <div class="form-text small">Independent of functional assignments or department assignments.</div>
+            </div>
+            <div class="form-check form-switch mb-3">
+              {{ form.regional_2ic_is_acting }}
+              <label class="form-check-label fw-semibold" for="{{ form.regional_2ic_is_acting.id_for_label }}">
+                Acting Appointment (Temporary)
+              </label>
+            </div>
+          </div>
+
+          <div class="col-12"><hr class="my-2"></div>
+
+          <!-- Metadata -->
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.effective_date.label }}</label>
+            {{ form.effective_date }}
+            {% if form.effective_date.errors %}<div class="text-danger small">{{ form.effective_date.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-8">
+            <label class="form-label fw-semibold">{{ form.appointment_reference.label }}</label>
+            {{ form.appointment_reference }}
+            {% if form.appointment_reference.errors %}<div class="text-danger small">{{ form.appointment_reference.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">{{ form.remarks.label }}</label>
+            {{ form.remarks }}
+            {% if form.remarks.errors %}<div class="text-danger small">{{ form.remarks.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 text-end mt-3">
+            <a href="{% url 'region-management' region.id %}" class="btn btn-outline-secondary me-2">Cancel</a>
+            <button type="submit" class="btn btn-danger px-4 fw-bold">
+              <i class="fas fa-save me-1"></i> Confirm & Save Appointments
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Region Stats Cards -->
+  {% if not editing %}
+  <div class="row g-3 mb-4">
+    <div class="col-md-2 col-sm-4">
+      <div class="card shadow-sm border-0 bg-white text-center py-3">
+        <h3 class="fw-bold text-dark mb-0">{{ districts.count }}</h3>
+        <span class="text-muted small">Districts</span>
+      </div>
+    </div>
+    <div class="col-md-2 col-sm-4">
+      <div class="card shadow-sm border-0 bg-white text-center py-3">
+        <h3 class="fw-bold text-dark mb-0">{{ stations.count }}</h3>
+        <span class="text-muted small">Fire Stations</span>
+      </div>
+    </div>
+    <div class="col-md-2 col-sm-4">
+      <div class="card shadow-sm border-0 bg-white text-center py-3">
+        <h3 class="fw-bold text-danger mb-0">{{ personnel_count }}</h3>
+        <span class="text-muted small">Total Personnel</span>
+      </div>
+    </div>
+    <div class="col-md-2 col-sm-4">
+      <div class="card shadow-sm border-0 bg-white text-center py-3">
+        <h3 class="fw-bold text-primary mb-0">{{ senior_officers }}</h3>
+        <span class="text-muted small">Senior Officers</span>
+      </div>
+    </div>
+    <div class="col-md-2 col-sm-4">
+      <div class="card shadow-sm border-0 bg-white text-center py-3">
+        <h3 class="fw-bold text-info mb-0">{{ junior_officers }}</h3>
+        <span class="text-muted small">Junior Officers</span>
+      </div>
+    </div>
+    <div class="col-md-2 col-sm-4">
+      <div class="card shadow-sm border-0 bg-white text-center py-3">
+        <h3 class="fw-bold text-warning mb-0">{{ personnel_on_leave }}</h3>
+        <span class="text-muted small">On Leave</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Leadership History & Districts Tabs -->
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white border-bottom">
+      <ul class="nav nav-tabs card-header-tabs" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link active fw-semibold text-danger" data-bs-toggle="tab" href="#historyTab" role="tab">
+            <i class="fas fa-history me-1"></i> Command Leadership History
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link fw-semibold text-dark" data-bs-toggle="tab" href="#districtsTab" role="tab">
+            <i class="fas fa-map-marked-alt me-1"></i> Districts ({{ districts.count }})
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link fw-semibold text-dark" data-bs-toggle="tab" href="#stationsTab" role="tab">
+            <i class="fas fa-fire-extinguisher me-1"></i> Stations ({{ stations.count }})
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div class="card-body p-0">
+      <div class="tab-content">
+        <!-- History Tab -->
+        <div class="tab-pane fade show active p-3" id="historyTab" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Appointment</th>
+                  <th>Officer</th>
+                  <th>Rank</th>
+                  <th>Effective Period</th>
+                  <th>Status</th>
+                  <th>Reference</th>
+                  <th>Appointed By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for apt in leadership_history %}
+                <tr>
+                  <td>
+                    <span class="badge {% if 'RFO' in apt.appointment_type %}bg-danger{% else %}bg-primary{% endif %}">
+                      {{ apt.get_appointment_type_display }}
+                    </span>
+                    {% if apt.is_acting %}
+                      <span class="badge bg-warning text-dark">Acting</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="{% url 'staff-detail' apt.personnel.id %}" class="fw-bold text-decoration-none text-dark">
+                      {{ apt.personnel.fullname }}
+                    </a>
+                    <div class="text-muted small">{{ apt.personnel.staffID }}</div>
+                  </td>
+                  <td>{{ apt.personnel.rank.name|default:apt.personnel.job_grade|default:"—" }}</td>
+                  <td>
+                    <strong>{{ apt.effective_from|date:"d M Y" }}</strong> &rarr;
+                    {% if apt.is_active %}
+                      <span class="badge bg-success">Present</span>
+                    {% else %}
+                      {{ apt.effective_to|date:"d M Y" }}
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if apt.is_active %}
+                      <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Active</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Concluded</span>
+                    {% endif %}
+                  </td>
+                  <td><code>{{ apt.appointment_reference|default:"—" }}</code></td>
+                  <td class="text-muted small">{{ apt.appointed_by.username|default:"System" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">
+                    No historical leadership records found for this Region.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Districts Tab -->
+        <div class="tab-pane fade p-3" id="districtsTab" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>District Command</th>
+                  <th>Type</th>
+                  <th>CO Designation</th>
+                  <th>Current CO</th>
+                  <th>Current 2IC</th>
+                  <th>Stations</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for dist in districts %}
+                <tr>
+                  <td class="fw-bold">{{ dist.name }}</td>
+                  <td><span class="badge bg-secondary">{{ dist.command_type }}</span></td>
+                  <td><span class="badge bg-dark">{{ dist.co_designation|default:"DFO" }}</span></td>
+                  <td>
+                    {% if dist.current_commanding_officer %}
+                      <a href="{% url 'staff-detail' dist.current_commanding_officer.personnel.id %}" class="text-decoration-none fw-semibold text-danger">
+                        {{ dist.current_commanding_officer.personnel.fullname }}
+                      </a>
+                    {% else %}
+                      <span class="text-muted small">Not Appointed</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if dist.current_2ic %}
+                      <a href="{% url 'staff-detail' dist.current_2ic.personnel.id %}" class="text-decoration-none fw-semibold text-primary">
+                        {{ dist.current_2ic.personnel.fullname }}
+                      </a>
+                    {% else %}
+                      <span class="text-muted small">Not Appointed</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ dist.stations.count }}</td>
+                  <td>
+                    <a href="{% url 'manage-district-leadership' dist.id %}" class="btn btn-outline-danger btn-sm">
+                      <i class="fas fa-users-cog me-1"></i> Leadership
+                    </a>
+                    <a href="{% url 'dashboard-district' dist.id %}" class="btn btn-outline-secondary btn-sm">
+                      <i class="fas fa-chart-line me-1"></i> Dashboard
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">No districts configured in this Region.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Stations Tab -->
+        <div class="tab-pane fade p-3" id="stationsTab" role="tabpanel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Station Name</th>
+                  <th>District</th>
+                  <th>Station Code</th>
+                  <th>Personnel Count</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for stn in stations %}
+                <tr>
+                  <td class="fw-bold">{{ stn.name }}</td>
+                  <td>{{ stn.district.name }}</td>
+                  <td><code>{{ stn.code|default:"—" }}</code></td>
+                  <td>{{ stn.personnel.count }}</td>
+                  <td>
+                    <a href="{% url 'dashboard-station' stn.id %}" class="btn btn-outline-secondary btn-sm">
+                      <i class="fas fa-chart-line me-1"></i> Dashboard
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center py-4 text-muted">No stations configured in this Region.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

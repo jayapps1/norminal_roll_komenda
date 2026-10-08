@@ -1,0 +1,471 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}My Personnel Profile — {{ personnel.fullname }} — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1200px;">
+
+  <!-- Breadcrumbs & Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom gap-2">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'my-dashboard' %}" class="text-decoration-none text-danger fw-bold"><i class="fas fa-user-circle me-1"></i> My Dashboard</a></li>
+          <li class="breadcrumb-item active" aria-current="page">My Profile</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-id-card text-danger me-2"></i>My Personnel Profile
+      </h3>
+      <p class="text-muted small mb-0">Official service identification, command appointment, posting, and contact information.</p>
+    </div>
+
+    <a href="{% url 'my-dashboard' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+      <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+    </a>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left Column: Primary Service Identity Card -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4 text-center border-top border-danger border-4 mb-4">
+        
+        <!-- Profile Picture & Change Button (Section 27-36) -->
+        <div class="position-relative d-inline-block mx-auto mb-3">
+          {% if personnel.profile_picture_url %}
+          <img id="profileAvatarImg" src="{{ personnel.profile_picture_url }}" alt="{{ personnel.fullname }}"
+               class="rounded-circle border border-3 border-warning shadow"
+               style="width: 110px; height: 110px; object-fit: cover;">
+          {% else %}
+          <div id="profileAvatarFallback" class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center fw-bold shadow mx-auto"
+               style="width: 110px; height: 110px; font-size: 2.5rem;">
+            {{ personnel.fullname|slice:":1"|upper }}
+          </div>
+          {% endif %}
+          <button type="button" class="btn btn-sm btn-dark rounded-circle position-absolute bottom-0 end-0 shadow-sm p-2"
+                  data-bs-toggle="modal" data-bs-target="#cropPictureModal" title="Change Profile Picture"
+                  style="width: 34px; height: 34px;">
+            <i class="fas fa-camera text-warning" style="font-size: 0.85rem;"></i>
+          </button>
+        </div>
+
+        <h4 class="fw-bold text-dark mb-1">{{ personnel.fullname }}</h4>
+        <div class="mb-2">
+          <span class="badge bg-danger px-3 py-1 fs-6">{{ personnel.rank.name|default:personnel.job_grade }}</span>
+          <span class="badge bg-secondary ms-1">{{ personnel.officer_category }}</span>
+        </div>
+        <div class="font-monospace text-muted small mb-2">Staff ID: {{ personnel.staffID }}</div>
+        
+        <div>
+          <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 fw-semibold"
+                  data-bs-toggle="modal" data-bs-target="#cropPictureModal">
+            <i class="fas fa-image me-1"></i> Change Picture
+          </button>
+        </div>
+
+        <div class="p-3 bg-light rounded-3 text-start small mt-3">
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">Sex / Gender:</span>
+            <strong class="text-dark">
+              {% if personnel.gender == 'MALE' %}
+                <i class="fas fa-mars text-primary me-1"></i>Male
+              {% elif personnel.gender == 'FEMALE' %}
+                <i class="fas fa-venus text-danger me-1"></i>Female
+              {% else %}
+                <span class="badge bg-warning text-dark">Requires Review</span>
+              {% endif %}
+            </strong>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">Ghana Card:</span>
+            <span class="text-dark font-monospace">{{ personnel.ghana_card|default:"Not specified" }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">Date of Birth:</span>
+            <span class="text-dark">{{ personnel.birth_date|date:"d M Y"|default:"Not specified" }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span class="text-muted">Payroll Bank:</span>
+            <span class="text-dark">{{ personnel.bank|default:"GCB" }} • {{ personnel.account_number|default:"—" }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">Duty Status:</span>
+            <span class="badge {% if personnel.leave_status == 'ON LEAVE' %}bg-info text-dark{% elif personnel.leave_status == 'AT POST' %}bg-success text-white{% else %}bg-secondary text-white{% endif %}">
+              {{ personnel.leave_status|default:"AT POST" }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account & Security Card (Section 36) -->
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-shield-alt text-danger me-2"></i>Account & Security
+        </h6>
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <div>
+            <strong class="d-block small text-dark">Private Password</strong>
+            <span class="text-muted small">Update your account authentication credential</span>
+          </div>
+          <a href="{% url 'profile' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-key me-1"></i> Change
+          </a>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <strong class="d-block small text-dark">Two-Factor Authentication</strong>
+            <span class="text-muted small">TOTP mobile authenticator protection</span>
+          </div>
+          <a href="{% url 'totp-setup' %}" class="btn btn-outline-success btn-sm">
+            <i class="fas fa-shield-virus me-1"></i> Manage
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Command Posting & Appointments & Assignments -->
+    <div class="col-lg-7">
+      
+      <!-- Command Appointment (if any) -->
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4 border-start border-warning border-4">
+        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-medal text-warning me-2"></i>Command Appointment
+        </h6>
+        {% if command_appointment %}
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="fs-5 fw-bold text-dark">
+              {{ command_appointment.get_appointment_type_display }}
+              {% if command_appointment.is_acting %}
+              <span class="badge bg-warning text-dark ms-2">Acting</span>
+              {% endif %}
+            </div>
+            <div class="text-muted small">
+              Scope: 
+              {% if command_appointment.district %}
+                {{ command_appointment.district.name }} District Command
+              {% elif command_appointment.region %}
+                {{ command_appointment.region.name }} Regional Command
+              {% else %}
+                National Headquarters
+              {% endif %}
+            </div>
+            <div class="text-muted small mt-1">Effective Date: {{ command_appointment.start_date|date:"d M Y" }}</div>
+          </div>
+          <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3">
+            <i class="fas fa-shield-alt fa-2x"></i>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-muted small">
+          No formal executive command appointment assigned. Standard operational / administrative personnel.
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Current Operational Posting -->
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+          <h6 class="fw-bold text-dark mb-0">
+            <i class="fas fa-map-marked-alt text-danger me-2"></i>Current Command Posting
+          </h6>
+          <a href="{% url 'my-posting' %}" class="btn btn-sm btn-outline-danger">
+            View Posting History &rarr;
+          </a>
+        </div>
+        <div class="row g-3 small">
+          <div class="col-sm-6">
+            <span class="text-muted d-block">Region:</span>
+            <strong class="text-dark">{{ personnel.station.district.region.name|default:"National Command" }}</strong>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted d-block">District / Metropolitan Command:</span>
+            <strong class="text-dark">{{ personnel.station.district.name|default:"Headquarters" }}</strong>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted d-block">Fire Station:</span>
+            <strong class="text-dark">{{ personnel.station.name|default:"Station not specified" }}</strong>
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted d-block">Fire Post:</span>
+            <strong class="text-dark">{{ current_posting.post.name|default:"Main Station" }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Functional Assignments -->
+      <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+          <h6 class="fw-bold text-dark mb-0">
+            <i class="fas fa-sitemap text-info me-2"></i>Functional Assignments
+          </h6>
+          <a href="{% url 'my-departments' %}" class="btn btn-sm btn-outline-info">
+            Full Details &rarr;
+          </a>
+        </div>
+        {% if active_assignments %}
+          {% for asgn in active_assignments %}
+          <div class="d-flex align-items-center justify-content-between p-3 rounded mb-2 {% if asgn.is_primary %}bg-danger bg-opacity-10 border border-danger border-opacity-25{% else %}bg-light border{% endif %}">
+            <div>
+              <strong class="text-dark d-block">{{ asgn.functional_unit.name }}</strong>
+              <div class="small text-muted">
+                {{ asgn.functional_unit.department.directorate.name }} &rarr; {{ asgn.functional_unit.department.name }}
+              </div>
+            </div>
+            <div>
+              {% if asgn.is_primary %}
+              <span class="badge bg-danger text-white">PRIMARY ASSIGNMENT</span>
+              {% else %}
+              <span class="badge bg-secondary text-white">ADDITIONAL</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-muted small py-2">No active functional assignments assigned to this officer.</div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock content %}
+
+{% block modals %}
+<!-- Profile Picture Upload & Crop Modal (Section 28-34, 45-46) -->
+<div class="modal fade" id="cropPictureModal" tabindex="-1" aria-labelledby="cropPictureModalLabel" aria-hidden="true" style="z-index: 1060;">
+  <div class="modal-dialog modal-dialog-centered" style="z-index: 1061;">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-bottom bg-danger text-white rounded-top-4">
+        <h5 class="modal-title fw-bold" id="cropPictureModalLabel">
+          <i class="fas fa-camera me-2"></i>Position & Crop Profile Photograph
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        <!-- File Picker -->
+        <div class="mb-3">
+          <label class="form-label text-muted small fw-bold text-uppercase d-block" for="avatarFileInput">
+            Choose Photo (JPEG, PNG, WebP — Max 5MB)
+          </label>
+          <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" class="form-control form-control-sm">
+        </div>
+
+        <!-- Interactive Canvas & Positioning Box -->
+        <div id="cropAreaWrapper" class="position-relative mx-auto bg-dark rounded-3 overflow-hidden d-none shadow-sm" style="width: 300px; height: 300px; cursor: move; touch-action: none;">
+          <canvas id="cropCanvas" width="300" height="300" class="d-block w-100 h-100"></canvas>
+          <!-- Circular overlay guide -->
+          <div class="position-absolute top-0 start-0 w-100 h-100" style="pointer-events: none; border-radius: 50%; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45); border: 2px dashed #ffc107;"></div>
+        </div>
+
+        <!-- Controls: Zoom -->
+        <div id="cropControls" class="mt-3 d-none">
+          <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+            <i class="fas fa-search-minus text-muted small"></i>
+            <input type="range" id="zoomSlider" class="form-range" style="width: 180px;" min="0.5" max="3" step="0.05" value="1">
+            <i class="fas fa-search-plus text-muted small"></i>
+          </div>
+          <p class="text-muted small mb-0"><i class="fas fa-arrows-alt me-1"></i>Drag to reposition officer's face in frame</p>
+        </div>
+
+        <!-- Live Avatar Preview -->
+        <div id="previewWrapper" class="mt-3 text-center d-none">
+          <span class="text-muted small text-uppercase fw-bold d-block mb-1">Preview Avatar</span>
+          <img id="cropPreviewImg" src="" alt="Avatar Preview" class="rounded-circle border border-2 border-warning shadow-sm mx-auto" style="width: 72px; height: 72px; object-fit: cover;">
+        </div>
+
+        <div id="uploadStatusMsg" class="mt-2 text-danger small"></div>
+      </div>
+      <div class="modal-footer border-top bg-light rounded-bottom-4">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="savePictureBtn" class="btn btn-danger btn-sm fw-bold px-3" disabled>
+          <i class="fas fa-check me-1"></i> Save Picture
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('avatarFileInput');
+    const cropAreaWrapper = document.getElementById('cropAreaWrapper');
+    const cropCanvas = document.getElementById('cropCanvas');
+    const cropControls = document.getElementById('cropControls');
+    const zoomSlider = document.getElementById('zoomSlider');
+    const previewWrapper = document.getElementById('previewWrapper');
+    const cropPreviewImg = document.getElementById('cropPreviewImg');
+    const savePictureBtn = document.getElementById('savePictureBtn');
+    const statusMsg = document.getElementById('uploadStatusMsg');
+
+    if (!fileInput || !cropCanvas) return;
+
+    const modalEl = document.getElementById('cropPictureModal');
+    if (modalEl && modalEl.parentNode !== document.body) {
+        document.body.appendChild(modalEl);
+    }
+
+    const ctx = cropCanvas.getContext('2d');
+    let img = new Image();
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let offsetX = 0;
+    let offsetY = 0;
+    let scale = 1;
+    let baseWidth = 0;
+    let baseHeight = 0;
+
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            statusMsg.textContent = 'File size exceeds 5MB limit. Please choose a smaller image.';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            img = new Image();
+            img.onload = function() {
+                // Initialize canvas dimensions
+                const canvasSize = 300;
+                cropCanvas.width = canvasSize;
+                cropCanvas.height = canvasSize;
+
+                // Scale image to fit canvas proportionally
+                const minSide = Math.min(img.width, img.height);
+                scale = canvasSize / minSide;
+                zoomSlider.value = 1;
+
+                baseWidth = img.width * scale;
+                baseHeight = img.height * scale;
+
+                // Center image
+                offsetX = (canvasSize - baseWidth) / 2;
+                offsetY = (canvasSize - baseHeight) / 2;
+
+                cropAreaWrapper.classList.remove('d-none');
+                cropControls.classList.remove('d-none');
+                previewWrapper.classList.remove('d-none');
+                savePictureBtn.disabled = false;
+                statusMsg.textContent = '';
+
+                draw();
+            };
+            img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    function draw() {
+        ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+        const currentZoom = parseFloat(zoomSlider.value);
+        const w = baseWidth * currentZoom;
+        const h = baseHeight * currentZoom;
+
+        ctx.drawImage(img, offsetX, offsetY, w, h);
+
+        // Update preview
+        cropPreviewImg.src = cropCanvas.toDataURL('image/jpeg', 0.9);
+    }
+
+    // Zoom slider
+    zoomSlider.addEventListener('input', function() {
+        draw();
+    });
+
+    // Mouse drag events
+    cropAreaWrapper.addEventListener('mousedown', function(e) {
+        isDragging = true;
+        startX = e.clientX - offsetX;
+        startY = e.clientY - offsetY;
+    });
+
+    window.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        offsetX = e.clientX - startX;
+        offsetY = e.clientY - startY;
+        draw();
+    });
+
+    window.addEventListener('mouseup', function() {
+        isDragging = false;
+    });
+
+    // Touch events for mobile/tablet (Section 46)
+    cropAreaWrapper.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 1) {
+            isDragging = true;
+            startX = e.touches[0].clientX - offsetX;
+            startY = e.touches[0].clientY - offsetY;
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', function(e) {
+        if (!isDragging || e.touches.length !== 1) return;
+        offsetX = e.touches[0].clientX - startX;
+        offsetY = e.touches[0].clientY - startY;
+        draw();
+    }, { passive: true });
+
+    window.addEventListener('touchend', function() {
+        isDragging = false;
+    });
+
+    // Save Picture
+    savePictureBtn.addEventListener('click', function() {
+        savePictureBtn.disabled = true;
+        savePictureBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+        statusMsg.textContent = '';
+
+        const dataUrl = cropCanvas.toDataURL('image/jpeg', 0.92);
+        const formData = new FormData();
+        formData.append('image_data', dataUrl);
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]') ? 
+                          document.querySelector('[name=csrfmiddlewaretoken]').value : 
+                          '{{ csrf_token }}';
+        formData.append('csrfmiddlewaretoken', csrfToken);
+
+        fetch("{% url 'my-profile-picture-upload' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Update avatar on profile page
+                const avatarImg = document.getElementById('profileAvatarImg');
+                const avatarFallback = document.getElementById('profileAvatarFallback');
+                if (avatarImg) {
+                    avatarImg.src = data.url;
+                } else if (avatarFallback) {
+                    avatarFallback.outerHTML = `<img id="profileAvatarImg" src="${data.url}" class="rounded-circle border border-3 border-warning shadow" style="width: 110px; height: 110px; object-fit: cover;">`;
+                }
+                const modalEl = document.getElementById('cropPictureModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                location.reload();
+            } else {
+                statusMsg.textContent = data.error || 'Failed to update profile photograph.';
+                savePictureBtn.disabled = false;
+                savePictureBtn.innerHTML = '<i class="fas fa-check me-1"></i> Save Picture';
+            }
+        })
+        .catch(err => {
+            statusMsg.textContent = 'Server error during upload: ' + err;
+            savePictureBtn.disabled = false;
+            savePictureBtn.innerHTML = '<i class="fas fa-check me-1"></i> Save Picture';
+        });
+    });
+});
+</script>
+{% endblock %}

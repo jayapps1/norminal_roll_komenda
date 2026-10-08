@@ -1,0 +1,102 @@
+{% extends 'main.html' %}
+
+{% block title %}{{ title }} — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'personnel' %}" class="text-decoration-none text-danger fw-bold">Personnel</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'staff-detail' personnel.id %}" class="text-decoration-none text-danger">{{ personnel.fullname }}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Add Functional Assignment</li>
+        </ol>
+      </nav>
+      <h3 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-tasks text-danger me-2"></i>Add Functional Assignment (Section 17.14)
+      </h3>
+      <p class="text-muted small mb-0">Assign officer to functional Directorate &rarr; Department &rarr; Unit</p>
+    </div>
+
+    <div>
+      <a href="{% url 'staff-detail' personnel.id %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+        <i class="fas fa-arrow-left me-1"></i> Back to Officer Profile
+      </a>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="card shadow-sm border-0 bg-white border-top border-danger border-3">
+        <div class="card-header bg-white py-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="bg-danger bg-opacity-10 text-danger p-2 rounded-circle">
+              <i class="fas fa-user-tag fa-lg"></i>
+            </div>
+            <div>
+              <h5 class="mb-0 fw-bold text-dark">{{ personnel.fullname }}</h5>
+              <span class="text-muted small">{{ personnel.staffID }} &bull; {{ personnel.rank.name|default:personnel.job_grade|default:"N/A" }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4">
+          <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label fw-semibold">{{ form.functional_unit.label }}</label>
+                {{ form.functional_unit }}
+                {% if form.functional_unit.errors %}<div class="text-danger small">{{ form.functional_unit.errors }}</div>{% endif %}
+                <div class="form-text small">Select the functional area the officer is assigned to.</div>
+              </div>
+
+              <div class="col-md-7">
+                <label class="form-label fw-semibold">{{ form.assignment_role.label }}</label>
+                {{ form.assignment_role }}
+                {% if form.assignment_role.errors %}<div class="text-danger small">{{ form.assignment_role.errors }}</div>{% endif %}
+              </div>
+
+              <div class="col-md-5">
+                <label class="form-label fw-semibold">{{ form.start_date.label }}</label>
+                {{ form.start_date }}
+                {% if form.start_date.errors %}<div class="text-danger small">{{ form.start_date.errors }}</div>{% endif %}
+              </div>
+
+              <div class="col-12">
+                <div class="form-check form-switch p-3 bg-light rounded border">
+                  {{ form.is_primary }}
+                  <label class="form-check-label fw-semibold ms-2" for="{{ form.is_primary.id_for_label }}">
+                    Mark as Primary Functional Assignment
+                  </label>
+                  <div class="text-muted small ms-2">Officers may have multiple assignments, with at most one marked as Primary.</div>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label fw-semibold">{{ form.reason.label }}</label>
+                {{ form.reason }}
+                {% if form.reason.errors %}<div class="text-danger small">{{ form.reason.errors }}</div>{% endif %}
+              </div>
+
+              <div class="col-12 text-end mt-4">
+                <a href="{% url 'staff-detail' personnel.id %}" class="btn btn-outline-secondary me-2">Cancel</a>
+                <button type="submit" class="btn btn-danger px-4 fw-bold">
+                  <i class="fas fa-plus me-1"></i> Add Assignment
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,391 @@
+{% extends 'main.html' %}
+
+{% block title %}{{ district.name }} Command — GNFS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Header (Section 30) -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-3 border-bottom">
+    <div>
+      <div class="text-uppercase text-danger fw-bold small" style="letter-spacing: 1px;">
+        GHANA NATIONAL FIRE SERVICE
+      </div>
+      <h2 class="fw-bold mb-0 text-dark" style="color: #8B0000 !important;">{{ district.name|upper }} COMMAND</h2>
+      <p class="text-muted small mb-0">District Operational Command, Force Readiness & Leave Authority</p>
+    </div>
+
+    <div class="d-flex gap-2 mt-2 mt-md-0">
+      <a href="{% url 'district-leave-approvals' district.id %}" class="btn btn-danger btn-sm shadow-sm fw-bold" style="background-color: #8B0000; border-color: #8B0000;">
+        <i class="fas fa-stamp me-1"></i> Command Leave Approvals ({{ leave_awaiting_approval }})
+      </a>
+      <a href="{% url 'my-dashboard' %}" class="btn btn-outline-secondary btn-sm shadow-sm fw-semibold">
+        <i class="fas fa-user me-1"></i> My Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Leadership Banner (Section 30) -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white p-3 border-top border-danger border-3">
+    <div class="row align-items-center g-3">
+      <div class="col-md-6">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+            <i class="fas fa-star fa-2x"></i>
+          </div>
+          <div>
+            <span class="badge bg-danger mb-1" style="background-color: #8B0000 !important;">{{ district.co_designation|default:"DFO" }} / MFO</span>
+            {% if current_co %}
+            <h5 class="fw-bold mb-0 text-dark">
+              {{ current_co.personnel.fullname }}
+              {% if current_co.is_acting %}<span class="badge bg-warning text-dark">Acting</span>{% endif %}
+            </h5>
+            <div class="text-muted small">{{ current_co.personnel.rank.name|default:current_co.personnel.job_grade }} &bull; {{ current_co.personnel.staffID }}</div>
+            {% else %}
+            <div class="text-secondary fw-semibold">No Active Commanding Officer Appointed</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+            <i class="fas fa-shield-alt fa-2x"></i>
+          </div>
+          <div>
+            <span class="badge bg-primary mb-1">District Second-in-Command (2IC)</span>
+            {% if current_2ic %}
+            <h5 class="fw-bold mb-0 text-dark">
+              {{ current_2ic.personnel.fullname }}
+              {% if current_2ic.is_acting %}<span class="badge bg-warning text-dark">Acting</span>{% endif %}
+            </h5>
+            <div class="text-muted small">{{ current_2ic.personnel.rank.name|default:current_2ic.personnel.job_grade }} &bull; {{ current_2ic.personnel.staffID }}</div>
+            {% else %}
+            <div class="text-secondary fw-semibold">No Active 2IC Appointed</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10 Command Summary Metrics (Prompt 2 Section 13) -->
+  <div class="row g-2 mb-4">
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100 border-start border-danger border-4">
+        <span class="text-muted small text-uppercase fw-semibold">Personnel Strength</span>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ total_personnel }}</span>
+          <span class="badge bg-danger" style="background-color: #8B0000 !important;">Total</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100 border-start border-danger border-4">
+        <span class="text-muted small text-uppercase fw-semibold">Operational Strength</span>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ operational_strength }}</span>
+          <i class="fas fa-fire-extinguisher text-danger opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100 border-start border-success border-4">
+        <span class="text-muted small text-uppercase fw-semibold">At Post</span>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-success">{{ at_post }}</span>
+          <i class="fas fa-user-check text-success opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100 border-start border-warning border-4">
+        <span class="text-muted small text-uppercase fw-semibold">On Leave</span>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-warning">{{ on_leave }}</span>
+          <i class="fas fa-user-clock text-warning opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100 border-start border-primary border-4">
+        <span class="text-muted small text-uppercase fw-semibold">Awaiting Decision</span>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-primary">{{ leave_awaiting_approval }}</span>
+          <span class="badge bg-primary">Inbox</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100 border-start border-success border-4">
+        <span class="text-muted small text-uppercase fw-semibold">Approved Leave</span>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-success">{{ approved_leave }}</span>
+          <i class="fas fa-check-double text-success opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100 border-start border-secondary border-4">
+        <span class="text-muted small text-uppercase fw-semibold">Rejected Leave</span>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-secondary">{{ rejected_leave }}</span>
+          <i class="fas fa-times-circle text-secondary opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100 border-start border-info border-4">
+        <span class="text-muted small text-uppercase fw-semibold">Returning Soon</span>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-info">{{ resuming_soon }}</span>
+          <i class="fas fa-calendar-check text-info opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100 border-start border-dark border-4">
+        <span class="text-muted small text-uppercase fw-semibold">Transfers</span>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-dark">{{ total_transfers }}</span>
+          <i class="fas fa-exchange-alt text-dark opacity-50"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card border-0 shadow-sm rounded-3 bg-white p-3 h-100 border-start border-danger border-4">
+        <span class="text-muted small text-uppercase fw-semibold">Notifications</span>
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <span class="fs-4 fw-bold text-danger">{{ notifications_count }}</span>
+          <i class="fas fa-bell text-danger opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role & Authority Guard Banner (Prompt 2 Section 13, 14) -->
+  {% if can_approve %}
+  <div class="alert alert-danger bg-danger bg-opacity-10 border border-danger rounded-3 shadow-sm p-3 mb-4 d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fas fa-stamp fa-2x text-danger" style="color: #8B0000 !important;"></i>
+      <div>
+        <h6 class="fw-bold mb-0 text-dark">COMMAND DECISION AUTHORITY (DFO / MFO)</h6>
+        <span class="small text-muted">You hold final District decision authority for Annual Leave quotas, Casual, Compassionate, and Paternity leaves. You may approve, reject with written reasons, return for corrections, or defer.</span>
+      </div>
+    </div>
+    <a href="{% url 'district-leave-approvals' district.id %}" class="btn btn-sm btn-danger fw-bold" style="background-color: #8B0000; border-color: #8B0000;">
+      <i class="fas fa-clipboard-check me-1"></i> Full Approval Queue ({{ leave_awaiting_approval }})
+    </a>
+  </div>
+  {% else %}
+  <div class="alert alert-primary bg-primary bg-opacity-10 border border-primary rounded-3 shadow-sm p-3 mb-4 d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fas fa-shield-alt fa-2x text-primary"></i>
+      <div>
+        <h6 class="fw-bold mb-0 text-dark">DISTRICT SECOND-IN-COMMAND (2IC) — COMMAND AWARENESS</h6>
+        <span class="small text-muted">2IC console maintains full force readiness and leave pipeline visibility for operational coordination. <strong>Final approval authority remains with the DFO / MFO</strong> unless formally delegated.</span>
+      </div>
+    </div>
+    <span class="badge bg-primary text-uppercase px-3 py-2">Awareness & Oversight Mode</span>
+  </div>
+  {% endif %}
+
+  <!-- Leave Awaiting Command Decision (Prompt 2 Section 13, 14) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
+    <div class="card-header bg-white border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+      <h5 class="fw-bold text-dark mb-0">
+        <i class="fas fa-inbox text-danger me-2"></i>Leave Applications Awaiting Command Decision ({{ decision_leaves|length }})
+      </h5>
+      <a href="{% url 'district-leave-approvals' district.id %}" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light text-muted">
+            <tr>
+              <th class="ps-3">Ref #</th>
+              <th>Officer</th>
+              <th>Rank & Station</th>
+              <th>Leave Type</th>
+              <th>Duration & Dates</th>
+              <th>Ops Recommendation</th>
+              <th class="text-end pe-3">Command Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lr in decision_leaves %}
+            <tr>
+              <td class="ps-3"><strong class="font-monospace text-dark">{{ lr.reference_number|default:lr.id }}</strong></td>
+              <td>
+                <strong class="text-dark d-block">{{ lr.personnel.fullname }}</strong>
+                <small class="text-muted">{{ lr.personnel.staffID }}</small>
+              </td>
+              <td>
+                <div>{{ lr.personnel.rank.abbreviation|default:lr.personnel.rank.name }}</div>
+                <small class="text-muted">{{ lr.personnel.station.name }}</small>
+              </td>
+              <td><span class="badge bg-light text-dark border">{{ lr.leave_type.name }}</span></td>
+              <td>
+                <strong>{{ lr.duration }}</strong> days
+                <small class="text-muted d-block">{{ lr.start_date|date:"d M" }} &rarr; {{ lr.resume_date|date:"d M Y" }}</small>
+              </td>
+              <td>
+                {% if lr.operations_recommendation == 'RECOMMEND' %}
+                <span class="badge bg-success bg-opacity-10 text-success border border-success">Recommended</span>
+                {% elif lr.operations_recommendation == 'NOT_RECOMMEND' %}
+                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">Not Recommended</span>
+                {% else %}
+                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning">Pending Ops</span>
+                {% endif %}
+              </td>
+              <td class="text-end pe-3">
+                {% if can_approve %}
+                <div class="d-flex justify-content-end gap-1">
+                  <!-- Approve Form -->
+                  <form method="post" action="{% url 'command-approve-leave' lr.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="decision" value="APPROVE">
+                    <button type="submit" class="btn btn-success btn-sm py-1 px-2 fw-bold" onclick="return confirm('Approve leave for {{ lr.personnel.fullname }}?');">
+                      <i class="fas fa-check me-1"></i> Approve
+                    </button>
+                  </form>
+
+                  <!-- Reject Trigger -->
+                  <button type="button" class="btn btn-outline-danger btn-sm py-1 px-2" data-bs-toggle="modal" data-bs-target="#rejectModal{{ lr.id }}">
+                    <i class="fas fa-times me-1"></i> Reject
+                  </button>
+
+                  <a href="{% url 'leave-detail' lr.id %}" class="btn btn-outline-secondary btn-sm py-1 px-2" title="Review">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </div>
+
+                <!-- Reject Modal -->
+                <div class="modal fade text-start" id="rejectModal{{ lr.id }}" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <form method="post" action="{% url 'command-approve-leave' lr.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="decision" value="REJECT">
+                        <div class="modal-header">
+                          <h6 class="modal-title fw-bold">Reject Leave Application</h6>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                          <p class="small text-muted">Officer: <strong>{{ lr.personnel.fullname }}</strong> ({{ lr.leave_type.name }})</p>
+                          <label class="form-label small fw-bold">Mandatory Written Reason *</label>
+                          <textarea name="rejection_reason" class="form-control form-control-sm" rows="3" required placeholder="Specify official reason for command rejection..."></textarea>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                          <button type="submit" class="btn btn-danger btn-sm fw-bold">Confirm Rejection</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+                {% else %}
+                <span class="badge bg-light text-secondary border">2IC Review Only</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted py-3">No leave applications currently awaiting command decision.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Approved Leave Register (Command Awareness) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
+    <div class="card-header bg-white border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+      <h5 class="fw-bold text-dark mb-0">
+        <i class="fas fa-clipboard-check text-success me-2"></i>Approved Leave Register (Command Awareness)
+      </h5>
+      <span class="small text-muted">Recently Approved Personnel Leaves</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light text-muted">
+            <tr>
+              <th class="ps-3">Ref #</th>
+              <th>Officer</th>
+              <th>Station</th>
+              <th>Leave Type</th>
+              <th>Approved Duration</th>
+              <th>Period</th>
+              <th>Approved By</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lr in approved_leaves %}
+            <tr>
+              <td class="ps-3"><strong class="font-monospace text-dark">{{ lr.reference_number|default:lr.id }}</strong></td>
+              <td>
+                <strong class="text-dark d-block">{{ lr.personnel.fullname }}</strong>
+                <small class="text-muted">{{ lr.personnel.staffID }}</small>
+              </td>
+              <td>{{ lr.personnel.station.name }}</td>
+              <td><span class="badge bg-light text-dark border">{{ lr.leave_type.name }}</span></td>
+              <td><strong class="text-success">{{ lr.duration }}</strong> days</td>
+              <td>{{ lr.start_date|date:"d M Y" }} &rarr; {{ lr.resume_date|date:"d M Y" }}</td>
+              <td>
+                <span class="small fw-semibold text-dark">{{ lr.approved_by.username|default:"Command" }}</span>
+                <small class="text-muted d-block">{{ lr.approved_at|date:"d M Y" }}</small>
+              </td>
+              <td><span class="badge bg-success bg-opacity-10 text-success border border-success">{{ lr.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-3">No approved leave records found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Command Stations Overview -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
+    <div class="card-header bg-white border-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+      <h5 class="fw-bold text-dark mb-0">
+        <i class="fas fa-fire-extinguisher text-danger me-2"></i>Stations under {{ district.name }} Command
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light text-muted">
+            <tr>
+              <th class="ps-3">Station Name</th>
+              <th>Station Code</th>
+              <th>Personnel Strength</th>
+              <th class="text-end pe-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for stn in stations %}
+            <tr>
+              <td class="ps-3 fw-bold text-dark">{{ stn.name }}</td>
+              <td><span class="badge bg-light text-dark border">{{ stn.code }}</span></td>
+              <td><strong>{{ stn.personnel_count }}</strong> officers</td>
+              <td class="text-end pe-3">
+                <a href="{% url 'dashboard-station' stn.id %}" class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold">
+                  Station View
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">No stations under this command.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock content %}
